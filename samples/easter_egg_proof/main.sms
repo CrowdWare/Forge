@@ -1,0 +1,9 @@
+fun getAnswer() {
+    return 42
+}
+
+fun main() {
+    log.success("The answer of all questions is: ${getAnswer()}")
+}
+
+main()
