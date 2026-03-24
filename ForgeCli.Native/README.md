@@ -6,6 +6,11 @@ Current commands:
 - `new`
 - `validate` (via `smlcore_native` + `sms_native`)
 - `build` (`mac` or `android`, via Godot headless export)
+- `toolchain doctor` (checks required local tools + native lib env)
+- `sms run` (execute `.sms` directly via interpreter)
+- `sms llvm-ir` (emit LLVM IR from `.sms`)
+- `sms build` (vertical slice: `.sms -> native binary` via LLVM IR + clang)
+- `sms demo` (writes `main.sms`, runs it, optional native build)
 
 Sandbox policy during `validate`:
 - Registers `sms_native_set_sandbox_path_callback(...)`.
@@ -27,6 +32,48 @@ SML_NATIVE_LIB_DIR="$(pwd)/SMLCore.Native/build" \
 SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
 ./ForgeCli.Native/build/forgecli-native validate --project ./MyApp
 ```
+
+Toolchain doctor:
+
+```bash
+SML_NATIVE_LIB_DIR="$(pwd)/SMLCore.Native/build" \
+SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
+./ForgeCli.Native/build/forgecli-native toolchain doctor
+```
+
+One-command SMS demo (writes + runs `main.sms`):
+
+```bash
+SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
+./ForgeCli.Native/build/forgecli-native sms demo
+```
+
+One-command SMS demo with native binary:
+
+```bash
+SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
+./ForgeCli.Native/build/forgecli-native sms demo --build --out ./main
+./main
+```
+
+SMS run (interpreter):
+
+```bash
+SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
+./ForgeCli.Native/build/forgecli-native sms run ./main.sms
+```
+
+SMS to native binary (`.sms -> .exe` on Windows / native binary on macOS/Linux):
+
+```bash
+SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
+./ForgeCli.Native/build/forgecli-native sms build ./main.sms --out ./main
+./main
+```
+
+Note: For `sms build`, the LLVM backend accepts either:
+- a top-level function call (for example `main()`)
+- or a `fun main() { ... }` fallback entry function
 
 Build (macOS zip):
 
