@@ -1,4 +1,0 @@
-/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/armeabi-v7a/CMakeFiles/forge_runner_native.dir
-/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/armeabi-v7a/CMakeFiles/forge-runner-native.dir
-/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/armeabi-v7a/CMakeFiles/edit_cache.dir
-/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/armeabi-v7a/CMakeFiles/rebuild_cache.dir

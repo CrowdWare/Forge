@@ -26,6 +26,7 @@
 
 # Exported builds (Windows, Linux, macOS, Android, Web)
 build/
+build-android/
 dist/
 bin/
 exports/
@@ -100,6 +101,9 @@ Desktop.ini
 # Test Export Output
 # =========================================================
 *.glb
+*.apk
+*.aab
+*.idsig
 
 # =========================================================
 # Local Run Overrides
