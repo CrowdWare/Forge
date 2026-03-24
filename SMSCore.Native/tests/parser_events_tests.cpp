@@ -220,6 +220,24 @@ void test_runtime_recursive_function_hits_recursion_limit() {
     }
 }
 
+void test_string_concat_dollar_operator_with_call_parses_and_executes() {
+    expect_ok_value(
+        "string_concat_dollar_operator_with_call_parses_and_executes",
+        "fun getAnswer() { return 42 } "
+        "var s = \"The answer of all questions is: \"$getAnswer() "
+        "1",
+        1);
+}
+
+void test_string_interpolation_braces_with_call_parses_and_executes() {
+    expect_ok_value(
+        "string_interpolation_braces_with_call_parses_and_executes",
+        "fun getAnswer() { return 42 } "
+        "var s = \"The answer of all questions is: ${getAnswer()}\" "
+        "1",
+        1);
+}
+
 const std::vector<TestCase>& all_tests() {
     static const std::vector<TestCase> tests = {
         {"sms_events_parse_with_event_handlers_parses_top_level_handlers", test_parse_with_event_handlers_parses_top_level_handlers},
@@ -236,6 +254,8 @@ const std::vector<TestCase>& all_tests() {
         {"sms_parser_double_literals_are_rejected_in_native_subset", test_parse_double_literals_are_rejected_in_native_subset},
         {"sms_parser_exponentials_are_rejected", test_parse_exponentials_are_rejected},
         {"sms_runtime_recursive_function_hits_recursion_limit", test_runtime_recursive_function_hits_recursion_limit},
+        {"sms_parser_string_concat_dollar_operator_with_call_parses_and_executes", test_string_concat_dollar_operator_with_call_parses_and_executes},
+        {"sms_parser_string_interpolation_braces_with_call_parses_and_executes", test_string_interpolation_braces_with_call_parses_and_executes},
     };
     return tests;
 }

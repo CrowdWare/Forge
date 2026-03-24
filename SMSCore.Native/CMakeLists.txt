@@ -90,4 +90,23 @@ if(BUILD_TESTING)
     foreach(CASE_NAME IN LISTS SMS_UI_STRING_BRIDGE_CASES)
         add_test(NAME sms_native_${CASE_NAME} COMMAND sms_native_ui_string_bridge_tests ${CASE_NAME})
     endforeach()
+
+    add_executable(sms_native_compiler_codegen_tests
+        tests/compiler_codegen_tests.cpp
+    )
+    target_link_libraries(sms_native_compiler_codegen_tests PRIVATE sms_native)
+    set(SMS_COMPILER_CODEGEN_CASES
+        sms_compiler_codegen_llvm_ir_emits_main_for_top_level_call
+        sms_compiler_codegen_llvm_ir_uses_main_function_fallback
+        sms_compiler_codegen_llvm_ir_reports_buffer_too_small
+        sms_compiler_codegen_llvm_ir_reports_unsupported_expression
+        sms_compiler_aot_invoke_validates_required_arguments
+        sms_compiler_aot_invoke_reports_clang_failure
+        sms_compiler_aot_invoke_succeeds_when_clang_available_or_skips
+        sms_compiler_aot_invoke_reuses_cached_binary_without_clang_or_skips
+        sms_compiler_aot_invoke_emits_shared_library_artifact_or_skips
+    )
+    foreach(CASE_NAME IN LISTS SMS_COMPILER_CODEGEN_CASES)
+        add_test(NAME sms_native_${CASE_NAME} COMMAND sms_native_compiler_codegen_tests ${CASE_NAME})
+    endforeach()
 endif()
