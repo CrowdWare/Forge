@@ -57,6 +57,7 @@ protected:
 
 public:
     void _ready() override;
+    void _process(double delta) override;
 
     // SMS event callbacks — called via Godot signal connections.
     // Signal args come first; bound args (object_id, event_name) are appended.

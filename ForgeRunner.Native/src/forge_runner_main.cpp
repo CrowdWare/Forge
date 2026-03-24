@@ -110,6 +110,7 @@ void ForgeRunnerNativeMain::_bind_methods() {
 
 void ForgeRunnerNativeMain::_ready() {
     UtilityFunctions::print("[ForgeRunner.Native] _ready");
+    set_process(true);
     g_sms_main_instance = this;
     forge::set_ui_open_dialog_hook(&sms_open_dialog_hook);
 
@@ -135,6 +136,17 @@ void ForgeRunnerNativeMain::_ready() {
     }
 
     show_sml(path);
+}
+
+void ForgeRunnerNativeMain::_process(double) {
+    if (sms_session_ < 0) {
+        return;
+    }
+    std::string event_name;
+    std::string payload_json;
+    while (forge::pop_benchmark_event(event_name, payload_json)) {
+        sms_bridge_.dispatch_event(sms_session_, "benchmark", event_name, payload_json);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +493,7 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
 }
 
 void ForgeRunnerNativeMain::stop_sms() {
+    forge::reset_benchmark_runtime();
     if (sms_session_ >= 0) {
         sms_bridge_.dispose_session(sms_session_);
         sms_session_ = -1;

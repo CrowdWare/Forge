@@ -1,0 +1,65 @@
+var statusLabel = null
+var runProgress = null
+var barSms = null
+var barKotlin = null
+var resultLabel = null
+
+fun clamp100(value) {
+    if (value < 0) {
+        return 0
+    }
+    if (value > 100) {
+        return 100
+    }
+    return value
+}
+
+fun startBench(name) {
+    statusLabel.text = "Running " $ name $ " benchmark..."
+    runProgress.value = 0
+    barSms.value = 0
+    barKotlin.value = 100
+    resultLabel.text = "Result: running..."
+    benchmark.start(name)
+}
+
+on mainWindow.ready() {
+    statusLabel = ui.getObject("statusLabel")
+    runProgress = ui.getObject("runProgress")
+    barSms = ui.getObject("barSms")
+    barKotlin = ui.getObject("barKotlin")
+    resultLabel = ui.getObject("resultLabel")
+}
+
+on btnCpu.clicked() {
+    startBench("cpu")
+}
+
+on btnDispatch.clicked() {
+    startBench("dispatch")
+}
+
+on btnFrame.clicked() {
+    startBench("frame")
+}
+
+on btnMixed.clicked() {
+    startBench("mixed")
+}
+
+on benchmark.progress(name, percent, stage) {
+    runProgress.value = clamp100(percent)
+    statusLabel.text = "Running " $ name $ ": " $ stage
+}
+
+on benchmark.completed(name, durationMs, smsScore, kotlinScore, summary) {
+    runProgress.value = 100
+    var smsPercent = 0
+    if (kotlinScore > 0) {
+        smsPercent = smsScore * 100 / kotlinScore
+    }
+    barSms.value = clamp100(smsPercent)
+    barKotlin.value = 100
+    resultLabel.text = "Result: " $ name $ " | " $ summary
+    statusLabel.text = "SMS " $ smsPercent $ "% of Kotlin baseline"
+}

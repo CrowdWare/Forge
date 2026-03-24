@@ -1,0 +1,12 @@
+fun run() {
+    var i = 0
+    var acc = 0
+    while (i < 5000000) {
+        var v = i * 1664525 + 1013904223
+        acc = acc + (v % 2147483647)
+        i = i + 1
+    }
+    return acc
+}
+
+run()

@@ -1271,6 +1271,37 @@ struct MethodCallExpr final : Expr {
             return parse_json_value(out_json);
         }
 
+        if (receiver.kind == Value::Kind::Object && receiver.class_name == "benchmark") {
+            if (g_ui_invoke == nullptr) {
+                throw std::runtime_error("ui invoke bridge unavailable.");
+            }
+
+            std::string args_json = "[";
+            for (std::size_t i = 0; i < args.size(); i++) {
+                if (i > 0) {
+                    args_json.push_back(',');
+                }
+                args_json += value_to_json(args[i]);
+            }
+            args_json.push_back(']');
+
+            char out_json[kBridgeJsonBufferSize] = {0};
+            char error[1024] = {0};
+            const auto rc = g_ui_invoke(
+                "__benchmark__",
+                method_.c_str(),
+                args_json.c_str(),
+                out_json,
+                static_cast<int>(sizeof(out_json)),
+                error,
+                static_cast<int>(sizeof(error)));
+            if (rc != 0) {
+                throw std::runtime_error(error[0] != '\0' ? error : ("Unknown benchmark method: " + method_));
+            }
+
+            return parse_json_value(out_json);
+        }
+
         if (receiver.kind == Value::Kind::Object && receiver.class_name == "fs") {
             if ((method_ == "list" || method_ == "readText" || method_ == "writeText") && !args.empty()) {
                 const std::string owner = "fs." + method_;
@@ -3909,6 +3940,7 @@ static std::shared_ptr<SmsSessionRuntime> build_session_runtime_or_throw(const c
     runtime->env.define_var("i18n", Value::Object("i18n", {}));
     runtime->env.define_var("ai", Value::Object("ai", {}));
     runtime->env.define_var("ui", Value::Object("ui", {}));
+    runtime->env.define_var("benchmark", Value::Object("benchmark", {}));
 
     for (const auto& stmt : runtime->program) {
         if (const auto* fn = dynamic_cast<const FunctionDeclStmt*>(stmt.get())) {

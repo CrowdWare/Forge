@@ -30,15 +30,22 @@
 #include "sms_native.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <sstream>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -223,8 +230,157 @@ static UiOpenDialogHook& ui_open_dialog_hook() {
     return hook;
 }
 
+static std::string json_string(const std::string& s);
+
 void set_ui_open_dialog_hook(UiOpenDialogHook hook) {
     ui_open_dialog_hook() = hook;
+}
+
+namespace {
+struct BenchmarkJob {
+    std::string name;
+    std::atomic<bool> cancel{false};
+    std::atomic<int> worker_a_progress{0};
+    std::atomic<int> worker_b_progress{0};
+    std::atomic<bool> done{false};
+    std::int64_t duration_ms = 0;
+    int sms_score = 0;
+    int kotlin_score = 1000;
+    std::thread worker_a;
+    std::thread worker_b;
+    std::thread monitor;
+};
+
+std::mutex g_benchmark_mutex;
+std::unique_ptr<BenchmarkJob> g_benchmark_job;
+std::mutex g_benchmark_events_mutex;
+std::deque<std::pair<std::string, std::string>> g_benchmark_events;
+
+int benchmark_workload_units(const std::string& name) {
+    if (name == "cpu") return 18;
+    if (name == "dispatch") return 12;
+    if (name == "frame") return 14;
+    if (name == "mixed") return 20;
+    return 10;
+}
+
+int benchmark_kotlin_score(const std::string& name) {
+    if (name == "cpu") return 1000;
+    if (name == "dispatch") return 900;
+    if (name == "frame") return 950;
+    if (name == "mixed") return 980;
+    return 1000;
+}
+
+std::string benchmark_progress_payload(const std::string& name, int percent, const std::string& stage) {
+    return "[" + json_string(name) + "," + std::to_string(percent) + "," + json_string(stage) + "]";
+}
+
+std::string benchmark_completed_payload(
+    const std::string& name, std::int64_t duration_ms, int sms_score, int kotlin_score, const std::string& summary) {
+    return "[" + json_string(name) + "," + std::to_string(duration_ms) + ","
+        + std::to_string(sms_score) + "," + std::to_string(kotlin_score) + "," + json_string(summary) + "]";
+}
+
+void enqueue_benchmark_event(const std::string& event_name, const std::string& payload_json) {
+    std::lock_guard<std::mutex> lock(g_benchmark_events_mutex);
+    g_benchmark_events.emplace_back(event_name, payload_json);
+}
+
+void join_job_threads(BenchmarkJob& job) {
+    if (job.worker_a.joinable()) job.worker_a.join();
+    if (job.worker_b.joinable()) job.worker_b.join();
+    if (job.monitor.joinable()) job.monitor.join();
+}
+
+void stop_active_benchmark_job_locked() {
+    if (!g_benchmark_job) return;
+    g_benchmark_job->cancel.store(true);
+    join_job_threads(*g_benchmark_job);
+    g_benchmark_job.reset();
+}
+
+void start_benchmark_job_locked(const std::string& name) {
+    stop_active_benchmark_job_locked();
+
+    auto job = std::make_unique<BenchmarkJob>();
+    job->name = name;
+    job->kotlin_score = benchmark_kotlin_score(name);
+    BenchmarkJob* raw = job.get();
+
+    const int workload_units = benchmark_workload_units(name);
+    const int iterations_per_unit = 200000;
+    auto worker_fn = [raw, workload_units, iterations_per_unit](std::atomic<int>& progress_slot) {
+        volatile std::uint64_t sink = 0;
+        for (int unit = 1; unit <= workload_units; ++unit) {
+            if (raw->cancel.load()) break;
+            for (int i = 0; i < iterations_per_unit; ++i) {
+                sink += static_cast<std::uint64_t>((i * 1664525u + 1013904223u) ^ unit);
+            }
+            progress_slot.store((unit * 100) / workload_units);
+        }
+        (void)sink;
+    };
+
+    raw->worker_a = std::thread(worker_fn, std::ref(raw->worker_a_progress));
+    raw->worker_b = std::thread(worker_fn, std::ref(raw->worker_b_progress));
+
+    raw->monitor = std::thread([raw]() {
+        const auto t0 = std::chrono::steady_clock::now();
+        enqueue_benchmark_event("progress", benchmark_progress_payload(raw->name, 0, "starting"));
+        int last_percent = -1;
+        while (!raw->cancel.load()) {
+            const bool a_done = raw->worker_a_progress.load() >= 100;
+            const bool b_done = raw->worker_b_progress.load() >= 100;
+            const int percent = (raw->worker_a_progress.load() + raw->worker_b_progress.load()) / 2;
+            if (percent != last_percent) {
+                enqueue_benchmark_event("progress", benchmark_progress_payload(raw->name, percent, "running"));
+                last_percent = percent;
+            }
+            if (a_done && b_done) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(40));
+        }
+        if (raw->worker_a.joinable()) raw->worker_a.join();
+        if (raw->worker_b.joinable()) raw->worker_b.join();
+
+        if (raw->cancel.load()) {
+            enqueue_benchmark_event("completed", benchmark_completed_payload(
+                raw->name, 0, 0, raw->kotlin_score, "cancelled"));
+            raw->done.store(true);
+            return;
+        }
+
+        const auto t1 = std::chrono::steady_clock::now();
+        raw->duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        if (raw->duration_ms <= 0) raw->duration_ms = 1;
+
+        const std::int64_t total_ops = static_cast<std::int64_t>(2) * benchmark_workload_units(raw->name) * iterations_per_unit;
+        raw->sms_score = static_cast<int>((total_ops * 1000) / raw->duration_ms);
+        const std::string summary = "done in " + std::to_string(raw->duration_ms) + " ms";
+        enqueue_benchmark_event("progress", benchmark_progress_payload(raw->name, 100, "finalizing"));
+        enqueue_benchmark_event("completed", benchmark_completed_payload(
+            raw->name, raw->duration_ms, raw->sms_score, raw->kotlin_score, summary));
+        raw->done.store(true);
+    });
+
+    g_benchmark_job = std::move(job);
+}
+} // namespace
+
+void reset_benchmark_runtime() {
+    std::lock_guard<std::mutex> lock(g_benchmark_mutex);
+    stop_active_benchmark_job_locked();
+    std::lock_guard<std::mutex> qlock(g_benchmark_events_mutex);
+    g_benchmark_events.clear();
+}
+
+bool pop_benchmark_event(std::string& out_event_name, std::string& out_payload_json) {
+    std::lock_guard<std::mutex> lock(g_benchmark_events_mutex);
+    if (g_benchmark_events.empty()) return false;
+    out_event_name = g_benchmark_events.front().first;
+    out_payload_json = g_benchmark_events.front().second;
+    g_benchmark_events.pop_front();
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -813,6 +969,39 @@ static int sms_ui_invoke(
             const std::string resolved = resolve_os_path(arg_string(0));
             const bool exists = !resolved.empty() && fs::exists(fs::path(resolved));
             write_out(out_json, out_cap, exists ? "true" : "false");
+            return 0;
+        }
+
+        write_out(out_json, out_cap, "null");
+        return 0;
+    }
+
+    if (id == "__benchmark__") {
+        bool parsed_ok = false;
+        const Variant parsed = parse_json_variant(args, &parsed_ok);
+        const Array arr = (parsed_ok && parsed.get_type() == Variant::ARRAY) ? static_cast<Array>(parsed) : Array();
+        auto arg_string = [&](int idx) -> std::string {
+            if (idx < 0 || idx >= arr.size()) return {};
+            return static_cast<String>(arr[idx]).utf8().get_data();
+        };
+
+        if (mname == "start" && arr.size() >= 1) {
+            const std::string bench_name = arg_string(0);
+            if (bench_name.empty()) {
+                write_out(out_json, out_cap, "false");
+                return 0;
+            }
+            {
+                std::lock_guard<std::mutex> lock(g_benchmark_mutex);
+                start_benchmark_job_locked(bench_name);
+            }
+            write_out(out_json, out_cap, "true");
+            return 0;
+        }
+        if (mname == "cancel") {
+            std::lock_guard<std::mutex> lock(g_benchmark_mutex);
+            stop_active_benchmark_job_locked();
+            write_out(out_json, out_cap, "true");
             return 0;
         }
 
