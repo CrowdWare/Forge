@@ -80,9 +80,9 @@ CrowdWare DAO is not yet founded, because that will cost about 100.000 CHF for n
 
 ---
 
-## books.crowdware.info
+## crowdbooks.crowdware.info
 
-The book you are reading is available free at books.crowdware.info.
+The book you are reading is available free at crowdbooks.crowdware.info.
 
 Because knowledge should not be behind a paywall.
 Because the junior developer in Lagos deserves the same access as the senior developer in Berlin.

@@ -227,7 +227,7 @@ From February 10 to March 13 (today).
 
 Twenty-eight days plus a few days documenting.
 
-In that time, with Codex writing C# and then C++, with Claude designing architecture, with Groq handling image processing, with ForgeSTA transcribing ideas that arrived faster than fingers could type:
+In that time, with Codex writing C# and then C++, with Claude designing architecture, with Grok handling image processing, with ForgeSTA transcribing ideas that arrived faster than fingers could type:
 
 Forge 4D became real.
 
@@ -247,7 +247,7 @@ Python (.py): 233 lines – 0.7%
 
 Total: 34,576 lines of code.
 
-C++ is the foundation – the Forge Runner, invisible and permanent. GDScript exists only to generate documentation and code directly from the Godot database. A CLI for Groq access, written in C#, still waiting for its moment.
+C++ is the foundation – the Forge Runner, invisible and permanent. GDScript exists only to generate documentation and code directly from the Godot database. A CLI for Grok access, written in C#, still waiting for its moment.
 
 Nobody typed most of this.
 It was generated, directed, reviewed.

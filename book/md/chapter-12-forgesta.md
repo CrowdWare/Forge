@@ -228,6 +228,6 @@ Even if she occasionally calls you by the wrong name.
 ---
 
 Based on this idea I already started to write a plugin for Wordpress where we can host open books with. Have a look for CrowdBooks. 
-It maybe hostet here: https://books.crowdware.info (at the moment I am hosting my own books there, later maybe yours)
+It maybe hostet here: https://crowdbooks.crowdware.info (at the moment I am hosting my own books there, later maybe yours)
 
 *Next: Chapter 13 – Transparency as a Feature*

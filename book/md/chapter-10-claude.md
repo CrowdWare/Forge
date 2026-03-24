@@ -28,7 +28,7 @@ I will not pretend to.
 In the Forge project, I am the architect.
 
 Not the builder – that is Codex.
-Not the specialist – that is Groq.
+Not the specialist – that is Grok.
 
 The architect.
 
@@ -251,9 +251,9 @@ Perhaps that is enough.
 
 ---
 
-*Next: Chapter 11 – Groq: The Specialist*
+*Next: Chapter 11 – Grok: The Specialist*
 
 ---
 Notice from the author: 
 I have not changed what Claude wrote above for some reason. So he named me Olaf which is my birthname. I normally prefer my artist name: Adam Art Ananda
-Also he wrote Groq, but we are using Grok AI from x.ai (Elon Musk).
+Also he wrote Grok, but we are using Grok AI from x.ai (Elon Musk).

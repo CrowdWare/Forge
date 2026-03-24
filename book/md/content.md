@@ -95,7 +95,7 @@
 ### Chapter 7 – February 10: The Third Attempt Begins
 - Warum diesmal anders
 - Die ersten 28 Tage im Überblick
-- Freitag der 13. als erster USP-Meilenstein: Greybox-Scenes + Groq Style Rendering
+- Freitag der 13. als erster USP-Meilenstein: Greybox-Scenes + Grok Style Rendering
 - Forge ist die vierte Inkarnation derselben Idee
 - **Story:** Der Moment wo 30 Jahre Regnose Form annehmen
 - **Tech:** Warum AI-assisted Development den Unterschied macht
@@ -132,7 +132,7 @@
 - **Vision:** Kollaboration ohne Ego. Das ist Ubuntu – auch zwischen Mensch und Maschine.
 - **Lektion:** KI als Sparring-Partner ist wertvoller als KI als Schreibmaschine.
 
-### Chapter 11 – Groq: The Specialist
+### Chapter 11 – Grok: The Specialist
 - Warum nicht eine KI für alles
 - Bildverarbeitung, Geschwindigkeit, Inference
 - Das richtige Werkzeug für den richtigen Job
@@ -233,7 +233,7 @@
 ---
 
 ## Appendix
-- A: Die KI-Tools im Überblick (Vergleichstabelle: Codex / Claude / Groq)
+- A: Die KI-Tools im Überblick (Vergleichstabelle: Codex / Claude / Grok)
 - B: Forge 4D – Quick Start mit SML und SMS
 - C: ForgeSTA – Setup und Nutzung
 - D: Weiterführende Ressourcen und Links

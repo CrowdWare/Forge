@@ -117,7 +117,7 @@ Result:
 
 ### Early Milestone
 - **Friday the 13th (February)** – First clear **USP milestone** reached
-- Forge was already able to **render greybox scenes and send frames to Groq for style rendering**
+- Forge was already able to **render greybox scenes and send frames to Grok for style rendering**
 - This proved the core concept: rapid scene creation in Forge followed by AI-based visual styling
 - Marked the moment when the idea of Forge as a **previsualization / mockup pipeline for AI rendering** became tangible
 
@@ -131,7 +131,7 @@ Forge concept:
 - Full migration from 41,000 lines C# to 19,000 lines C++ 
 - The GdScript Incident: Codex rebuilt the SML compiler in GdScript during C++ migration
 - Claude brought in to fix architecture, clean up detour, complete C++ migration
-- Groq integrated for image processing pipeline
+- Grok integrated for image processing pipeline
 - ForgeSTA created as a parallel tool: Speech → Whisper → structured output
 
 ---

@@ -20,7 +20,7 @@ Three AI systems, each with a distinct role:
 
 **Codex** – writes code.
 **Claude** – designs architecture and thinks.
-**Groq** – handles specialized tasks like image processing.
+**Grok** – handles specialized tasks like image processing.
 
 And me – the human in the driver's seat. The one who knows where we are going, even when the GPS suggests a different route.
 
@@ -67,7 +67,7 @@ Not estimates. Not approximations. Measured:
 | Python (.py) | 233 | 0.7% |
 | **Total** | **34,576** | **100%** |
 
-C++ is the foundation – the Forge Runner, invisible and permanent, doing its work without asking for attention. GDScript exists only to generate documentation and code directly from the Godot database. A CLI for Groq access, written in C#, waiting in the wings.
+C++ is the foundation – the Forge Runner, invisible and permanent, doing its work without asking for attention. GDScript exists only to generate documentation and code directly from the Godot database. A CLI for Grok access, written in C#, waiting in the wings.
 
 Nobody typed most of this.
 
