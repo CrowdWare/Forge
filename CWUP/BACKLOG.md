@@ -74,6 +74,7 @@
 ## Use Cases
 
 ## Tasks Forge-Runner
+- [ ] tasks/forgecli_build_command.md
 - [ ] tasks/pose_library_and_retarget_workflow.md
 - [ ] tasks/partial.md
 

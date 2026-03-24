@@ -39,6 +39,7 @@
 #include <godot_cpp/classes/base_button.hpp>
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/file_dialog.hpp>
+#include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/h_box_container.hpp>
 #include <godot_cpp/classes/http_request.hpp>
 #include <godot_cpp/classes/item_list.hpp>
@@ -114,7 +115,8 @@ void ForgeRunnerNativeMain::_ready() {
 
     const char* env_url = std::getenv("FORGE_RUNNER_URL");
     if (!env_url || env_url[0] == '\0') {
-        show_error("FORGE_RUNNER_URL is not set.");
+        UtilityFunctions::push_warning("[ForgeRunner.Native] FORGE_RUNNER_URL is not set. Falling back to res:/app.sml.");
+        show_sml("res:/app.sml");
         return;
     }
 
@@ -158,6 +160,19 @@ std::string ForgeRunnerNativeMain::file_url_to_path(const std::string& url) {
 // ---------------------------------------------------------------------------
 
 std::string ForgeRunnerNativeMain::load_file(const std::string& path) {
+    if (path.rfind("res:/", 0) == 0 || path.rfind("res://", 0) == 0 ||
+        path.rfind("user:/", 0) == 0 || path.rfind("user://", 0) == 0) {
+        std::string godot_path = path;
+        if (godot_path.rfind("res:/", 0) == 0 && godot_path.rfind("res://", 0) != 0) {
+            godot_path = "res://" + godot_path.substr(5);
+        } else if (godot_path.rfind("user:/", 0) == 0 && godot_path.rfind("user://", 0) != 0) {
+            godot_path = "user://" + godot_path.substr(6);
+        }
+        Ref<FileAccess> f = FileAccess::open(String(godot_path.c_str()), FileAccess::ModeFlags::READ);
+        if (f.is_null()) return {};
+        const String text = f->get_as_text();
+        return text.utf8().get_data();
+    }
     std::ifstream f(path);
     if (!f.is_open()) return {};
     std::ostringstream ss;
@@ -255,7 +270,11 @@ void ForgeRunnerNativeMain::show_sml(const std::string& path) {
 
     // Splash: schedule next load
     if (win_cfg.is_splash && !win_cfg.splash_load_on_ready.empty()) {
-        splash_next_path_ = base_dir + "/" + win_cfg.splash_load_on_ready;
+        splash_next_path_ = base_dir;
+        if (!splash_next_path_.empty() && splash_next_path_.back() != '/') {
+            splash_next_path_ += "/";
+        }
+        splash_next_path_ += win_cfg.splash_load_on_ready;
 
         if (splash_timer_) {
             splash_timer_->stop();
@@ -329,10 +348,17 @@ void ForgeRunnerNativeMain::on_splash_timeout() {
 // ---------------------------------------------------------------------------
 
 void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::string& root_name, const std::string& root_id) {
-    // Companion script: same base path with .sms extension
-    fs::path script = fs::path(sml_path);
-    script.replace_extension(".sms");
-    if (!fs::exists(script)) return;
+    std::string script_path = sml_path;
+    const std::size_t last_slash = script_path.find_last_of("/\\");
+    const std::size_t last_dot = script_path.find_last_of('.');
+    if (last_dot != std::string::npos && (last_slash == std::string::npos || last_dot > last_slash)) {
+        script_path = script_path.substr(0, last_dot) + ".sms";
+    } else {
+        script_path += ".sms";
+    }
+
+    const std::string script_source = load_file(script_path);
+    if (script_source.empty()) return;
 
     // Resolve repo root via FORGE_RUNNER_APPRES_ROOT (set by run.sh to
     // <repo>/ForgeRunner.Native), so parent_path() gives us <repo>.
@@ -349,7 +375,7 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
 
     if (!sms_bridge_.load(repo_root)) return;
 
-    sms_session_ = sms_bridge_.start_session(script.string());
+    sms_session_ = sms_bridge_.start_session_from_source(script_source, script_path);
     if (sms_session_ < 0) return;
 
     popup_item_id_map_.clear();
@@ -451,7 +477,7 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
     if (!root_id.empty() && root_id != root_lower) {
         sms_bridge_.dispatch_event(sms_session_, root_id, "ready");
     }
-    UtilityFunctions::print(String(("[ForgeRunner.Native] SMS session started: " + script.string()).c_str()));
+    UtilityFunctions::print(String(("[ForgeRunner.Native] SMS session started: " + script_path).c_str()));
 }
 
 void ForgeRunnerNativeMain::stop_sms() {

@@ -1,0 +1,7 @@
+on mainWindow.ready() {
+    log.info("mac_demo ready")
+}
+
+on btnQuit.clicked() {
+    os.quit()
+}

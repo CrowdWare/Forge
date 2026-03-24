@@ -1,0 +1,3 @@
+Strings {
+    windowTitle: "Mac Demo"
+}

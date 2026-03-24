@@ -23,25 +23,48 @@ if(NOT EXISTS "${GODOT_CPP_INCLUDE_DIR}/godot_cpp/godot.hpp")
     message(FATAL_ERROR "godot-cpp headers not found in GODOT_CPP_DIR='${GODOT_CPP_DIR}'.")
 endif()
 
-if(WIN32)
-    file(GLOB GODOT_CPP_LIB_CANDIDATES "${GODOT_CPP_DIR}/bin/libgodot-cpp*.lib")
+if(ANDROID)
+    if(ANDROID_ABI STREQUAL "arm64-v8a")
+        set(FRN_GODOT_CPP_ARCH_SUFFIX "arm64")
+    elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+        set(FRN_GODOT_CPP_ARCH_SUFFIX "arm32")
+    elseif(ANDROID_ABI STREQUAL "x86_64")
+        set(FRN_GODOT_CPP_ARCH_SUFFIX "x86_64")
+    else()
+        message(FATAL_ERROR "Unsupported ANDROID_ABI='${ANDROID_ABI}' for godot-cpp selection.")
+    endif()
+    file(GLOB GODOT_CPP_LIB_CANDIDATES
+        "${GODOT_CPP_DIR}/bin/libgodot-cpp.android.*.${FRN_GODOT_CPP_ARCH_SUFFIX}.a")
+elseif(APPLE)
+    file(GLOB GODOT_CPP_LIB_CANDIDATES
+        "${GODOT_CPP_DIR}/bin/libgodot-cpp.macos.*.a")
+elseif(WIN32)
+    file(GLOB GODOT_CPP_LIB_CANDIDATES
+        "${GODOT_CPP_DIR}/bin/libgodot-cpp.windows.*.lib")
 else()
-    file(GLOB GODOT_CPP_LIB_CANDIDATES "${GODOT_CPP_DIR}/bin/libgodot-cpp*.a")
+    file(GLOB GODOT_CPP_LIB_CANDIDATES
+        "${GODOT_CPP_DIR}/bin/libgodot-cpp.linux.*.a")
 endif()
 
 list(LENGTH GODOT_CPP_LIB_CANDIDATES GODOT_CPP_LIB_COUNT)
 if(GODOT_CPP_LIB_COUNT EQUAL 0)
-    message(FATAL_ERROR "No godot-cpp library found in ${GODOT_CPP_DIR}/bin")
+    message(FATAL_ERROR "No matching godot-cpp library found in ${GODOT_CPP_DIR}/bin")
 endif()
+list(SORT GODOT_CPP_LIB_CANDIDATES)
 list(GET GODOT_CPP_LIB_CANDIDATES 0 GODOT_CPP_LIB)
+message(STATUS "Using godot-cpp library: ${GODOT_CPP_LIB}")
 
 # ---------------------------------------------------------------------------
 # SMLCore.Native (parser — compiled directly into the extension)
 # ---------------------------------------------------------------------------
 set(SMLCORE_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMLCore.Native")
+set(SMSCORE_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMSCore.Native")
 
 if(NOT EXISTS "${SMLCORE_NATIVE_DIR}/include/sml_document.h")
     message(FATAL_ERROR "SMLCore.Native not found at '${SMLCORE_NATIVE_DIR}'.")
+endif()
+if(NOT EXISTS "${SMSCORE_NATIVE_DIR}/include/sms_native.h")
+    message(FATAL_ERROR "SMSCore.Native not found at '${SMSCORE_NATIVE_DIR}'.")
 endif()
 
 # ---------------------------------------------------------------------------
@@ -59,11 +82,18 @@ add_library(forge_runner_native SHARED
     "${SMLCORE_NATIVE_DIR}/src/smlcore_native.cpp"
 )
 
+if(ANDROID)
+    target_sources(forge_runner_native PRIVATE
+        "${SMSCORE_NATIVE_DIR}/src/sms_native.cpp"
+    )
+endif()
+
 target_include_directories(forge_runner_native PRIVATE
     "${GODOT_CPP_INCLUDE_DIR}"
     "${GODOT_CPP_GEN_DIR}/include"
     "${GODOT_CPP_BINDING_DIR}"
     "${SMLCORE_NATIVE_DIR}/include"
+    "${SMSCORE_NATIVE_DIR}/include"
     "src"
 )
 
@@ -134,7 +164,7 @@ if(BUILD_TESTING)
     # Reproduces stack overflow scenarios (e.g. setKeyframe cycle in ForgePoser).
     # No Godot dependency — links sms_native sources directly.
     # ---------------------------------------------------------------------------
-    set(SMS_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMSCore.Native")
+    set(SMS_NATIVE_DIR "${SMSCORE_NATIVE_DIR}")
 
     if(EXISTS "${SMS_NATIVE_DIR}/src/sms_native.cpp")
         add_executable(forge_runner_native_sms_integration_tests

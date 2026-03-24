@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 
+#include "cmd_build.h"
 #include "sandbox_policy.h"
 
 #if defined(_WIN32)
@@ -307,6 +308,8 @@ static void help() {
     std::cout << "Usage:\n";
     std::cout << "  forgecli-native new <name> [--output <dir>] [--force]\n";
     std::cout << "  forgecli-native validate [--project <dir>]\n";
+    std::cout << "  forgecli-native build mac     --project <dir> [--output <path>] [--godot-version <ver>]\n";
+    std::cout << "  forgecli-native build android --project <dir> [--output <path>] [--godot-version <ver>]\n";
 }
 
 int main(int argc, char** argv) {
@@ -320,6 +323,7 @@ int main(int argc, char** argv) {
 
     if (cmd == "new") return cmd_new(args);
     if (cmd == "validate") return cmd_validate(args);
+    if (cmd == "build") return cmd_build(args);
     if (cmd == "help" || cmd == "--help" || cmd == "-h") {
         help();
         return 0;

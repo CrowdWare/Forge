@@ -27,6 +27,7 @@
 #include "forge_sms_error_policy.h"
 #include "forge_json_string.h"
 #include "forge_path_resolver.h"
+#include "sms_native.h"
 
 #include <algorithm>
 #include <cctype>
@@ -531,11 +532,29 @@ static int sms_ui_invoke(
     const std::string args  = args_json ? args_json : "[]";
 
     if (id == "__log__") {
-        const std::string msg = first_string_arg(args);
-        if (mname == "success") {
-            UtilityFunctions::print(String(("\x1b[32m" + msg + "\x1b[0m").c_str()));
+        std::string msg = first_string_arg(args);
+        if (msg.empty()) {
+            bool parsed_ok = false;
+            const Variant parsed = parse_json_variant(args, &parsed_ok);
+            if (parsed_ok && parsed.get_type() == Variant::ARRAY) {
+                const Array arr = static_cast<Array>(parsed);
+                if (!arr.is_empty()) {
+                    msg = variant_to_json(arr[0]);
+                }
+            }
+            if (msg.empty()) {
+                msg = args;
+            }
+        }
+
+        const std::string level = mname.empty() ? "info" : mname;
+        const std::string line = "[SMS][" + level + "] " + msg;
+        if (mname == "error") {
+            UtilityFunctions::printerr(String(line.c_str()));
+        } else if (mname == "warn" || mname == "warning") {
+            UtilityFunctions::push_warning(String(line.c_str()));
         } else {
-            UtilityFunctions::print(String(msg.c_str()));
+            UtilityFunctions::print(String(line.c_str()));
         }
         write_out(out_json, out_cap, "null");
         return 0;
@@ -957,6 +976,42 @@ bool SmsBridge::load(const std::string& repo_root) {
     const fs::path lib_path = lib_dir / ("libsms_native" + lib_extension());
 
     lib_handle_ = platform_load_lib(lib_path);
+#if defined(__ANDROID__)
+    if (!lib_handle_) {
+        // In packaged Android builds, try direct soname first.
+        lib_handle_ = platform_load_lib("libsms_native.so");
+    }
+    if (!lib_handle_) {
+        // Final fallback for Android: SMS runtime is linked into forge_runner_native.
+        create_fn_    = &sms_native_session_create;
+        load_fn_      = &sms_native_session_load;
+        invoke_fn_    = &sms_native_session_invoke;
+        dispose_fn_   = &sms_native_session_dispose;
+        set_ui_cb_fn_ = &sms_native_set_ui_callbacks;
+        set_ui_string_cb_fn_ = &sms_native_set_ui_string_callbacks;
+
+        char err[512] = {};
+        set_ui_cb_fn_(&sms_ui_get, &sms_ui_set, &sms_ui_invoke, err, static_cast<int>(sizeof(err)));
+        if (err[0] != '\0') {
+            UtilityFunctions::push_warning(String((
+                "[ForgeRunner.Native] SMS set_ui_callbacks warning: " + std::string(err)).c_str()));
+        }
+        if (set_ui_string_cb_fn_ != nullptr) {
+            char string_err[512] = {};
+            set_ui_string_cb_fn_(&sms_ui_get_string, &sms_ui_set_string,
+                                 string_err, static_cast<int>(sizeof(string_err)));
+            if (string_err[0] != '\0') {
+                UtilityFunctions::push_warning(String((
+                    "[ForgeRunner.Native] SMS set_ui_string_callbacks warning: "
+                    + std::string(string_err)).c_str()));
+            }
+        }
+
+        loaded_ = true;
+        UtilityFunctions::print("[ForgeRunner.Native] SMS runtime linked into forge_runner_native.");
+        return true;
+    }
+#endif
     if (!lib_handle_) {
         UtilityFunctions::push_warning(String((
             "[ForgeRunner.Native] SMS library not found at " + lib_path.string() +
@@ -1026,6 +1081,12 @@ std::int64_t SmsBridge::start_session(const std::string& script_path) {
     ss << f.rdbuf();
     const std::string source = ss.str();
 
+    return start_session_from_source(source, script_path);
+}
+
+std::int64_t SmsBridge::start_session_from_source(const std::string& source, const std::string& source_label) {
+    if (!loaded_) return -1;
+
     std::int64_t session = -1;
     char err[512] = {};
     if (create_fn_(&session, err, static_cast<int>(sizeof(err))) != 0 || session < 0) {
@@ -1034,8 +1095,11 @@ std::int64_t SmsBridge::start_session(const std::string& script_path) {
         return -1;
     }
     if (load_fn_(session, source.c_str(), err, static_cast<int>(sizeof(err))) != 0) {
-        UtilityFunctions::push_warning(String((
-            "[ForgeRunner.Native] SMS session load failed: " + std::string(err)).c_str()));
+        std::string prefix = "[ForgeRunner.Native] SMS session load failed";
+        if (!source_label.empty()) {
+            prefix += " for '" + source_label + "'";
+        }
+        UtilityFunctions::push_warning(String(((prefix + ": " + std::string(err))).c_str()));
         dispose_fn_(session, nullptr, 0);
         return -1;
     }

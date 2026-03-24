@@ -1,0 +1,12 @@
+var tapCount = 0
+
+on mainWindow.ready() {
+    log.info("android_demo ready")
+}
+
+on btnTest.clicked() {
+    tapCount = tapCount + 1
+    var btn = ui.getObject("btnTest")
+    btn.text = "Tapped " + tapCount + " times"
+    log.info("button clicked")
+}

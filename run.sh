@@ -137,15 +137,280 @@ Usage:
   ./run.sh build              Build native stack (default)
   ./run.sh build-native       Same as build
   ./run.sh build-host         Build ForgeRunner.Native only
+  ./run.sh build-mac [forgecli-build-args]
+                             Build macOS app zip via ForgeCli.Native (wraps 'forgecli-native build mac')
+  ./run.sh build-android [forgecli-build-args]
+                             Build Android apk via ForgeCli.Native (wraps 'forgecli-native build android')
   ./run.sh test               Run native tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)
   ./run.sh clean              Remove native build/dist folders
 
 Environment:
   FORGE_RUNNER_NATIVE_BIN     Optional explicit native runner executable path
+  FORGE_NATIVE_ANDROID_LIB_DIR Optional dir with Android ForgeRunner .so libs (used by build-android)
+  ANDROID_SDK_ROOT / ANDROID_HOME Optional Android SDK root (used for NDK + godot-cpp Android build)
+  ANDROID_NDK_ROOT            Optional explicit Android NDK path for Android native build
+  FORGE_ANDROID_RELEASE_KEYSTORE Optional path to Android release keystore for Godot signing
+  FORGE_ANDROID_RELEASE_USER      Optional keystore alias/user for Godot signing
+  FORGE_ANDROID_RELEASE_PASSWORD  Optional keystore password for Godot signing
   GODOT_CPP_DIR               Required for build-host/build
   ./.godot_cpp_dir            Optional file with one line: absolute GODOT_CPP_DIR
   FORGE_APP_SERVER_BASE_URL   Base URL for hosted app manifests (default: https://crowdware.github.io/Forge)
 USAGE
+}
+
+FORGE_RESOLVED_ANDROID_NATIVE_LIB_DIR=""
+
+run_forgecli_build_target() {
+  local target="$1"
+  shift || true
+
+  build_native_lib "SMLCore.Native" "$REPO_ROOT/SMLCore.Native" "$REPO_ROOT/SMLCore.Native/build" true
+  build_native_lib "SMSCore.Native" "$REPO_ROOT/SMSCore.Native" "$REPO_ROOT/SMSCore.Native/build" true
+  build_native_lib "ForgeCli.Native" "$REPO_ROOT/ForgeCli.Native" "$REPO_ROOT/ForgeCli.Native/build" false
+  build_forge_runner_native_host
+
+  local forgecli_bin="$REPO_ROOT/ForgeCli.Native/build/forgecli-native"
+  if [[ "$OS_NAME" != "Darwin" && "$OS_NAME" != "Linux" ]]; then
+    forgecli_bin="$REPO_ROOT/ForgeCli.Native/build/forgecli-native.exe"
+  fi
+  if [[ ! -x "$forgecli_bin" ]]; then
+    echo "ERROR: ForgeCli.Native executable not found: $forgecli_bin" >&2
+    return 1
+  fi
+
+  local native_lib_dir="$REPO_ROOT/ForgeRunner.Native/build"
+  if [[ "$target" == "android" ]]; then
+    if ! resolve_android_native_lib_dir; then
+      return 1
+    fi
+    native_lib_dir="$FORGE_RESOLVED_ANDROID_NATIVE_LIB_DIR"
+  fi
+
+  local default_project="$REPO_ROOT/samples/${target}_demo"
+  echo "Running forgecli build ${target}..."
+  SML_NATIVE_LIB_DIR="$REPO_ROOT/SMLCore.Native/build" \
+  SMS_NATIVE_LIB_DIR="$REPO_ROOT/SMSCore.Native/build" \
+  FORGE_HOST_PROJECT_DIR="$REPO_ROOT/ForgeRunner.Native/host" \
+  FORGE_NATIVE_LIB_DIR="$native_lib_dir" \
+    "$forgecli_bin" build "$target" --project "$default_project" "$@"
+}
+
+resolve_android_native_lib_dir() {
+  has_android_lib_token() {
+    local dir="$1"
+    local token="$2"
+    [[ -d "$dir" ]] && find "$dir" -type f -name "*.so" -print | grep -i "$token" >/dev/null 2>&1
+  }
+
+  if [[ -n "${FORGE_NATIVE_ANDROID_LIB_DIR:-}" ]]; then
+    if has_android_lib_token "$FORGE_NATIVE_ANDROID_LIB_DIR" "forge_runner_native" && \
+       has_android_lib_token "$FORGE_NATIVE_ANDROID_LIB_DIR" "sms_native"; then
+      FORGE_RESOLVED_ANDROID_NATIVE_LIB_DIR="$FORGE_NATIVE_ANDROID_LIB_DIR"
+      return 0
+    fi
+    echo "ERROR: FORGE_NATIVE_ANDROID_LIB_DIR must contain both forge_runner_native and sms_native Android .so libs: $FORGE_NATIVE_ANDROID_LIB_DIR" >&2
+    return 1
+  fi
+
+  local candidates=(
+    "$REPO_ROOT/ForgeRunner.Native/build-android"
+    "$REPO_ROOT/ForgeRunner.Native/build/android"
+    "$REPO_ROOT/ForgeRunner.Native/android"
+    "$REPO_ROOT/ForgeRunner.Native/dist/android"
+    "$REPO_ROOT/ForgeRunner.Native/build"
+  )
+
+  local candidate=""
+  for candidate in "${candidates[@]}"; do
+    if has_android_lib_token "$candidate" "forge_runner_native" && \
+       has_android_lib_token "$candidate" "sms_native"; then
+      FORGE_RESOLVED_ANDROID_NATIVE_LIB_DIR="$candidate"
+      return 0
+    fi
+  done
+
+  echo "No prebuilt Android ForgeRunner libs found. Building now..." >&2
+  if build_forge_runner_native_android; then
+    for candidate in "${candidates[@]}"; do
+      if has_android_lib_token "$candidate" "forge_runner_native" && \
+         has_android_lib_token "$candidate" "sms_native"; then
+        FORGE_RESOLVED_ANDROID_NATIVE_LIB_DIR="$candidate"
+        return 0
+      fi
+    done
+  fi
+
+  echo "ERROR: No Android ForgeRunner native libraries found (*.so)." >&2
+  echo "Set FORGE_NATIVE_ANDROID_LIB_DIR to a directory containing forge_runner_native Android libs." >&2
+  echo "Example:" >&2
+  echo "  FORGE_NATIVE_ANDROID_LIB_DIR=/abs/path/to/android/libs ./run.sh build-android" >&2
+  return 1
+}
+
+resolve_android_ndk_root() {
+  local required_ndk_version="28.1.13356709"
+
+  if [[ -n "${ANDROID_NDK_ROOT:-}" && -d "$ANDROID_NDK_ROOT" ]]; then
+    echo "$ANDROID_NDK_ROOT"
+    return 0
+  fi
+
+  local sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+  if [[ -n "$sdk_root" && -d "$sdk_root/ndk/${required_ndk_version}" ]]; then
+    echo "$sdk_root/ndk/${required_ndk_version}"
+    return 0
+  fi
+  if [[ -n "$sdk_root" && -d "$sdk_root/ndk" ]]; then
+    local ndk_dir=""
+    ndk_dir="$(find "$sdk_root/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+    if [[ -n "$ndk_dir" ]]; then
+      echo "$ndk_dir"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+resolve_android_sdk_root() {
+  if [[ -n "${ANDROID_SDK_ROOT:-}" && -d "$ANDROID_SDK_ROOT" ]]; then
+    echo "$ANDROID_SDK_ROOT"
+    return 0
+  fi
+  if [[ -n "${ANDROID_HOME:-}" && -d "$ANDROID_HOME" ]]; then
+    echo "$ANDROID_HOME"
+    return 0
+  fi
+  return 1
+}
+
+resolve_android_ndk_version() {
+  local ndk_root="$1"
+  basename "$ndk_root"
+}
+
+godot_cpp_has_android_lib() {
+  local abi_key="$1"
+  local bin_dir="${GODOT_CPP_DIR}/bin"
+  if [[ ! -d "$bin_dir" ]]; then
+    return 1
+  fi
+  find "$bin_dir" -maxdepth 1 -type f -name "*android*.${abi_key}.a" -print -quit | grep -q .
+}
+
+build_godot_cpp_android_libs() {
+  local ndk_root="$1"
+
+  if ! command -v scons >/dev/null 2>&1; then
+    echo "ERROR: scons not found. Install scons to build godot-cpp Android libs." >&2
+    return 1
+  fi
+
+  local sdk_root=""
+  if ! sdk_root="$(resolve_android_sdk_root)"; then
+    echo "ERROR: Android SDK not found. Set ANDROID_SDK_ROOT or ANDROID_HOME." >&2
+    return 1
+  fi
+
+  local ndk_version=""
+  ndk_version="$(resolve_android_ndk_version "$ndk_root")"
+  if [[ -z "$ndk_version" ]]; then
+    echo "ERROR: Failed to resolve NDK version from path: $ndk_root" >&2
+    return 1
+  fi
+
+  echo "Building godot-cpp Android libs with SDK=$sdk_root, NDK=$ndk_version..."
+  (
+    cd "$GODOT_CPP_DIR"
+    ANDROID_HOME="$sdk_root" scons platform=android target=template_release arch=arm64 api_version=4.6 ndk_version="$ndk_version"
+    ANDROID_HOME="$sdk_root" scons platform=android target=template_release arch=arm32 api_version=4.6 ndk_version="$ndk_version"
+  )
+}
+
+build_forge_runner_native_android() {
+  if [[ -z "${GODOT_CPP_DIR:-}" || ! -d "$GODOT_CPP_DIR" ]]; then
+    echo "ERROR: GODOT_CPP_DIR is required for Android native build." >&2
+    echo "       Example: export GODOT_CPP_DIR=/Users/art/SourceCode/godot-cpp" >&2
+    return 1
+  fi
+
+  local ndk_root=""
+  if ! ndk_root="$(resolve_android_ndk_root)"; then
+    echo "ERROR: Android NDK not found. Required version: 28.1.13356709" >&2
+    echo "Set ANDROID_NDK_ROOT or ANDROID_SDK_ROOT/ANDROID_HOME." >&2
+    return 1
+  fi
+
+  local missing=()
+  if ! godot_cpp_has_android_lib "arm64"; then
+    missing+=("arm64")
+  fi
+  if ! godot_cpp_has_android_lib "arm32"; then
+    missing+=("arm32")
+  fi
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "Missing godot-cpp Android static libs for: ${missing[*]} (trying auto-build)..." >&2
+    if ! build_godot_cpp_android_libs "$ndk_root"; then
+      echo "ERROR: Failed to build missing godot-cpp Android static libs." >&2
+      return 1
+    fi
+    missing=()
+    if ! godot_cpp_has_android_lib "arm64"; then
+      missing+=("arm64")
+    fi
+    if ! godot_cpp_has_android_lib "arm32"; then
+      missing+=("arm32")
+    fi
+    if [[ ${#missing[@]} -gt 0 ]]; then
+      echo "ERROR: godot-cpp Android static libs still missing after auto-build: ${missing[*]}" >&2
+      return 1
+    fi
+  fi
+
+  local frn_dir="$REPO_ROOT/ForgeRunner.Native"
+  local sms_dir="$REPO_ROOT/SMSCore.Native"
+  local toolchain_file="$ndk_root/build/cmake/android.toolchain.cmake"
+  if [[ ! -f "$toolchain_file" ]]; then
+    echo "ERROR: Android toolchain file not found: $toolchain_file" >&2
+    return 1
+  fi
+
+  local abi=""
+  local build_dir=""
+  for abi in arm64-v8a armeabi-v7a; do
+    build_dir="$frn_dir/build-android/$abi"
+    mkdir -p "$build_dir"
+    echo "Configuring ForgeRunner.Native Android ($abi)..."
+    cmake -S "$frn_dir" -B "$build_dir" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTING=OFF \
+      -DGODOT_CPP_DIR="$GODOT_CPP_DIR" \
+      -DCMAKE_TOOLCHAIN_FILE="$toolchain_file" \
+      -DANDROID_ABI="$abi" \
+      -DANDROID_PLATFORM=android-24
+    echo "Building ForgeRunner.Native Android ($abi)..."
+    cmake --build "$build_dir" --config Release --target forge_runner_native
+
+    local sms_build_dir="$sms_dir/build-android/$abi"
+    mkdir -p "$sms_build_dir"
+    echo "Configuring SMSCore.Native Android ($abi)..."
+    cmake -S "$sms_dir" -B "$sms_build_dir" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTING=OFF \
+      -DCMAKE_TOOLCHAIN_FILE="$toolchain_file" \
+      -DANDROID_ABI="$abi" \
+      -DANDROID_PLATFORM=android-24
+    echo "Building SMSCore.Native Android ($abi)..."
+    cmake --build "$sms_build_dir" --config Release --target sms_native
+
+    if [[ -f "$sms_build_dir/libsms_native.so" ]]; then
+      cp "$sms_build_dir/libsms_native.so" "$build_dir/libsms_native.so"
+    else
+      echo "ERROR: SMSCore.Native Android artifact not found: $sms_build_dir/libsms_native.so" >&2
+      return 1
+    fi
+  done
+
+  return 0
 }
 
 resolve_native_runner_bin() {
@@ -310,11 +575,13 @@ if [[ -z "$MODE" ]]; then
   echo "  7) docs            -> SML/SMS Docs generieren (headless Godot)"
   echo "  8) build           -> Native Stack bauen (SMLCore.Native, SMSCore.Native, ForgeCli.Native, ForgeRunner.Native)"
   echo "  9) build-host      -> nur ForgeRunner.Native bauen"
-  echo " 10) test            -> Native Tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)"
-  echo " 11) clean           -> Native Build-Artefakte entfernen"
-  echo " 12) pub             -> Lokaler Publish-Override (run.local.sh)"
-  echo " 13) help            -> Hilfe anzeigen"
-  read -r -p "Auswahl [1-13] (Default 1): " CHOICE || true
+  echo " 10) build-mac       -> forgecli build mac (inkl. prerequisites)"
+  echo " 11) build-android   -> forgecli build android (inkl. prerequisites)"
+  echo " 12) test            -> Native Tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)"
+  echo " 13) clean           -> Native Build-Artefakte entfernen"
+  echo " 14) pub             -> Lokaler Publish-Override (run.local.sh)"
+  echo " 15) help            -> Hilfe anzeigen"
+  read -r -p "Auswahl [1-15] (Default 1): " CHOICE || true
   CHOICE="$(printf '%s' "${CHOICE:-}" | tr -d '[:space:]')"
   if [[ -z "$CHOICE" ]]; then
     CHOICE="1"
@@ -330,10 +597,12 @@ if [[ -z "$MODE" ]]; then
     7|docs) MODE="docs" ;;
     8|build|build-native) MODE="build" ;;
     9|build-host|build-native-host) MODE="build-host" ;;
-   10|test|test-native) MODE="test" ;;
-   11|clean) MODE="clean" ;;
-   12|pub) MODE="pub" ;;
-   13|help|-h|--help) MODE="help" ;;
+   10|build-mac) MODE="build-mac" ;;
+   11|build-android) MODE="build-android" ;;
+   12|test|test-native) MODE="test" ;;
+   13|clean) MODE="clean" ;;
+   14|pub) MODE="pub" ;;
+   15|help|-h|--help) MODE="help" ;;
     *)
       echo "Ungültige Auswahl. Abbruch."
       exit 1
@@ -426,6 +695,12 @@ case "$MODE" in
     ;;
   build-host|build-native-host)
     build_forge_runner_native_host
+    ;;
+  build-mac)
+    run_forgecli_build_target "mac" "$@"
+    ;;
+  build-android)
+    run_forgecli_build_target "android" "$@"
     ;;
   test|test-native)
     if [[ ! -f "$REPO_ROOT/SMLCore.Native/build/CTestTestfile.cmake" ]]; then

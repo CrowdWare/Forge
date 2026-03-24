@@ -8,6 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(forgecli-native
     src/main.cpp
     src/sandbox_policy.cpp
+    src/cmd_build.cpp
+    src/godot_sdk.cpp
 )
 
 target_include_directories(forgecli-native PRIVATE

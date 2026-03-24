@@ -63,6 +63,7 @@ public:
     /// Create + load a session for the SMS script at @p script_path.
     /// Returns the session id, or -1 on failure.
     std::int64_t start_session(const std::string& script_path);
+    std::int64_t start_session_from_source(const std::string& source, const std::string& source_label = "");
 
     /// Invoke an event on an object inside an active session.
     void dispatch_event(std::int64_t session,

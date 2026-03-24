@@ -89,6 +89,7 @@ Desktop.ini
 *.old
 *.swp
 *.swo
+/tmp/forge-build-*/
 
 # =========================================================
 # Appliaction
