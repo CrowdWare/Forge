@@ -81,6 +81,15 @@ public:
     static IdMap& id_map();
 
 private:
+    struct SessionMeta {
+        bool is_local_source = true;
+        bool has_event_handlers = false;
+        bool aot_attempted = false;
+        bool aot_succeeded = false;
+        bool aot_failed = false;
+        std::string source;
+    };
+
     bool  loaded_     = false;
     void* lib_handle_ = nullptr;
 
@@ -88,6 +97,8 @@ private:
     using LoadFn    = int (*)(std::int64_t, const char*, char*, int);
     using InvokeFn  = int (*)(std::int64_t, const char*, const char*, const char*,
                                std::int64_t*, char*, int);
+    using AotInvokeFn = int (*)(const char*, const char*, const char*, const char*,
+                                 std::int64_t*, char*, int);
     using DisposeFn = int (*)(std::int64_t, char*, int);
     using SetUiCbFn = int (*)(
         int (*)(const char*, const char*, char*, int, char*, int),
@@ -102,9 +113,11 @@ private:
     CreateFn  create_fn_    = nullptr;
     LoadFn    load_fn_      = nullptr;
     InvokeFn  invoke_fn_    = nullptr;
+    AotInvokeFn aot_invoke_fn_ = nullptr;
     DisposeFn dispose_fn_   = nullptr;
     SetUiCbFn set_ui_cb_fn_ = nullptr;
     SetUiStringCbFn set_ui_string_cb_fn_ = nullptr;
+    std::unordered_map<std::int64_t, SessionMeta> session_meta_;
 };
 
 } // namespace forge

@@ -26,15 +26,20 @@
 #include "sms_native.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -42,7 +47,18 @@
 #include <utility>
 #include <vector>
 
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
+#if !defined(_WIN32)
+#include <sys/wait.h>
+#endif
+
 namespace {
+namespace fs = std::filesystem;
 
 struct SmsSessionRuntime;
 
@@ -65,6 +81,7 @@ constexpr int kBridgeJsonBufferSize = 65536;
 constexpr int kBridgeStringBufferSize = 262144;
 constexpr std::size_t kMaxInterpreterCallDepth = 1024;
 constexpr int kMaxSessionInvokeDepth = 3;
+std::mutex g_aot_mutex;
 
 bool has_parent_traversal_segment(const std::string& path) {
     std::size_t start = 0;
@@ -170,6 +187,7 @@ enum class TokenType {
     Semicolon,
     Assign,
     Plus,
+    Dollar,
     Increment,
     Minus,
     Decrement,
@@ -253,6 +271,9 @@ public:
                     } else {
                         out.push_back({TokenType::Plus, "+"});
                     }
+                    break;
+                case '$':
+                    out.push_back({TokenType::Dollar, "$"});
                     break;
                 case '-':
                     if (!is_at_end() && peek() == '>') {
@@ -1001,6 +1022,30 @@ struct StringExpr final : Expr {
     std::string value;
 };
 
+struct InterpolatedStringExpr final : Expr {
+    struct Part {
+        std::string literal;
+        std::unique_ptr<Expr> expr;
+    };
+
+    explicit InterpolatedStringExpr(std::vector<Part> parts)
+        : parts_(std::move(parts)) {}
+
+    Value eval(Env& env) const override {
+        std::string out;
+        for (const auto& part : parts_) {
+            if (part.expr) {
+                out += value_to_string(part.expr->eval(env));
+            } else {
+                out += part.literal;
+            }
+        }
+        return Value::String(std::move(out));
+    }
+
+    std::vector<Part> parts_;
+};
+
 struct BoolExpr final : Expr {
     explicit BoolExpr(bool v) : value(v) {}
     Value eval(Env&) const override { return Value::Bool(value); }
@@ -1471,6 +1516,8 @@ struct BinaryExpr final : Expr {
                     return Value::String(value_to_string(left_value) + value_to_string(right_value));
                 }
                 return Value::Int(left_value.as_int("Binary expression") + right_value.as_int("Binary expression"));
+            case TokenType::Dollar:
+                return Value::String(value_to_string(left_value) + value_to_string(right_value));
             case TokenType::Minus:
                 return Value::Int(left_value.as_int("Binary expression") - right_value.as_int("Binary expression"));
             case TokenType::Star:
@@ -2444,6 +2491,11 @@ private:
                 expr = std::make_unique<BinaryExpr>(TokenType::Plus, std::move(expr), std::move(rhs));
                 continue;
             }
+            if (match(TokenType::Dollar)) {
+                auto rhs = parse_factor();
+                expr = std::make_unique<BinaryExpr>(TokenType::Dollar, std::move(expr), std::move(rhs));
+                continue;
+            }
             if (match(TokenType::Minus)) {
                 auto rhs = parse_factor();
                 expr = std::make_unique<BinaryExpr>(TokenType::Minus, std::move(expr), std::move(rhs));
@@ -2619,7 +2671,7 @@ private:
         }
 
         if (match(TokenType::String)) {
-            return std::make_unique<StringExpr>(previous().text);
+            return parse_string_literal_expr(previous().text);
         }
 
         if (match(TokenType::True)) {
@@ -2693,6 +2745,114 @@ private:
         return std::make_unique<WhenExpr>(std::move(subject), std::move(branches));
     }
 
+    std::unique_ptr<Expr> parse_embedded_expression(const std::string& expr_source) {
+        Lexer embedded_lexer(expr_source);
+        auto embedded_tokens = embedded_lexer.tokenize();
+        Parser embedded_parser(std::move(embedded_tokens));
+        auto expr = embedded_parser.parse_expression();
+        if (!embedded_parser.check(TokenType::Eof)) {
+            throw std::runtime_error("String interpolation expression must end at '}'.");
+        }
+        return expr;
+    }
+
+    std::unique_ptr<Expr> parse_string_literal_expr(const std::string& text) {
+        if (text.find("${") == std::string::npos) {
+            return std::make_unique<StringExpr>(text);
+        }
+
+        std::vector<InterpolatedStringExpr::Part> parts;
+        std::size_t i = 0;
+        std::size_t literal_start = 0;
+        while (i < text.size()) {
+            if (i + 1 < text.size() && text[i] == '$' && text[i + 1] == '{') {
+                if (i > literal_start) {
+                    InterpolatedStringExpr::Part literal_part;
+                    literal_part.literal = text.substr(literal_start, i - literal_start);
+                    parts.push_back(std::move(literal_part));
+                }
+
+                i += 2; // skip ${
+                const std::size_t expr_start = i;
+                int brace_depth = 1;
+                bool in_string = false;
+                bool escaped = false;
+                while (i < text.size()) {
+                    const char ch = text[i];
+                    if (in_string) {
+                        if (escaped) {
+                            escaped = false;
+                        } else if (ch == '\\') {
+                            escaped = true;
+                        } else if (ch == '"') {
+                            in_string = false;
+                        }
+                        i++;
+                        continue;
+                    }
+
+                    if (ch == '"') {
+                        in_string = true;
+                        i++;
+                        continue;
+                    }
+                    if (ch == '{') {
+                        brace_depth++;
+                        i++;
+                        continue;
+                    }
+                    if (ch == '}') {
+                        brace_depth--;
+                        if (brace_depth == 0) {
+                            break;
+                        }
+                        i++;
+                        continue;
+                    }
+                    i++;
+                }
+
+                if (i >= text.size() || text[i] != '}') {
+                    throw std::runtime_error("Unterminated string interpolation '${...}'.");
+                }
+
+                auto expr_text = text.substr(expr_start, i - expr_start);
+                auto trim = [](const std::string& in) {
+                    std::size_t start = 0;
+                    while (start < in.size() && std::isspace(static_cast<unsigned char>(in[start])) != 0) {
+                        start++;
+                    }
+                    std::size_t end = in.size();
+                    while (end > start && std::isspace(static_cast<unsigned char>(in[end - 1])) != 0) {
+                        end--;
+                    }
+                    return in.substr(start, end - start);
+                };
+                expr_text = trim(expr_text);
+                if (expr_text.empty()) {
+                    throw std::runtime_error("Empty expression in string interpolation.");
+                }
+
+                InterpolatedStringExpr::Part expr_part;
+                expr_part.expr = parse_embedded_expression(expr_text);
+                parts.push_back(std::move(expr_part));
+
+                i++; // skip closing }
+                literal_start = i;
+                continue;
+            }
+            i++;
+        }
+
+        if (literal_start < text.size()) {
+            InterpolatedStringExpr::Part tail_literal;
+            tail_literal.literal = text.substr(literal_start);
+            parts.push_back(std::move(tail_literal));
+        }
+
+        return std::make_unique<InterpolatedStringExpr>(std::move(parts));
+    }
+
     bool match(TokenType type) {
         if (!check(type)) {
             return false;
@@ -2744,6 +2904,209 @@ void write_error(char* error, int capacity, const std::string& message) {
     const auto count = static_cast<int>(std::min<std::size_t>(message.size(), static_cast<std::size_t>(capacity - 1)));
     std::memcpy(error, message.data(), static_cast<std::size_t>(count));
     error[count] = '\0';
+}
+
+inline std::uint32_t rotr32(std::uint32_t x, std::uint32_t n) {
+    return (x >> n) | (x << (32u - n));
+}
+
+std::string sha256_hex(const std::string& text) {
+    static constexpr std::array<std::uint32_t, 64> k = {{
+        0x428a2f98u, 0x71374491u, 0xb5c0fbcfu, 0xe9b5dba5u, 0x3956c25bu, 0x59f111f1u, 0x923f82a4u, 0xab1c5ed5u,
+        0xd807aa98u, 0x12835b01u, 0x243185beu, 0x550c7dc3u, 0x72be5d74u, 0x80deb1feu, 0x9bdc06a7u, 0xc19bf174u,
+        0xe49b69c1u, 0xefbe4786u, 0x0fc19dc6u, 0x240ca1ccu, 0x2de92c6fu, 0x4a7484aau, 0x5cb0a9dcu, 0x76f988dau,
+        0x983e5152u, 0xa831c66du, 0xb00327c8u, 0xbf597fc7u, 0xc6e00bf3u, 0xd5a79147u, 0x06ca6351u, 0x14292967u,
+        0x27b70a85u, 0x2e1b2138u, 0x4d2c6dfcu, 0x53380d13u, 0x650a7354u, 0x766a0abbu, 0x81c2c92eu, 0x92722c85u,
+        0xa2bfe8a1u, 0xa81a664bu, 0xc24b8b70u, 0xc76c51a3u, 0xd192e819u, 0xd6990624u, 0xf40e3585u, 0x106aa070u,
+        0x19a4c116u, 0x1e376c08u, 0x2748774cu, 0x34b0bcb5u, 0x391c0cb3u, 0x4ed8aa4au, 0x5b9cca4fu, 0x682e6ff3u,
+        0x748f82eeu, 0x78a5636fu, 0x84c87814u, 0x8cc70208u, 0x90befffau, 0xa4506cebu, 0xbef9a3f7u, 0xc67178f2u
+    }};
+
+    std::array<std::uint32_t, 8> h = {{
+        0x6a09e667u, 0xbb67ae85u, 0x3c6ef372u, 0xa54ff53au,
+        0x510e527fu, 0x9b05688cu, 0x1f83d9abu, 0x5be0cd19u
+    }};
+
+    std::vector<std::uint8_t> msg(text.begin(), text.end());
+    const std::uint64_t bit_len = static_cast<std::uint64_t>(msg.size()) * 8ull;
+    msg.push_back(0x80u);
+    while ((msg.size() % 64u) != 56u) {
+        msg.push_back(0x00u);
+    }
+    for (int i = 7; i >= 0; --i) {
+        msg.push_back(static_cast<std::uint8_t>((bit_len >> (i * 8)) & 0xffu));
+    }
+
+    std::array<std::uint32_t, 64> w{};
+    for (std::size_t offset = 0; offset < msg.size(); offset += 64) {
+        for (int i = 0; i < 16; ++i) {
+            const std::size_t base = offset + static_cast<std::size_t>(i) * 4u;
+            w[static_cast<std::size_t>(i)] =
+                (static_cast<std::uint32_t>(msg[base]) << 24u) |
+                (static_cast<std::uint32_t>(msg[base + 1]) << 16u) |
+                (static_cast<std::uint32_t>(msg[base + 2]) << 8u) |
+                static_cast<std::uint32_t>(msg[base + 3]);
+        }
+        for (int i = 16; i < 64; ++i) {
+            const std::uint32_t s0 = rotr32(w[static_cast<std::size_t>(i - 15)], 7u) ^
+                                     rotr32(w[static_cast<std::size_t>(i - 15)], 18u) ^
+                                     (w[static_cast<std::size_t>(i - 15)] >> 3u);
+            const std::uint32_t s1 = rotr32(w[static_cast<std::size_t>(i - 2)], 17u) ^
+                                     rotr32(w[static_cast<std::size_t>(i - 2)], 19u) ^
+                                     (w[static_cast<std::size_t>(i - 2)] >> 10u);
+            w[static_cast<std::size_t>(i)] =
+                w[static_cast<std::size_t>(i - 16)] + s0 + w[static_cast<std::size_t>(i - 7)] + s1;
+        }
+
+        std::uint32_t a = h[0], b = h[1], c = h[2], d = h[3];
+        std::uint32_t e = h[4], f = h[5], g = h[6], hv = h[7];
+        for (int i = 0; i < 64; ++i) {
+            const std::uint32_t s1 = rotr32(e, 6u) ^ rotr32(e, 11u) ^ rotr32(e, 25u);
+            const std::uint32_t ch = (e & f) ^ ((~e) & g);
+            const std::uint32_t temp1 = hv + s1 + ch + k[static_cast<std::size_t>(i)] + w[static_cast<std::size_t>(i)];
+            const std::uint32_t s0 = rotr32(a, 2u) ^ rotr32(a, 13u) ^ rotr32(a, 22u);
+            const std::uint32_t maj = (a & b) ^ (a & c) ^ (b & c);
+            const std::uint32_t temp2 = s0 + maj;
+
+            hv = g;
+            g = f;
+            f = e;
+            e = d + temp1;
+            d = c;
+            c = b;
+            b = a;
+            a = temp1 + temp2;
+        }
+
+        h[0] += a; h[1] += b; h[2] += c; h[3] += d;
+        h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
+    }
+
+    std::ostringstream out;
+    out << std::hex << std::nouppercase;
+    for (std::uint32_t word : h) {
+        for (int shift = 24; shift >= 0; shift -= 8) {
+            const auto byte = static_cast<unsigned>((word >> shift) & 0xffu);
+            if (byte < 16u) {
+                out << '0';
+            }
+            out << byte;
+        }
+    }
+    return out.str();
+}
+
+std::string shell_quote_arg(const std::string& arg) {
+    std::string out = "\"";
+    for (char ch : arg) {
+        if (ch == '"' || ch == '\\') {
+            out.push_back('\\');
+        }
+        out.push_back(ch);
+    }
+    out.push_back('"');
+    return out;
+}
+
+std::string capture_command_output(const std::string& command, int* out_exit_code) {
+    if (out_exit_code != nullptr) {
+        *out_exit_code = -1;
+    }
+    std::string output;
+#if defined(_WIN32)
+    FILE* pipe = _popen(command.c_str(), "r");
+#else
+    FILE* pipe = popen(command.c_str(), "r");
+#endif
+    if (pipe == nullptr) {
+        return output;
+    }
+
+    char buffer[1024];
+    while (std::fgets(buffer, static_cast<int>(sizeof(buffer)), pipe) != nullptr) {
+        output += buffer;
+    }
+
+#if defined(_WIN32)
+    const int rc = _pclose(pipe);
+    if (out_exit_code != nullptr) {
+        *out_exit_code = rc;
+    }
+#else
+    const int rc = pclose(pipe);
+    if (out_exit_code != nullptr) {
+        if (WIFEXITED(rc)) {
+            *out_exit_code = WEXITSTATUS(rc);
+        } else {
+            *out_exit_code = rc;
+        }
+    }
+#endif
+    return output;
+}
+
+std::string resolve_sms_aot_cache_dir() {
+    const char* env_override = std::getenv("SMS_NATIVE_AOT_CACHE_DIR");
+    if (env_override != nullptr && env_override[0] != '\0') {
+        return std::string(env_override);
+    }
+#if defined(_WIN32)
+    const char* local_app_data = std::getenv("LOCALAPPDATA");
+    if (local_app_data != nullptr && local_app_data[0] != '\0') {
+        return (fs::path(local_app_data) / "forge-runner" / "sms_aot").string();
+    }
+#endif
+    const char* home = std::getenv("HOME");
+    if (home != nullptr && home[0] != '\0') {
+        return (fs::path(home) / ".cache" / "forge-runner" / "sms_aot").string();
+    }
+    return (fs::temp_directory_path() / "forge-runner" / "sms_aot").string();
+}
+
+std::string detect_clang_command() {
+    const char* env_clang = std::getenv("SMS_NATIVE_CLANG");
+    if (env_clang != nullptr && env_clang[0] != '\0') {
+        return std::string(env_clang);
+    }
+    return "clang";
+}
+
+std::string shared_lib_extension() {
+#if defined(_WIN32)
+    return ".dll";
+#elif defined(__APPLE__)
+    return ".dylib";
+#else
+    return ".so";
+#endif
+}
+
+void* load_shared_lib(const std::string& path) {
+#if defined(_WIN32)
+    return reinterpret_cast<void*>(LoadLibraryA(path.c_str()));
+#else
+    return dlopen(path.c_str(), RTLD_NOW);
+#endif
+}
+
+void* load_shared_symbol(void* handle, const char* name) {
+#if defined(_WIN32)
+    if (handle == nullptr) return nullptr;
+    return reinterpret_cast<void*>(GetProcAddress(reinterpret_cast<HMODULE>(handle), name));
+#else
+    return handle != nullptr ? dlsym(handle, name) : nullptr;
+#endif
+}
+
+void close_shared_lib(void* handle) {
+    if (handle == nullptr) {
+        return;
+    }
+#if defined(_WIN32)
+    FreeLibrary(reinterpret_cast<HMODULE>(handle));
+#else
+    dlclose(handle);
+#endif
 }
 
 std::int64_t count_sml_nodes(const char* source) {
@@ -2998,6 +3361,12 @@ static std::string codegen_program_cpp(const std::vector<std::unique_ptr<Stmt>>&
 // ── LLVM IR Code Generator (SMS → .ll, Phase 1) ──────────────────────────────
 
 struct LlvmCtx {
+    struct ProgramState {
+        int global_string_counter = 0;
+        std::vector<std::string> global_defs;
+    };
+
+    ProgramState* program = nullptr;
     int temp_cnt = 0;
     int label_cnt = 0;
     bool terminated = false;
@@ -3011,6 +3380,180 @@ static void llvm_i(LlvmCtx& c, const std::string& s) { c.code += "    " + s + "\
 static void llvm_l(LlvmCtx& c, const std::string& l) { c.code += l + ":\n"; c.terminated = false; }
 static void llvm_term(LlvmCtx& c, const std::string& s) {
     if (!c.terminated) { c.code += "    " + s + "\n"; c.terminated = true; }
+}
+
+struct LlvmGlobalStringRef {
+    std::string symbol;
+    std::size_t size = 0;
+};
+
+static std::string llvm_escape_c_string(const std::string& input) {
+    static const char* kHex = "0123456789ABCDEF";
+    std::string out;
+    out.reserve(input.size() + 8);
+    for (unsigned char ch : input) {
+        switch (ch) {
+            case '\\': out += "\\5C"; break;
+            case '"':  out += "\\22"; break;
+            case '\n': out += "\\0A"; break;
+            case '\r': out += "\\0D"; break;
+            case '\t': out += "\\09"; break;
+            default:
+                if (ch >= 32 && ch <= 126) {
+                    out.push_back(static_cast<char>(ch));
+                } else {
+                    out.push_back('\\');
+                    out.push_back(kHex[(ch >> 4) & 0x0F]);
+                    out.push_back(kHex[ch & 0x0F]);
+                }
+                break;
+        }
+    }
+    return out;
+}
+
+static std::string llvm_escape_printf_literal(const std::string& input) {
+    std::string out;
+    out.reserve(input.size() + 8);
+    for (char ch : input) {
+        if (ch == '%') {
+            out += "%%";
+        } else {
+            out.push_back(ch);
+        }
+    }
+    return out;
+}
+
+static LlvmGlobalStringRef llvm_add_global_c_string(LlvmCtx& c, const std::string& text) {
+    if (c.program == nullptr) {
+        throw std::runtime_error("llvm codegen: missing program context for global string");
+    }
+    LlvmGlobalStringRef ref;
+    ref.symbol = "@.str" + std::to_string(c.program->global_string_counter++);
+    ref.size = text.size() + 1;
+    const auto escaped = llvm_escape_c_string(text);
+    c.program->global_defs.push_back(
+        ref.symbol + " = private unnamed_addr constant ["
+        + std::to_string(ref.size) + " x i8] c\"" + escaped + "\\00\"");
+    return ref;
+}
+
+static void llvm_emit_printf(LlvmCtx& c, const std::string& format, const std::vector<std::string>& i64_args) {
+    const auto global = llvm_add_global_c_string(c, format);
+    const auto fmt_ptr = llvm_t(c);
+    llvm_i(c, fmt_ptr + " = getelementptr inbounds [" + std::to_string(global.size) + " x i8], ["
+        + std::to_string(global.size) + " x i8]* " + global.symbol + ", i64 0, i64 0");
+    std::string call = "call i32 (i8*, ...) @printf(i8* " + fmt_ptr;
+    for (const auto& arg : i64_args) {
+        call += ", i64 " + arg;
+    }
+    call += ")";
+    llvm_i(c, call);
+}
+
+static bool llvm_is_log_method(const std::string& method) {
+    return method == "info" || method == "success" || method == "warning"
+        || method == "warn" || method == "error" || method == "debug";
+}
+
+static bool llvm_expr_has_log_call(const Expr* e) {
+    if (e == nullptr) return false;
+    if (const auto* m = dynamic_cast<const MethodCallExpr*>(e)) {
+        const auto* receiver = dynamic_cast<const VarExpr*>(m->receiver_.get());
+        if (receiver != nullptr && receiver->name == "log" && llvm_is_log_method(m->method_)) {
+            return true;
+        }
+        for (const auto& arg : m->args_) {
+            if (llvm_expr_has_log_call(arg.value.get())) return true;
+        }
+        return llvm_expr_has_log_call(m->receiver_.get());
+    }
+    if (const auto* b = dynamic_cast<const BinaryExpr*>(e)) {
+        return llvm_expr_has_log_call(b->left_.get()) || llvm_expr_has_log_call(b->right_.get());
+    }
+    if (const auto* l = dynamic_cast<const LogicalExpr*>(e)) {
+        return llvm_expr_has_log_call(l->left_.get()) || llvm_expr_has_log_call(l->right_.get());
+    }
+    if (const auto* u = dynamic_cast<const UnaryExpr*>(e)) {
+        return llvm_expr_has_log_call(u->operand_.get());
+    }
+    if (const auto* p = dynamic_cast<const PostfixExpr*>(e)) {
+        return llvm_expr_has_log_call(p->operand_.get());
+    }
+    if (const auto* c = dynamic_cast<const CallExpr*>(e)) {
+        for (const auto& arg : c->args_) {
+            if (llvm_expr_has_log_call(arg.value.get())) return true;
+        }
+        return false;
+    }
+    if (const auto* a = dynamic_cast<const ArrayLiteralExpr*>(e)) {
+        for (const auto& item : a->elements_) {
+            if (llvm_expr_has_log_call(item.get())) return true;
+        }
+        return false;
+    }
+    if (const auto* a = dynamic_cast<const ArrayAccessExpr*>(e)) {
+        return llvm_expr_has_log_call(a->receiver_.get()) || llvm_expr_has_log_call(a->index_.get());
+    }
+    if (const auto* m = dynamic_cast<const MemberAccessExpr*>(e)) {
+        return llvm_expr_has_log_call(m->receiver_.get());
+    }
+    if (const auto* w = dynamic_cast<const WhenExpr*>(e)) {
+        if (llvm_expr_has_log_call(w->subject_.get())) return true;
+        for (const auto& branch : w->branches_) {
+            if (llvm_expr_has_log_call(branch.condition.get()) || llvm_expr_has_log_call(branch.result.get())) return true;
+        }
+    }
+    if (const auto* s = dynamic_cast<const InterpolatedStringExpr*>(e)) {
+        for (const auto& part : s->parts_) {
+            if (llvm_expr_has_log_call(part.expr.get())) return true;
+        }
+    }
+    return false;
+}
+
+static bool llvm_stmt_has_log_call(const Stmt* s) {
+    if (s == nullptr) return false;
+    if (const auto* v = dynamic_cast<const VarDeclStmt*>(s)) return llvm_expr_has_log_call(v->value.get());
+    if (const auto* a = dynamic_cast<const AssignStmt*>(s)) {
+        return llvm_expr_has_log_call(a->target_expr.get()) || llvm_expr_has_log_call(a->value_expr.get());
+    }
+    if (const auto* r = dynamic_cast<const ReturnStmt*>(s)) return llvm_expr_has_log_call(r->value.get());
+    if (const auto* e = dynamic_cast<const ExprStmt*>(s)) return llvm_expr_has_log_call(e->value.get());
+    if (const auto* w = dynamic_cast<const WhileStmt*>(s)) {
+        if (llvm_expr_has_log_call(w->condition.get())) return true;
+        for (const auto& stmt : w->body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        return false;
+    }
+    if (const auto* i = dynamic_cast<const IfStmt*>(s)) {
+        if (llvm_expr_has_log_call(i->condition.get())) return true;
+        for (const auto& stmt : i->then_body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        for (const auto& stmt : i->else_body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        return false;
+    }
+    if (const auto* f = dynamic_cast<const ForStmt*>(s)) {
+        if (llvm_stmt_has_log_call(f->init.get())) return true;
+        if (llvm_expr_has_log_call(f->condition.get())) return true;
+        if (llvm_stmt_has_log_call(f->update.get())) return true;
+        for (const auto& stmt : f->body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        return false;
+    }
+    if (const auto* fi = dynamic_cast<const ForInStmt*>(s)) {
+        if (llvm_expr_has_log_call(fi->iterable.get())) return true;
+        for (const auto& stmt : fi->body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        return false;
+    }
+    if (const auto* t = dynamic_cast<const TryCatchStmt*>(s)) {
+        for (const auto& stmt : t->try_body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        for (const auto& stmt : t->catch_body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        return false;
+    }
+    if (const auto* fn = dynamic_cast<const FunctionDeclStmt*>(s)) {
+        for (const auto& stmt : fn->body) if (llvm_stmt_has_log_call(stmt.get())) return true;
+        return false;
+    }
+    return false;
 }
 
 static std::string llvm_expr(LlvmCtx& c, const Expr* e);
@@ -3104,6 +3647,45 @@ static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
         const auto t = llvm_t(c);
         llvm_i(c, t + " = call i64 @sms_" + call->name + "(" + args_str + ")");
         return t;
+    }
+    if (const auto* m = dynamic_cast<const MethodCallExpr*>(e)) {
+        const auto* receiver = dynamic_cast<const VarExpr*>(m->receiver_.get());
+        if (receiver != nullptr && receiver->name == "log") {
+            if (!llvm_is_log_method(m->method_)) {
+                throw std::runtime_error("llvm codegen: unknown log method");
+            }
+            if (m->args_.size() != 1) {
+                throw std::runtime_error("llvm codegen: log methods expect exactly one argument");
+            }
+
+            const bool green = (m->method_ == "success");
+            const std::string color_prefix = green ? "\x1b[32m" : "";
+            const std::string color_suffix = green ? "\x1b[0m" : "";
+            const Expr* arg_expr = m->args_[0].value.get();
+            if (const auto* s = dynamic_cast<const StringExpr*>(arg_expr)) {
+                llvm_emit_printf(c, color_prefix + llvm_escape_printf_literal(s->value) + color_suffix + "\n", {});
+                return "0";
+            }
+            if (const auto* is = dynamic_cast<const InterpolatedStringExpr*>(arg_expr)) {
+                std::string format = color_prefix;
+                std::vector<std::string> values;
+                for (const auto& part : is->parts_) {
+                    if (part.expr) {
+                        format += "%lld";
+                        values.push_back(llvm_expr(c, part.expr.get()));
+                    } else {
+                        format += llvm_escape_printf_literal(part.literal);
+                    }
+                }
+                format += color_suffix + "\n";
+                llvm_emit_printf(c, format, values);
+                return "0";
+            }
+
+            const auto value = llvm_expr(c, arg_expr);
+            llvm_emit_printf(c, color_prefix + std::string("%lld") + color_suffix + "\n", {value});
+            return "0";
+        }
     }
     throw std::runtime_error("llvm codegen: unsupported expression type");
 }
@@ -3211,8 +3793,12 @@ static void llvm_stmt(LlvmCtx& c, const Stmt* s) {
 static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stmt>>& program) {
     std::vector<const FunctionDeclStmt*> fns;
     std::string entry_fn;
+    bool has_log_calls = false;
 
     for (const auto& stmt : program) {
+        if (llvm_stmt_has_log_call(stmt.get())) {
+            has_log_calls = true;
+        }
         if (const auto* fn = dynamic_cast<const FunctionDeclStmt*>(stmt.get())) {
             fns.push_back(fn);
         } else if (const auto* es = dynamic_cast<const ExprStmt*>(stmt.get())) {
@@ -3222,15 +3808,18 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
         }
     }
 
-    if (entry_fn.empty()) throw std::runtime_error("llvm codegen: no top-level function call");
+    if (entry_fn.empty()) {
+        for (const auto* fn : fns) {
+            if (fn->name == "main") {
+                entry_fn = "main";
+                break;
+            }
+        }
+    }
+    if (entry_fn.empty()) throw std::runtime_error("llvm codegen: no top-level function call and no 'main' function fallback");
 
-    std::string out;
-    out += "; SMS -> LLVM IR  |  Phase 1  |  CrowdWare Forge 2026\n\n";
-    out += "declare i64 @clock()\n";
-    out += "declare i32 @printf(i8*, ...)\n\n";
-    // "RESULT:%lld\n\0" = 13 bytes,  "TIME_US:%.1f\n\0" = 14 bytes
-    out += "@.rfmt = private unnamed_addr constant [13 x i8] c\"RESULT:%lld\\0A\\00\"\n";
-    out += "@.tfmt = private unnamed_addr constant [14 x i8] c\"TIME_US:%.1f\\0A\\00\"\n\n";
+    LlvmCtx::ProgramState program_state;
+    std::string function_defs;
 
     for (const auto* fn : fns) {
         std::string params_str;
@@ -3240,6 +3829,7 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
         }
 
         LlvmCtx ctx;
+        ctx.program = &program_state;
         for (const auto& param : fn->params) {
             ctx.code += "    %" + param.name + " = alloca i64\n";
             ctx.code += "    store i64 %" + param.name + "_arg, i64* %" + param.name + "\n";
@@ -3247,11 +3837,26 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
         llvm_stmts(ctx, fn->body);
         if (!ctx.terminated) ctx.code += "    ret i64 0\n";
 
-        out += "define i64 @sms_" + fn->name + "(" + params_str + ") {\n";
-        out += "entry:\n";
-        out += ctx.code;
-        out += "}\n\n";
+        function_defs += "define i64 @sms_" + fn->name + "(" + params_str + ") {\n";
+        function_defs += "entry:\n";
+        function_defs += ctx.code;
+        function_defs += "}\n\n";
     }
+
+    std::string out;
+    out += "; SMS -> LLVM IR  |  Phase 1  |  CrowdWare Forge 2026\n\n";
+    out += "declare i64 @clock()\n";
+    out += "declare i32 @printf(i8*, ...)\n\n";
+    if (!has_log_calls) {
+        // "RESULT:%lld\n\0" = 13 bytes,  "TIME_US:%.1f\n\0" = 14 bytes
+        out += "@.rfmt = private unnamed_addr constant [13 x i8] c\"RESULT:%lld\\0A\\00\"\n";
+        out += "@.tfmt = private unnamed_addr constant [14 x i8] c\"TIME_US:%.1f\\0A\\00\"\n";
+    }
+    for (const auto& global_def : program_state.global_defs) {
+        out += global_def + "\n";
+    }
+    out += "\n";
+    out += function_defs;
 
     // main() — uses clock() for timing (CLOCKS_PER_SEC=1000000 on macOS → µs directly)
     out += "define i32 @main() {\n";
@@ -3261,11 +3866,14 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
     out += "    %t_end = call i64 @clock()\n";
     out += "    %elapsed = sub i64 %t_end, %t_start\n";
     out += "    %elapsed_f = sitofp i64 %elapsed to double\n";
-    out += "    %rfmt = getelementptr inbounds [13 x i8], [13 x i8]* @.rfmt, i64 0, i64 0\n";
-    out += "    call i32 (i8*, ...) @printf(i8* %rfmt, i64 %result)\n";
-    out += "    %tfmt = getelementptr inbounds [14 x i8], [14 x i8]* @.tfmt, i64 0, i64 0\n";
-    out += "    call i32 (i8*, ...) @printf(i8* %tfmt, double %elapsed_f)\n";
-    out += "    ret i32 0\n";
+    if (!has_log_calls) {
+        out += "    %rfmt = getelementptr inbounds [13 x i8], [13 x i8]* @.rfmt, i64 0, i64 0\n";
+        out += "    call i32 (i8*, ...) @printf(i8* %rfmt, i64 %result)\n";
+        out += "    %tfmt = getelementptr inbounds [14 x i8], [14 x i8]* @.tfmt, i64 0, i64 0\n";
+        out += "    call i32 (i8*, ...) @printf(i8* %tfmt, double %elapsed_f)\n";
+    }
+    out += "    %result_i32 = trunc i64 %result to i32\n";
+    out += "    ret i32 %result_i32\n";
     out += "}\n";
 
     return out;
@@ -3771,6 +4379,101 @@ extern "C" int sms_native_codegen_llvm_ir(
         return 1;
     } catch (...) {
         write_error(error, error_capacity, "unknown llvm codegen exception");
+        return 1;
+    }
+}
+
+extern "C" int sms_native_aot_invoke(
+    const char* source,
+    const char* target_id,
+    const char* event_name,
+    const char* args_json,
+    std::int64_t* out_result,
+    char* error,
+    int error_capacity) {
+    if (source == nullptr || target_id == nullptr || event_name == nullptr || out_result == nullptr) {
+        write_error(error, error_capacity, "source/target_id/event_name/out_result must not be null");
+        return 2;
+    }
+
+    const std::string invoke_key = std::string(target_id) + "." + std::string(event_name);
+    (void)args_json;
+
+    std::lock_guard<std::mutex> lock(g_aot_mutex);
+    try {
+        Lexer lexer(source);
+        auto tokens = lexer.tokenize();
+        Parser parser(std::move(tokens));
+        auto program = parser.parse_program();
+        const auto ir = codegen_program_llvm_ir(program);
+
+        const fs::path cache_dir = resolve_sms_aot_cache_dir();
+        std::error_code ec;
+        fs::create_directories(cache_dir, ec);
+        if (ec) {
+            write_error(error, error_capacity, "failed to create sms aot cache dir: " + cache_dir.string());
+            return 1;
+        }
+
+        const std::string key = sha256_hex(std::string(source));
+        const fs::path ir_path = cache_dir / (key + ".ll");
+        const fs::path lib_path = cache_dir / (key + shared_lib_extension());
+
+        if (!fs::exists(lib_path)) {
+            {
+                std::ofstream out(ir_path, std::ios::binary);
+                if (!out.is_open()) {
+                    write_error(error, error_capacity, "failed to write IR file: " + ir_path.string());
+                    return 1;
+                }
+                out << ir;
+            }
+
+            const std::string clang = detect_clang_command();
+#if defined(_WIN32)
+            const std::string compile_cmd =
+                clang + " -O2 -shared -o " + shell_quote_arg(lib_path.string()) + " "
+                + shell_quote_arg(ir_path.string()) + " 2>&1";
+#else
+            const std::string compile_cmd =
+                clang + " -O2 -shared -fPIC -o " + shell_quote_arg(lib_path.string()) + " "
+                + shell_quote_arg(ir_path.string()) + " 2>&1";
+#endif
+            int compile_rc = -1;
+            const std::string compile_out = capture_command_output(compile_cmd, &compile_rc);
+            if (compile_rc != 0) {
+                write_error(error, error_capacity,
+                    "aot clang build failed for '" + invoke_key + "' ("
+                    + std::to_string(compile_rc) + "): " + compile_out);
+                return 1;
+            }
+        }
+
+        void* lib_handle = load_shared_lib(lib_path.string());
+        if (lib_handle == nullptr) {
+            write_error(error, error_capacity, "aot failed to load shared library: " + lib_path.string());
+            return 1;
+        }
+        struct ScopedLib {
+            void* handle = nullptr;
+            explicit ScopedLib(void* h) : handle(h) {}
+            ~ScopedLib() { close_shared_lib(handle); }
+        } scoped_lib(lib_handle);
+
+        using SmsCompiledMainFn = int (*)();
+        auto compiled_main = reinterpret_cast<SmsCompiledMainFn>(load_shared_symbol(lib_handle, "main"));
+        if (compiled_main == nullptr) {
+            write_error(error, error_capacity, "aot shared library missing symbol 'main'");
+            return 1;
+        }
+
+        *out_result = static_cast<std::int64_t>(compiled_main());
+        return 0;
+    } catch (const std::exception& ex) {
+        write_error(error, error_capacity, ex.what());
+        return 1;
+    } catch (...) {
+        write_error(error, error_capacity, "unknown aot invoke exception");
         return 1;
     }
 }

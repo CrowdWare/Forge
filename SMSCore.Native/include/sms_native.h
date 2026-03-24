@@ -119,4 +119,12 @@ SMS_EXPORT int sms_native_codegen_llvm_ir(
     int out_ir_capacity,
     char* error,
     int error_capacity);
+SMS_EXPORT int sms_native_aot_invoke(
+    const char* source,
+    const char* target_id,
+    const char* event_name,
+    const char* args_json,
+    std::int64_t* out_result,
+    char* error,
+    int error_capacity);
 }

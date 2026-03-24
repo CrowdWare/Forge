@@ -41,6 +41,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -84,6 +85,114 @@ namespace forge {
 
 namespace {
 constexpr int kMaxSmsDispatchDepth = 256;
+
+bool starts_with_http_scheme(const std::string& label) {
+    return label.rfind("http://", 0) == 0 || label.rfind("https://", 0) == 0;
+}
+
+bool runner_started_from_http_url() {
+    const char* env = std::getenv("FORGE_RUNNER_URL");
+    if (env == nullptr || env[0] == '\0') {
+        return false;
+    }
+    return starts_with_http_scheme(std::string(env));
+}
+
+bool is_local_source_label(const std::string& source_label) {
+    if (runner_started_from_http_url()) {
+        // Remote apps are downloaded to local cache paths, but must stay on interpreter path.
+        return false;
+    }
+    if (source_label.empty()) {
+        return true;
+    }
+    if (source_label.rfind("file://", 0) == 0) {
+        return true;
+    }
+    if (starts_with_http_scheme(source_label)) {
+        return false;
+    }
+    return true;
+}
+
+bool has_sms_event_handlers(const std::string& source) {
+    // Heuristic: detect "on <object>.<event>(...)" declarations outside comments/strings.
+    bool in_line_comment = false;
+    bool in_string = false;
+    bool saw_on_keyword = false;
+    for (std::size_t i = 0; i < source.size(); ++i) {
+        const char ch = source[i];
+        const char next = (i + 1 < source.size()) ? source[i + 1] : '\0';
+
+        if (in_line_comment) {
+            if (ch == '\n') {
+                in_line_comment = false;
+            }
+            continue;
+        }
+        if (in_string) {
+            if (ch == '"' && (i == 0 || source[i - 1] != '\\')) {
+                in_string = false;
+            }
+            continue;
+        }
+        if (ch == '/' && next == '/') {
+            in_line_comment = true;
+            ++i;
+            continue;
+        }
+        if (ch == '"') {
+            in_string = true;
+            continue;
+        }
+        if (ch != 'o' || next != 'n') {
+            continue;
+        }
+
+        const char before = (i > 0) ? source[i - 1] : ' ';
+        if (std::isalnum(static_cast<unsigned char>(before)) || before == '_') {
+            continue;
+        }
+        saw_on_keyword = true;
+
+        std::size_t j = i + 2;
+        while (j < source.size() && std::isspace(static_cast<unsigned char>(source[j]))) {
+            ++j;
+        }
+        if (j >= source.size() || !(std::isalpha(static_cast<unsigned char>(source[j])) || source[j] == '_')) {
+            continue;
+        }
+        // object id
+        while (j < source.size() && (std::isalnum(static_cast<unsigned char>(source[j])) || source[j] == '_')) {
+            ++j;
+        }
+        while (j < source.size() && std::isspace(static_cast<unsigned char>(source[j]))) {
+            ++j;
+        }
+        if (j >= source.size() || source[j] != '.') {
+            continue;
+        }
+        ++j; // '.'
+        while (j < source.size() && std::isspace(static_cast<unsigned char>(source[j]))) {
+            ++j;
+        }
+        if (j >= source.size() || !(std::isalpha(static_cast<unsigned char>(source[j])) || source[j] == '_')) {
+            continue;
+        }
+        // event name
+        while (j < source.size() && (std::isalnum(static_cast<unsigned char>(source[j])) || source[j] == '_')) {
+            ++j;
+        }
+        while (j < source.size() && std::isspace(static_cast<unsigned char>(source[j]))) {
+            ++j;
+        }
+        if (j < source.size() && source[j] == '(') {
+            return true; // on object.event(...)
+        }
+    }
+    // Conservative fallback: if "on" keyword is present, keep interpreter path.
+    return saw_on_keyword;
+}
 
 bool try_quit_on_fatal_sms_error(const std::string& message) {
     if (!sms_error_requires_exit(message)) {
@@ -663,6 +772,54 @@ static int sms_ui_invoke(
         return 0;
     }
 
+    if (id == "__os__") {
+        bool parsed_ok = false;
+        const Variant parsed = parse_json_variant(args, &parsed_ok);
+        const Array arr = (parsed_ok && parsed.get_type() == Variant::ARRAY) ? static_cast<Array>(parsed) : Array();
+        auto arg_string = [&](int idx) -> std::string {
+            if (idx < 0 || idx >= arr.size()) return {};
+            return static_cast<String>(arr[idx]).utf8().get_data();
+        };
+
+        auto resolve_os_path = [&](const std::string& raw) -> std::string {
+            if (raw.empty()) return {};
+            if (raw.rfind("user:/", 0) == 0) {
+                String user_uri = String("user://") + String(raw.substr(6).c_str());
+                if (ProjectSettings::get_singleton() != nullptr) {
+                    return std::string(ProjectSettings::get_singleton()->globalize_path(user_uri).utf8().get_data());
+                }
+            }
+            return forge::resolve_runtime_asset_path(
+                raw,
+                app_url_base_dir().utf8().get_data(),
+                appres_root_dir().utf8().get_data());
+        };
+
+        if (mname == "quit" || mname == "exit") {
+            auto* main_loop = Engine::get_singleton() ? Engine::get_singleton()->get_main_loop() : nullptr;
+            auto* tree = Object::cast_to<SceneTree>(main_loop);
+            if (tree != nullptr) {
+                tree->quit(0);
+            } else if (main_loop != nullptr && main_loop->has_method(StringName("quit"))) {
+                main_loop->call("quit", 0);
+            } else {
+                UtilityFunctions::push_warning("[ForgeRunner.Native][SMS] os.quit requested but SceneTree is unavailable.");
+            }
+            write_out(out_json, out_cap, "null");
+            return 0;
+        }
+
+        if (mname == "fileExists" && arr.size() >= 1) {
+            const std::string resolved = resolve_os_path(arg_string(0));
+            const bool exists = !resolved.empty() && fs::exists(fs::path(resolved));
+            write_out(out_json, out_cap, exists ? "true" : "false");
+            return 0;
+        }
+
+        write_out(out_json, out_cap, "null");
+        return 0;
+    }
+
     if (id == "__ui__" || id == "ui") {
         bool parsed_ok = false;
         const Variant parsed = parse_json_variant(args, &parsed_ok);
@@ -1022,6 +1179,7 @@ bool SmsBridge::load(const std::string& repo_root) {
     create_fn_    = reinterpret_cast<CreateFn> (platform_load_sym(lib_handle_, "sms_native_session_create"));
     load_fn_      = reinterpret_cast<LoadFn>   (platform_load_sym(lib_handle_, "sms_native_session_load"));
     invoke_fn_    = reinterpret_cast<InvokeFn> (platform_load_sym(lib_handle_, "sms_native_session_invoke"));
+    aot_invoke_fn_ = reinterpret_cast<AotInvokeFn>(platform_load_sym(lib_handle_, "sms_native_aot_invoke"));
     dispose_fn_   = reinterpret_cast<DisposeFn>(platform_load_sym(lib_handle_, "sms_native_session_dispose"));
     set_ui_cb_fn_ = reinterpret_cast<SetUiCbFn>(platform_load_sym(lib_handle_, "sms_native_set_ui_callbacks"));
     set_ui_string_cb_fn_ = reinterpret_cast<SetUiStringCbFn>(platform_load_sym(lib_handle_, "sms_native_set_ui_string_callbacks"));
@@ -1061,9 +1219,11 @@ void SmsBridge::unload() {
     create_fn_    = nullptr;
     load_fn_      = nullptr;
     invoke_fn_    = nullptr;
+    aot_invoke_fn_ = nullptr;
     dispose_fn_   = nullptr;
     set_ui_cb_fn_ = nullptr;
     set_ui_string_cb_fn_ = nullptr;
+    session_meta_.clear();
     loaded_       = false;
 }
 
@@ -1103,6 +1263,11 @@ std::int64_t SmsBridge::start_session_from_source(const std::string& source, con
         dispose_fn_(session, nullptr, 0);
         return -1;
     }
+    SessionMeta meta;
+    meta.is_local_source = is_local_source_label(source_label);
+    meta.has_event_handlers = has_sms_event_handlers(source);
+    meta.source = source;
+    session_meta_[session] = std::move(meta);
     return session;
 }
 
@@ -1135,6 +1300,42 @@ void SmsBridge::dispatch_event(std::int64_t session,
     DispatchDepthGuard depth_guard(dispatch_depth);
 
     const char* args_json = payload_json.empty() ? "[]" : payload_json.c_str();
+    auto meta_it = session_meta_.find(session);
+    if (meta_it != session_meta_.end() && meta_it->second.is_local_source &&
+        !meta_it->second.has_event_handlers) {
+        if (meta_it->second.aot_succeeded) {
+            return;
+        }
+
+        const bool should_try_aot = aot_invoke_fn_ != nullptr
+            && !meta_it->second.aot_attempted
+            && !meta_it->second.aot_failed;
+        if (should_try_aot) {
+            meta_it->second.aot_attempted = true;
+            std::int64_t aot_result = -1;
+            char aot_err[512] = {};
+            const int aot_rc = aot_invoke_fn_(meta_it->second.source.c_str(),
+                                              object_id.c_str(),
+                                              event_name.c_str(),
+                                              args_json,
+                                              &aot_result,
+                                              aot_err,
+                                              static_cast<int>(sizeof(aot_err)));
+            if (aot_rc == 0) {
+                meta_it->second.aot_succeeded = true;
+                UtilityFunctions::print(String((
+                    "[ForgeRunner.Native] SMS AOT active for local session (dispatch: "
+                    + object_id + "." + event_name + ").").c_str()));
+                return;
+            }
+            meta_it->second.aot_failed = true;
+            const std::string aot_msg = aot_err[0] != '\0' ? std::string(aot_err) : std::string("unknown aot invoke error");
+            UtilityFunctions::push_warning(String((
+                "[ForgeRunner.Native] SMS AOT unavailable for local session; using interpreter fallback: "
+                + aot_msg).c_str()));
+        }
+    }
+
     std::int64_t result_session = -1;
     char err[512] = {};
     const int rc = invoke_fn_(session, object_id.c_str(), event_name.c_str(), args_json,
@@ -1151,6 +1352,7 @@ void SmsBridge::dispatch_event(std::int64_t session,
 
 void SmsBridge::dispose_session(std::int64_t session) {
     if (!loaded_ || session < 0) return;
+    session_meta_.erase(session);
     dispose_fn_(session, nullptr, 0);
 }
 
