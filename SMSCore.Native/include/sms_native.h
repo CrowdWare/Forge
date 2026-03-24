@@ -107,4 +107,16 @@ SMS_EXPORT int sms_native_set_sandbox_path_callback(
     sms_native_sandbox_path_allow_fn allow_path,
     char* error,
     int error_capacity);
+SMS_EXPORT int sms_native_codegen_cpp(
+    const char* source,
+    char* out_cpp,
+    int out_cpp_capacity,
+    char* error,
+    int error_capacity);
+SMS_EXPORT int sms_native_codegen_llvm_ir(
+    const char* source,
+    char* out_ir,
+    int out_ir_capacity,
+    char* error,
+    int error_capacity);
 }

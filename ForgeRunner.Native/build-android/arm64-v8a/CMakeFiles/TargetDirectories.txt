@@ -1,0 +1,4 @@
+/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/arm64-v8a/CMakeFiles/forge_runner_native.dir
+/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/arm64-v8a/CMakeFiles/forge-runner-native.dir
+/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/arm64-v8a/CMakeFiles/rebuild_cache.dir

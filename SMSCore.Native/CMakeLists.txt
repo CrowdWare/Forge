@@ -13,6 +13,13 @@ target_include_directories(sms_native PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+if(BUILD_BENCHMARK)
+    add_executable(sms_bench
+        benchmark/sms_bench.cpp
+    )
+    target_link_libraries(sms_bench PRIVATE sms_native)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(sms_native_spec_tests

@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/art/SourceCode/Forge/ForgeRunner.Native/build-android/armeabi-v7a/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

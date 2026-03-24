@@ -2825,6 +2825,454 @@ std::int64_t count_sml_nodes(const char* source) {
     return nodes;
 }
 
+// ── Code Generator: SMS → C++ (Phase 1: int64_t subset) ─────────────────────
+
+static std::string cg_indent(int depth) {
+    return std::string(static_cast<std::size_t>(depth * 4), ' ');
+}
+
+static std::string cg_op(TokenType op) {
+    switch (op) {
+        case TokenType::Plus:          return "+";
+        case TokenType::Minus:         return "-";
+        case TokenType::Star:          return "*";
+        case TokenType::Slash:         return "/";
+        case TokenType::Percent:       return "%";
+        case TokenType::Less:          return "<";
+        case TokenType::LessEqual:     return "<=";
+        case TokenType::Greater:       return ">";
+        case TokenType::GreaterEqual:  return ">=";
+        case TokenType::EqualEqual:    return "==";
+        case TokenType::BangEqual:     return "!=";
+        case TokenType::AndAnd:        return "&&";
+        case TokenType::OrOr:          return "||";
+        case TokenType::Increment:     return "++";
+        case TokenType::Decrement:     return "--";
+        default: throw std::runtime_error("codegen: unsupported operator");
+    }
+}
+
+static std::string cg_expr(const Expr* expr);
+
+static std::string cg_call_args(const std::vector<CallArgumentExpr>& args) {
+    std::string out;
+    for (std::size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) out += ", ";
+        out += cg_expr(args[i].value.get());
+    }
+    return out;
+}
+
+static std::string cg_expr(const Expr* expr) {
+    if (expr == nullptr) return "0LL";
+    if (const auto* e = dynamic_cast<const NumberExpr*>(expr)) {
+        return std::to_string(e->value) + "LL";
+    }
+    if (const auto* e = dynamic_cast<const BoolExpr*>(expr)) {
+        return e->value ? "1LL" : "0LL";
+    }
+    if (dynamic_cast<const NullExpr*>(expr)) {
+        return "0LL";
+    }
+    if (const auto* e = dynamic_cast<const VarExpr*>(expr)) {
+        return e->name;
+    }
+    if (const auto* e = dynamic_cast<const BinaryExpr*>(expr)) {
+        return "(" + cg_expr(e->left_.get()) + " " + cg_op(e->oper) + " " + cg_expr(e->right_.get()) + ")";
+    }
+    if (const auto* e = dynamic_cast<const LogicalExpr*>(expr)) {
+        return "(" + cg_expr(e->left_.get()) + " " + cg_op(e->oper) + " " + cg_expr(e->right_.get()) + ")";
+    }
+    if (const auto* e = dynamic_cast<const UnaryExpr*>(expr)) {
+        if (e->oper == TokenType::Bang)  return "(!(" + cg_expr(e->operand_.get()) + ") ? 1LL : 0LL)";
+        if (e->oper == TokenType::Minus) return "(-" + cg_expr(e->operand_.get()) + ")";
+        throw std::runtime_error("codegen: unsupported unary op");
+    }
+    if (const auto* e = dynamic_cast<const PostfixExpr*>(expr)) {
+        const auto* var = dynamic_cast<const VarExpr*>(e->operand_.get());
+        if (!var) throw std::runtime_error("codegen: postfix on non-variable");
+        return "(" + var->name + cg_op(e->oper) + ")";
+    }
+    if (const auto* e = dynamic_cast<const CallExpr*>(expr)) {
+        return "sms_" + e->name + "(" + cg_call_args(e->args_) + ")";
+    }
+    throw std::runtime_error("codegen: unsupported expression type");
+}
+
+static std::string cg_stmts(const std::vector<std::unique_ptr<Stmt>>& stmts, int depth);
+
+static std::string cg_stmt(const Stmt* stmt, int depth) {
+    const std::string ind = cg_indent(depth);
+    if (const auto* s = dynamic_cast<const VarDeclStmt*>(stmt)) {
+        return ind + "int64_t " + s->name + " = " + cg_expr(s->value.get()) + ";\n";
+    }
+    if (const auto* s = dynamic_cast<const AssignStmt*>(stmt)) {
+        const auto* var = dynamic_cast<const VarExpr*>(s->target_expr.get());
+        if (!var) throw std::runtime_error("codegen: non-variable assignment not supported in Phase 1");
+        return ind + var->name + " = " + cg_expr(s->value_expr.get()) + ";\n";
+    }
+    if (const auto* s = dynamic_cast<const ReturnStmt*>(stmt)) {
+        return ind + "return " + (s->value ? cg_expr(s->value.get()) : "0LL") + ";\n";
+    }
+    if (dynamic_cast<const BreakStmt*>(stmt)) {
+        return ind + "break;\n";
+    }
+    if (dynamic_cast<const ContinueStmt*>(stmt)) {
+        return ind + "continue;\n";
+    }
+    if (const auto* s = dynamic_cast<const ExprStmt*>(stmt)) {
+        return ind + cg_expr(s->value.get()) + ";\n";
+    }
+    if (const auto* s = dynamic_cast<const WhileStmt*>(stmt)) {
+        return ind + "while (" + cg_expr(s->condition.get()) + ") {\n"
+             + cg_stmts(s->body, depth + 1)
+             + ind + "}\n";
+    }
+    if (const auto* s = dynamic_cast<const IfStmt*>(stmt)) {
+        std::string out = ind + "if (" + cg_expr(s->condition.get()) + ") {\n"
+             + cg_stmts(s->then_body, depth + 1)
+             + ind + "}";
+        if (!s->else_body.empty()) {
+            out += " else {\n" + cg_stmts(s->else_body, depth + 1) + ind + "}";
+        }
+        return out + "\n";
+    }
+    if (const auto* s = dynamic_cast<const FunctionDeclStmt*>(stmt)) {
+        std::string params_str;
+        for (std::size_t i = 0; i < s->params.size(); ++i) {
+            if (i > 0) params_str += ", ";
+            params_str += "int64_t " + s->params[i].name;
+        }
+        return "static int64_t sms_" + s->name + "(" + params_str + ") {\n"
+             + cg_stmts(s->body, 1)
+             + "}\n";
+    }
+    // ImportDeclStmt, DataClassDeclStmt, EventHandlerDeclStmt: ignore in Phase 1
+    return "";
+}
+
+static std::string cg_stmts(const std::vector<std::unique_ptr<Stmt>>& stmts, int depth) {
+    std::string out;
+    for (const auto& s : stmts) {
+        out += cg_stmt(s.get(), depth);
+    }
+    return out;
+}
+
+static std::string codegen_program_cpp(const std::vector<std::unique_ptr<Stmt>>& program) {
+    std::string fn_defs;
+    std::string entry_call;
+
+    for (const auto& stmt : program) {
+        if (dynamic_cast<const FunctionDeclStmt*>(stmt.get())) {
+            fn_defs += cg_stmt(stmt.get(), 0) + "\n";
+        } else if (const auto* es = dynamic_cast<const ExprStmt*>(stmt.get())) {
+            if (const auto* call = dynamic_cast<const CallExpr*>(es->value.get())) {
+                entry_call = "sms_" + call->name + "(" + cg_call_args(call->args_) + ")";
+            }
+        }
+    }
+
+    if (entry_call.empty()) {
+        throw std::runtime_error("codegen: no top-level function call found as entry point");
+    }
+
+    std::string out;
+    out += "#include <cstdint>\n";
+    out += "#include <chrono>\n";
+    out += "#include <cstdio>\n";
+    out += "\n";
+    out += fn_defs;
+    out += "int main() {\n";
+    out += "    auto t0 = std::chrono::high_resolution_clock::now();\n";
+    out += "    int64_t result = " + entry_call + ";\n";
+    out += "    auto t1 = std::chrono::high_resolution_clock::now();\n";
+    out += "    double us = std::chrono::duration<double, std::micro>(t1 - t0).count();\n";
+    out += "    printf(\"RESULT:%lld\\n\", (long long)result);\n";
+    out += "    printf(\"TIME_US:%.1f\\n\", us);\n";
+    out += "    return 0;\n";
+    out += "}\n";
+    return out;
+}
+
+// ── LLVM IR Code Generator (SMS → .ll, Phase 1) ──────────────────────────────
+
+struct LlvmCtx {
+    int temp_cnt = 0;
+    int label_cnt = 0;
+    bool terminated = false;
+    std::string code;
+    std::vector<std::pair<std::string, std::string>> loops; // {cond_label, end_label}
+};
+
+static std::string llvm_t(LlvmCtx& c) { return "%t" + std::to_string(c.temp_cnt++); }
+static std::string llvm_lbl_name(LlvmCtx& c, const std::string& p) { return p + std::to_string(c.label_cnt++); }
+static void llvm_i(LlvmCtx& c, const std::string& s) { c.code += "    " + s + "\n"; c.terminated = false; }
+static void llvm_l(LlvmCtx& c, const std::string& l) { c.code += l + ":\n"; c.terminated = false; }
+static void llvm_term(LlvmCtx& c, const std::string& s) {
+    if (!c.terminated) { c.code += "    " + s + "\n"; c.terminated = true; }
+}
+
+static std::string llvm_expr(LlvmCtx& c, const Expr* e);
+static std::string llvm_cond(LlvmCtx& c, const Expr* e);
+static void llvm_stmt(LlvmCtx& c, const Stmt* s);
+static void llvm_stmts(LlvmCtx& c, const std::vector<std::unique_ptr<Stmt>>& ss);
+
+static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
+    if (const auto* n = dynamic_cast<const NumberExpr*>(e))
+        return std::to_string(n->value);
+    if (const auto* b = dynamic_cast<const BoolExpr*>(e))
+        return b->value ? "1" : "0";
+    if (dynamic_cast<const NullExpr*>(e))
+        return "0";
+    if (const auto* v = dynamic_cast<const VarExpr*>(e)) {
+        const auto t = llvm_t(c);
+        llvm_i(c, t + " = load i64, i64* %" + v->name);
+        return t;
+    }
+    if (const auto* b = dynamic_cast<const BinaryExpr*>(e)) {
+        const auto lv = llvm_expr(c, b->left_.get());
+        const auto rv = llvm_expr(c, b->right_.get());
+        const auto t = llvm_t(c);
+        switch (b->oper) {
+            case TokenType::Plus:    llvm_i(c, t + " = add i64 " + lv + ", " + rv); break;
+            case TokenType::Minus:   llvm_i(c, t + " = sub i64 " + lv + ", " + rv); break;
+            case TokenType::Star:    llvm_i(c, t + " = mul i64 " + lv + ", " + rv); break;
+            case TokenType::Slash:   llvm_i(c, t + " = sdiv i64 " + lv + ", " + rv); break;
+            case TokenType::Percent: llvm_i(c, t + " = srem i64 " + lv + ", " + rv); break;
+            default: {
+                const char* op = nullptr;
+                switch (b->oper) {
+                    case TokenType::Less:         op = "slt"; break;
+                    case TokenType::LessEqual:    op = "sle"; break;
+                    case TokenType::Greater:      op = "sgt"; break;
+                    case TokenType::GreaterEqual: op = "sge"; break;
+                    case TokenType::EqualEqual:   op = "eq";  break;
+                    case TokenType::BangEqual:    op = "ne";  break;
+                    default: throw std::runtime_error("llvm codegen: unsupported binary op");
+                }
+                const auto cmp = llvm_t(c);
+                llvm_i(c, cmp + " = icmp " + op + " i64 " + lv + ", " + rv);
+                llvm_i(c, t + " = zext i1 " + cmp + " to i64");
+                break;
+            }
+        }
+        return t;
+    }
+    if (const auto* l = dynamic_cast<const LogicalExpr*>(e)) {
+        const auto lv = llvm_expr(c, l->left_.get());
+        const auto rv = llvm_expr(c, l->right_.get());
+        const auto cl = llvm_t(c); llvm_i(c, cl + " = icmp ne i64 " + lv + ", 0");
+        const auto cr = llvm_t(c); llvm_i(c, cr + " = icmp ne i64 " + rv + ", 0");
+        const auto tmp = llvm_t(c);
+        if (l->oper == TokenType::AndAnd) llvm_i(c, tmp + " = and i1 " + cl + ", " + cr);
+        else                              llvm_i(c, tmp + " = or i1 "  + cl + ", " + cr);
+        const auto t = llvm_t(c);
+        llvm_i(c, t + " = zext i1 " + tmp + " to i64");
+        return t;
+    }
+    if (const auto* u = dynamic_cast<const UnaryExpr*>(e)) {
+        const auto v = llvm_expr(c, u->operand_.get());
+        const auto t = llvm_t(c);
+        if (u->oper == TokenType::Minus) {
+            llvm_i(c, t + " = sub i64 0, " + v);
+        } else if (u->oper == TokenType::Bang) {
+            const auto cmp = llvm_t(c);
+            llvm_i(c, cmp + " = icmp eq i64 " + v + ", 0");
+            llvm_i(c, t + " = zext i1 " + cmp + " to i64");
+        } else {
+            throw std::runtime_error("llvm codegen: unsupported unary op");
+        }
+        return t;
+    }
+    if (const auto* p = dynamic_cast<const PostfixExpr*>(e)) {
+        const auto* var = dynamic_cast<const VarExpr*>(p->operand_.get());
+        if (!var) throw std::runtime_error("llvm codegen: postfix on non-variable");
+        const auto old_t = llvm_t(c);
+        llvm_i(c, old_t + " = load i64, i64* %" + var->name);
+        const auto new_t = llvm_t(c);
+        llvm_i(c, new_t + " = " + (p->oper == TokenType::Increment ? "add" : "sub") + " i64 " + old_t + ", 1");
+        llvm_i(c, "store i64 " + new_t + ", i64* %" + var->name);
+        return old_t;
+    }
+    if (const auto* call = dynamic_cast<const CallExpr*>(e)) {
+        std::string args_str;
+        for (std::size_t i = 0; i < call->args_.size(); ++i) {
+            if (i > 0) args_str += ", ";
+            args_str += "i64 " + llvm_expr(c, call->args_[i].value.get());
+        }
+        const auto t = llvm_t(c);
+        llvm_i(c, t + " = call i64 @sms_" + call->name + "(" + args_str + ")");
+        return t;
+    }
+    throw std::runtime_error("llvm codegen: unsupported expression type");
+}
+
+static std::string llvm_cond(LlvmCtx& c, const Expr* e) {
+    if (const auto* b = dynamic_cast<const BinaryExpr*>(e)) {
+        const char* op = nullptr;
+        switch (b->oper) {
+            case TokenType::Less:         op = "slt"; break;
+            case TokenType::LessEqual:    op = "sle"; break;
+            case TokenType::Greater:      op = "sgt"; break;
+            case TokenType::GreaterEqual: op = "sge"; break;
+            case TokenType::EqualEqual:   op = "eq";  break;
+            case TokenType::BangEqual:    op = "ne";  break;
+            default: break;
+        }
+        if (op) {
+            const auto lv = llvm_expr(c, b->left_.get());
+            const auto rv = llvm_expr(c, b->right_.get());
+            const auto t = llvm_t(c);
+            llvm_i(c, t + " = icmp " + op + " i64 " + lv + ", " + rv);
+            return t;
+        }
+    }
+    const auto v = llvm_expr(c, e);
+    const auto t = llvm_t(c);
+    llvm_i(c, t + " = icmp ne i64 " + v + ", 0");
+    return t;
+}
+
+static void llvm_stmts(LlvmCtx& c, const std::vector<std::unique_ptr<Stmt>>& ss) {
+    for (const auto& s : ss) llvm_stmt(c, s.get());
+}
+
+static void llvm_stmt(LlvmCtx& c, const Stmt* s) {
+    if (const auto* v = dynamic_cast<const VarDeclStmt*>(s)) {
+        llvm_i(c, "%" + v->name + " = alloca i64");
+        const auto init = llvm_expr(c, v->value.get());
+        llvm_i(c, "store i64 " + init + ", i64* %" + v->name);
+        return;
+    }
+    if (const auto* a = dynamic_cast<const AssignStmt*>(s)) {
+        const auto* var = dynamic_cast<const VarExpr*>(a->target_expr.get());
+        if (!var) throw std::runtime_error("llvm codegen: non-variable assignment not supported in Phase 1");
+        const auto val = llvm_expr(c, a->value_expr.get());
+        llvm_i(c, "store i64 " + val + ", i64* %" + var->name);
+        return;
+    }
+    if (const auto* r = dynamic_cast<const ReturnStmt*>(s)) {
+        const auto val = r->value ? llvm_expr(c, r->value.get()) : std::string("0");
+        llvm_term(c, "ret i64 " + val);
+        return;
+    }
+    if (dynamic_cast<const BreakStmt*>(s)) {
+        if (c.loops.empty()) throw std::runtime_error("llvm codegen: break outside loop");
+        llvm_term(c, "br label %" + c.loops.back().second);
+        return;
+    }
+    if (dynamic_cast<const ContinueStmt*>(s)) {
+        if (c.loops.empty()) throw std::runtime_error("llvm codegen: continue outside loop");
+        llvm_term(c, "br label %" + c.loops.back().first);
+        return;
+    }
+    if (const auto* es = dynamic_cast<const ExprStmt*>(s)) {
+        llvm_expr(c, es->value.get());
+        return;
+    }
+    if (const auto* w = dynamic_cast<const WhileStmt*>(s)) {
+        const auto cond_l = llvm_lbl_name(c, "while_cond");
+        const auto body_l = llvm_lbl_name(c, "while_body");
+        const auto end_l  = llvm_lbl_name(c, "while_end");
+        llvm_term(c, "br label %" + cond_l);
+        llvm_l(c, cond_l);
+        const auto cond = llvm_cond(c, w->condition.get());
+        llvm_term(c, "br i1 " + cond + ", label %" + body_l + ", label %" + end_l);
+        llvm_l(c, body_l);
+        c.loops.push_back({cond_l, end_l});
+        llvm_stmts(c, w->body);
+        c.loops.pop_back();
+        llvm_term(c, "br label %" + cond_l);
+        llvm_l(c, end_l);
+        return;
+    }
+    if (const auto* i = dynamic_cast<const IfStmt*>(s)) {
+        const auto then_l = llvm_lbl_name(c, "if_then");
+        const auto else_l = llvm_lbl_name(c, "if_else");
+        const auto end_l  = llvm_lbl_name(c, "if_end");
+        const bool has_else = !i->else_body.empty();
+        const auto cond = llvm_cond(c, i->condition.get());
+        llvm_term(c, "br i1 " + cond + ", label %" + then_l + ", label %" + (has_else ? else_l : end_l));
+        llvm_l(c, then_l);
+        llvm_stmts(c, i->then_body);
+        llvm_term(c, "br label %" + end_l);
+        if (has_else) {
+            llvm_l(c, else_l);
+            llvm_stmts(c, i->else_body);
+            llvm_term(c, "br label %" + end_l);
+        }
+        llvm_l(c, end_l);
+        return;
+    }
+    // FunctionDeclStmt, ImportDeclStmt, DataClassDeclStmt, EventHandlerDeclStmt: handled at top level
+}
+
+static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stmt>>& program) {
+    std::vector<const FunctionDeclStmt*> fns;
+    std::string entry_fn;
+
+    for (const auto& stmt : program) {
+        if (const auto* fn = dynamic_cast<const FunctionDeclStmt*>(stmt.get())) {
+            fns.push_back(fn);
+        } else if (const auto* es = dynamic_cast<const ExprStmt*>(stmt.get())) {
+            if (const auto* call = dynamic_cast<const CallExpr*>(es->value.get())) {
+                entry_fn = call->name;
+            }
+        }
+    }
+
+    if (entry_fn.empty()) throw std::runtime_error("llvm codegen: no top-level function call");
+
+    std::string out;
+    out += "; SMS -> LLVM IR  |  Phase 1  |  CrowdWare Forge 2026\n\n";
+    out += "declare i64 @clock()\n";
+    out += "declare i32 @printf(i8*, ...)\n\n";
+    // "RESULT:%lld\n\0" = 13 bytes,  "TIME_US:%.1f\n\0" = 14 bytes
+    out += "@.rfmt = private unnamed_addr constant [13 x i8] c\"RESULT:%lld\\0A\\00\"\n";
+    out += "@.tfmt = private unnamed_addr constant [14 x i8] c\"TIME_US:%.1f\\0A\\00\"\n\n";
+
+    for (const auto* fn : fns) {
+        std::string params_str;
+        for (std::size_t i = 0; i < fn->params.size(); ++i) {
+            if (i > 0) params_str += ", ";
+            params_str += "i64 %" + fn->params[i].name + "_arg";
+        }
+
+        LlvmCtx ctx;
+        for (const auto& param : fn->params) {
+            ctx.code += "    %" + param.name + " = alloca i64\n";
+            ctx.code += "    store i64 %" + param.name + "_arg, i64* %" + param.name + "\n";
+        }
+        llvm_stmts(ctx, fn->body);
+        if (!ctx.terminated) ctx.code += "    ret i64 0\n";
+
+        out += "define i64 @sms_" + fn->name + "(" + params_str + ") {\n";
+        out += "entry:\n";
+        out += ctx.code;
+        out += "}\n\n";
+    }
+
+    // main() — uses clock() for timing (CLOCKS_PER_SEC=1000000 on macOS → µs directly)
+    out += "define i32 @main() {\n";
+    out += "entry:\n";
+    out += "    %t_start = call i64 @clock()\n";
+    out += "    %result = call i64 @sms_" + entry_fn + "()\n";
+    out += "    %t_end = call i64 @clock()\n";
+    out += "    %elapsed = sub i64 %t_end, %t_start\n";
+    out += "    %elapsed_f = sitofp i64 %elapsed to double\n";
+    out += "    %rfmt = getelementptr inbounds [13 x i8], [13 x i8]* @.rfmt, i64 0, i64 0\n";
+    out += "    call i32 (i8*, ...) @printf(i8* %rfmt, i64 %result)\n";
+    out += "    %tfmt = getelementptr inbounds [14 x i8], [14 x i8]* @.tfmt, i64 0, i64 0\n";
+    out += "    call i32 (i8*, ...) @printf(i8* %tfmt, double %elapsed_f)\n";
+    out += "    ret i32 0\n";
+    out += "}\n";
+
+    return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 std::vector<Value> parse_event_args_json(const char* args_json);
 
 struct SmsSessionRuntime {
@@ -3293,6 +3741,70 @@ extern "C" int sms_native_set_sandbox_path_callback(
     int) {
     g_sandbox_path_allow = allow_path;
     return 0;
+}
+
+extern "C" int sms_native_codegen_llvm_ir(
+    const char* source,
+    char* out_ir,
+    int out_ir_capacity,
+    char* error,
+    int error_capacity) {
+    if (source == nullptr || out_ir == nullptr) {
+        write_error(error, error_capacity, "source/out_ir must not be null");
+        return 2;
+    }
+    try {
+        Lexer lexer(source);
+        auto tokens = lexer.tokenize();
+        Parser parser(std::move(tokens));
+        auto program = parser.parse_program();
+        const auto ir = codegen_program_llvm_ir(program);
+        if (static_cast<int>(ir.size()) >= out_ir_capacity) {
+            write_error(error, error_capacity, "output buffer too small for generated IR");
+            return 1;
+        }
+        std::memcpy(out_ir, ir.data(), ir.size());
+        out_ir[ir.size()] = '\0';
+        return 0;
+    } catch (const std::exception& ex) {
+        write_error(error, error_capacity, ex.what());
+        return 1;
+    } catch (...) {
+        write_error(error, error_capacity, "unknown llvm codegen exception");
+        return 1;
+    }
+}
+
+extern "C" int sms_native_codegen_cpp(
+    const char* source,
+    char* out_cpp,
+    int out_cpp_capacity,
+    char* error,
+    int error_capacity) {
+    if (source == nullptr || out_cpp == nullptr) {
+        write_error(error, error_capacity, "source/out_cpp must not be null");
+        return 2;
+    }
+    try {
+        Lexer lexer(source);
+        auto tokens = lexer.tokenize();
+        Parser parser(std::move(tokens));
+        auto program = parser.parse_program();
+        const auto cpp = codegen_program_cpp(program);
+        if (static_cast<int>(cpp.size()) >= out_cpp_capacity) {
+            write_error(error, error_capacity, "output buffer too small for generated C++");
+            return 1;
+        }
+        std::memcpy(out_cpp, cpp.data(), cpp.size());
+        out_cpp[cpp.size()] = '\0';
+        return 0;
+    } catch (const std::exception& ex) {
+        write_error(error, error_capacity, ex.what());
+        return 1;
+    } catch (...) {
+        write_error(error, error_capacity, "unknown codegen exception");
+        return 1;
+    }
 }
 
 extern "C" int sms_native_sml_parse(const char* source, std::int64_t* out_node_count, char* error, int error_capacity) {
