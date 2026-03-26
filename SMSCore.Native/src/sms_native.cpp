@@ -165,8 +165,6 @@ enum class TokenType {
     Else,
     When,
     While,
-    Try,
-    Catch,
     Fun,
     Data,
     Class,
@@ -211,6 +209,8 @@ enum class TokenType {
 struct Token {
     TokenType type;
     std::string text;
+    int line = 1;
+    int col = 1;
 };
 
 class Lexer {
@@ -222,10 +222,13 @@ public:
         while (true) {
             skip_whitespace();
             if (is_at_end()) {
-                out.push_back({TokenType::Eof, ""});
+                out.push_back({TokenType::Eof, "", line_, col_});
                 return out;
             }
 
+            const int tok_line = line_;
+            const int tok_col = col_;
+            const std::size_t prev_size = out.size();
             const char c = advance();
             switch (c) {
                 case '(':
@@ -365,45 +368,57 @@ public:
                     break;
                 default:
                     if (std::isdigit(static_cast<unsigned char>(c))) {
-                        out.push_back(number_token(c));
+                        out.push_back(number_token(c, tok_line, tok_col));
                     } else if (c == '"') {
-                        out.push_back(string_token());
+                        out.push_back(string_token(tok_line, tok_col));
                     } else if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
-                        out.push_back(identifier_token(c));
+                        out.push_back(identifier_token(c, tok_line, tok_col));
                     } else {
                         throw std::runtime_error("Unexpected character in source.");
                     }
                     break;
+            }
+            // Stamp start position on any token pushed this iteration.
+            if (out.size() > prev_size) {
+                out.back().line = tok_line;
+                out.back().col = tok_col;
             }
         }
     }
 
 private:
     bool is_at_end() const { return index_ >= source_.size(); }
-    char advance() { return source_[index_++]; }
+
+    char advance() {
+        const char c = source_[index_++];
+        if (c == '\n') { line_++; col_ = 1; }
+        else { col_++; }
+        return c;
+    }
+
     char peek() const { return is_at_end() ? '\0' : source_[index_]; }
 
     void skip_whitespace() {
         while (!is_at_end()) {
             const char c = peek();
             if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-                index_++;
+                advance();
                 continue;
             }
             break;
         }
     }
 
-    Token number_token(char first) {
+    Token number_token(char first, int tok_line, int tok_col) {
         std::string text;
         text.push_back(first);
         while (!is_at_end() && std::isdigit(static_cast<unsigned char>(peek()))) {
             text.push_back(advance());
         }
-        return {TokenType::Number, text};
+        return {TokenType::Number, text, tok_line, tok_col};
     }
 
-    Token string_token() {
+    Token string_token(int tok_line, int tok_col) {
         std::string text;
         bool escape = false;
         while (!is_at_end()) {
@@ -430,7 +445,7 @@ private:
             }
 
             if (c == '"') {
-                return {TokenType::String, text};
+                return {TokenType::String, text, tok_line, tok_col};
             }
 
             text.push_back(c);
@@ -439,7 +454,7 @@ private:
         throw std::runtime_error("Unterminated string literal.");
     }
 
-    Token identifier_token(char first) {
+    Token identifier_token(char first, int tok_line, int tok_col) {
         std::string text;
         text.push_back(first);
         while (!is_at_end()) {
@@ -451,41 +466,80 @@ private:
             break;
         }
 
-        if (text == "import") return {TokenType::Import, text};
-        if (text == "export") return {TokenType::Export, text};
-        if (text == "as") return {TokenType::As, text};
-        if (text == "var") return {TokenType::Var, text};
-        if (text == "for") return {TokenType::For, text};
-        if (text == "in") return {TokenType::In, text};
-        if (text == "if") return {TokenType::If, text};
-        if (text == "else") return {TokenType::Else, text};
-        if (text == "when") return {TokenType::When, text};
-        if (text == "while") return {TokenType::While, text};
-        if (text == "try") return {TokenType::Try, text};
-        if (text == "catch") return {TokenType::Catch, text};
-        if (text == "fun") return {TokenType::Fun, text};
-        if (text == "data") return {TokenType::Data, text};
-        if (text == "class") return {TokenType::Class, text};
-        if (text == "on") return {TokenType::On, text};
-        if (text == "true") return {TokenType::True, text};
-        if (text == "false") return {TokenType::False, text};
-        if (text == "null") return {TokenType::Null, text};
-        if (text == "break") return {TokenType::Break, text};
-        if (text == "continue") return {TokenType::Continue, text};
-        if (text == "return") return {TokenType::Return, text};
-        return {TokenType::Identifier, text};
+        if (text == "import") return {TokenType::Import, text, tok_line, tok_col};
+        if (text == "export") return {TokenType::Export, text, tok_line, tok_col};
+        if (text == "as") return {TokenType::As, text, tok_line, tok_col};
+        if (text == "var") return {TokenType::Var, text, tok_line, tok_col};
+        if (text == "for") return {TokenType::For, text, tok_line, tok_col};
+        if (text == "in") return {TokenType::In, text, tok_line, tok_col};
+        if (text == "if") return {TokenType::If, text, tok_line, tok_col};
+        if (text == "else") return {TokenType::Else, text, tok_line, tok_col};
+        if (text == "when") return {TokenType::When, text, tok_line, tok_col};
+        if (text == "while") return {TokenType::While, text, tok_line, tok_col};
+        if (text == "fun") return {TokenType::Fun, text, tok_line, tok_col};
+        if (text == "data") return {TokenType::Data, text, tok_line, tok_col};
+        if (text == "class") return {TokenType::Class, text, tok_line, tok_col};
+        if (text == "on") return {TokenType::On, text, tok_line, tok_col};
+        if (text == "true") return {TokenType::True, text, tok_line, tok_col};
+        if (text == "false") return {TokenType::False, text, tok_line, tok_col};
+        if (text == "null") return {TokenType::Null, text, tok_line, tok_col};
+        if (text == "break") return {TokenType::Break, text, tok_line, tok_col};
+        if (text == "continue") return {TokenType::Continue, text, tok_line, tok_col};
+        if (text == "return") return {TokenType::Return, text, tok_line, tok_col};
+        return {TokenType::Identifier, text, tok_line, tok_col};
     }
 
     std::string source_;
     std::size_t index_ = 0;
+    int line_ = 1;
+    int col_ = 1;
 };
 
 struct FunctionDeclStmt;
 struct DataClassDeclStmt;
 struct EventHandlerDeclStmt;
 
+struct SourceLoc {
+    int line = 0;
+    int col = 0;
+};
+
+thread_local std::vector<std::string> g_source_lines;
+
+static void init_source_lines(const std::string& source) {
+    g_source_lines.clear();
+    std::string cur;
+    for (const char c : source) {
+        if (c == '\n') { g_source_lines.push_back(cur); cur.clear(); }
+        else { cur.push_back(c); }
+    }
+    g_source_lines.push_back(cur);
+}
+
+static std::string get_source_line(int line) {
+    if (line >= 1 && static_cast<std::size_t>(line) <= g_source_lines.size()) {
+        return g_source_lines[static_cast<std::size_t>(line - 1)];
+    }
+    return "";
+}
+
+static std::string value_kind_name(int kind_int) {
+    // Avoids circular dependency with Value::Kind - called after Value is defined.
+    // 0=Int,1=Bool,2=String,3=Array,4=Object,5=Null,6=Tuple
+    switch (kind_int) {
+        case 0: return "Int32";
+        case 1: return "Bool";
+        case 2: return "String";
+        case 3: return "Array";
+        case 4: return "Object";
+        case 5: return "Null";
+        case 6: return "Tuple";
+    }
+    return "Unknown";
+}
+
 struct Value {
-    enum class Kind { Int, Bool, String, Array, Object, Null };
+    enum class Kind { Int, Bool, String, Array, Object, Null, Tuple };
 
     Kind kind = Kind::Null;
     std::int64_t int_value = 0;
@@ -527,6 +581,13 @@ struct Value {
         return Value{};
     }
 
+    static Value Tuple(std::vector<Value> elements) {
+        Value v;
+        v.kind = Kind::Tuple;
+        v.array = std::make_shared<std::vector<Value>>(std::move(elements));
+        return v;
+    }
+
     static Value Object(std::string class_name, std::unordered_map<std::string, Value> fields) {
         Value v;
         v.kind = Kind::Object;
@@ -540,6 +601,7 @@ struct Value {
         if (kind == Kind::Bool) return bool_value;
         if (kind == Kind::String) return !string_value.empty();
         if (kind == Kind::Array) return array && !array->empty();
+        if (kind == Kind::Tuple) return array && !array->empty();
         if (kind == Kind::Object) return object_fields && !object_fields->empty();
         return false;
     }
@@ -575,6 +637,11 @@ struct Value {
                     return array == other.array;
                 }
                 return *array == *other.array;
+            case Kind::Tuple:
+                if (!array || !other.array) {
+                    return array == other.array;
+                }
+                return *array == *other.array;
             case Kind::Object:
                 if (!object_fields || !other.object_fields) {
                     return object_fields == other.object_fields;
@@ -598,6 +665,17 @@ static std::string value_to_string(const Value& value) {
             return "null";
         case Value::Kind::Array:
             return "[array]";
+        case Value::Kind::Tuple: {
+            std::string out = "(";
+            if (value.array) {
+                for (std::size_t i = 0; i < value.array->size(); ++i) {
+                    if (i > 0) out += ", ";
+                    out += value_to_string((*value.array)[i]);
+                }
+            }
+            out += ")";
+            return out;
+        }
         case Value::Kind::Object:
             return "[object]";
     }
@@ -632,6 +710,17 @@ static std::string value_to_json(const Value& value) {
             return "null";
         case Value::Kind::Array:
             return "null";
+        case Value::Kind::Tuple: {
+            std::string out = "[";
+            if (value.array) {
+                for (std::size_t i = 0; i < value.array->size(); ++i) {
+                    if (i > 0) out += ",";
+                    out += value_to_json((*value.array)[i]);
+                }
+            }
+            out += "]";
+            return out;
+        }
         case Value::Kind::Object:
             if (value.class_name == "__host_ref" && value.object_fields) {
                 const auto it = value.object_fields->find("__nativeObjectId");
@@ -904,12 +993,29 @@ static Value parse_json_value(std::string text) {
     return parse_json_scalar(std::move(text));
 }
 
+struct SmsGuruMeditation final : std::runtime_error {
+    explicit SmsGuruMeditation(const std::string& code, const std::string& context = "")
+        : std::runtime_error(make_msg(code, context)) {}
+
+    static std::string make_msg(const std::string& code, const std::string& context) {
+        // #0000002A = 42 decimal. The answer to life, the universe, and everything.
+        std::string msg = "[SMS Guru Meditation] #0000002A." + code + "\n";
+        if (!context.empty()) msg += "  in: " + context + "\n";
+        msg += "  The interpreter has reached a point of no return.\n";
+        msg += "  SMS session terminated. Restart to continue.";
+        return msg;
+    }
+};
+
 class Env {
 public:
     explicit Env(Env* parent = nullptr) : parent_(parent) {}
 
     void define_var(const std::string& name, const Value& value) {
         vars_[name] = value;
+        if (value.kind != Value::Kind::Null) {
+            var_kinds_[name] = value.kind;
+        }
     }
 
     Value get_var(const std::string& name) const {
@@ -923,10 +1029,20 @@ public:
         throw std::runtime_error("Unknown variable: " + name);
     }
 
+    std::optional<Value::Kind> get_var_kind(const std::string& name) const {
+        const auto it = var_kinds_.find(name);
+        if (it != var_kinds_.end()) return it->second;
+        if (parent_ != nullptr) return parent_->get_var_kind(name);
+        return std::nullopt;
+    }
+
     bool assign_var(const std::string& name, const Value& value) {
         const auto it = vars_.find(name);
         if (it != vars_.end()) {
             it->second = value;
+            if (value.kind != Value::Kind::Null) {
+                var_kinds_[name] = value.kind;
+            }
             return true;
         }
         if (parent_ != nullptr) {
@@ -968,9 +1084,7 @@ public:
     void enter_call(const std::string& context) {
         auto* r = root();
         if (r->call_depth_ >= kMaxInterpreterCallDepth) {
-            throw std::runtime_error(
-                "RuntimeError: interpreter recursion limit exceeded in '" + context
-                + "' (possible stack overflow).");
+            throw SmsGuruMeditation("recursion_limit_exceeded", context);
         }
         r->call_depth_++;
     }
@@ -993,6 +1107,7 @@ private:
 
     Env* parent_ = nullptr;
     std::unordered_map<std::string, Value> vars_;
+    std::unordered_map<std::string, Value::Kind> var_kinds_;
     std::unordered_map<std::string, const FunctionDeclStmt*> functions_;
     std::unordered_map<std::string, const DataClassDeclStmt*> data_classes_;
     std::unordered_map<std::string, const EventHandlerDeclStmt*> event_handlers_;
@@ -1007,9 +1122,28 @@ struct ReturnSignal final : std::exception {
 struct BreakSignal final : std::exception {};
 struct ContinueSignal final : std::exception {};
 
+struct SmsRuntimeError final : std::runtime_error {
+    SmsRuntimeError(const std::string& code, SourceLoc loc = {})
+        : std::runtime_error(make_msg(code, loc)), code_(code) {}
+
+    static std::string make_msg(const std::string& code, const SourceLoc& loc) {
+        std::string msg = "[SMS Runtime Error] " + code + "\n";
+        if (loc.line > 0) {
+            msg += "  file: <script>, line " + std::to_string(loc.line)
+                 + ", col " + std::to_string(loc.col) + "\n";
+            const auto src = get_source_line(loc.line);
+            if (!src.empty()) msg += "  > " + src + "\n";
+        }
+        msg += "  SMS thread terminated. App continues.";
+        return msg;
+    }
+    std::string code_;
+};
+
 struct Expr {
     virtual ~Expr() = default;
     virtual Value eval(Env& env) const = 0;
+    SourceLoc loc;
 };
 
 struct NumberExpr final : Expr {
@@ -1080,6 +1214,22 @@ struct ArrayLiteralExpr final : Expr {
     std::vector<std::unique_ptr<Expr>> elements_;
 };
 
+struct TupleLiteralExpr final : Expr {
+    explicit TupleLiteralExpr(std::vector<std::unique_ptr<Expr>> elements)
+        : elements_(std::move(elements)) {}
+
+    Value eval(Env& env) const override {
+        std::vector<Value> out;
+        out.reserve(elements_.size());
+        for (const auto& expr : elements_) {
+            out.push_back(expr->eval(env));
+        }
+        return Value::Tuple(std::move(out));
+    }
+
+    std::vector<std::unique_ptr<Expr>> elements_;
+};
+
 struct ArrayAccessExpr final : Expr {
     ArrayAccessExpr(std::unique_ptr<Expr> receiver, std::unique_ptr<Expr> index)
         : receiver_(std::move(receiver)), index_(std::move(index)) {}
@@ -1087,11 +1237,14 @@ struct ArrayAccessExpr final : Expr {
     Value eval(Env& env) const override {
         auto receiver = receiver_->eval(env);
         auto index = index_->eval(env).as_int("Array index");
-        if (receiver.kind != Value::Kind::Array || !receiver.array) {
+        if (receiver.kind == Value::Kind::Null) {
+            throw SmsRuntimeError("null_access", loc);
+        }
+        if ((receiver.kind != Value::Kind::Array && receiver.kind != Value::Kind::Tuple) || !receiver.array) {
             throw std::runtime_error("Array access expects array receiver.");
         }
         if (index < 0 || static_cast<std::size_t>(index) >= receiver.array->size()) {
-            return Value::Null();
+            throw SmsRuntimeError("index_out_of_bounds", loc);
         }
         return (*receiver.array)[static_cast<std::size_t>(index)];
     }
@@ -1557,12 +1710,12 @@ struct BinaryExpr final : Expr {
                 return Value::Int(left_value.as_int("Binary expression") * right_value.as_int("Binary expression"));
             case TokenType::Slash:
                 if (right_value.as_int("Binary expression") == 0) {
-                    throw std::runtime_error("Division by zero.");
+                    throw SmsRuntimeError("division_by_zero", loc);
                 }
                 return Value::Int(left_value.as_int("Binary expression") / right_value.as_int("Binary expression"));
             case TokenType::Percent:
                 if (right_value.as_int("Binary expression") == 0) {
-                    throw std::runtime_error("Modulo by zero.");
+                    throw SmsRuntimeError("modulo_by_zero", loc);
                 }
                 return Value::Int(left_value.as_int("Binary expression") % right_value.as_int("Binary expression"));
             case TokenType::Less:
@@ -1709,6 +1862,7 @@ struct WhenExpr final : Expr {
 struct Stmt {
     virtual ~Stmt() = default;
     virtual void execute(Env& env, Value& last) const = 0;
+    SourceLoc loc;
 };
 
 static void execute_statements(const std::vector<std::unique_ptr<Stmt>>& body, Env& env, Value& last) {
@@ -1930,6 +2084,21 @@ struct AssignStmt final : Stmt {
     void execute(Env& env, Value&) const override {
         const auto value = value_expr->eval(env);
         if (const auto* variable = dynamic_cast<const VarExpr*>(target_expr.get())) {
+            const auto existing_kind = env.get_var_kind(variable->name);
+            if (existing_kind.has_value() && value.kind != *existing_kind) {
+                const auto expected = value_kind_name(static_cast<int>(*existing_kind));
+                const auto got = value_kind_name(static_cast<int>(value.kind));
+                std::string msg = "[SMS Compiler Error] type_mismatch\n";
+                if (loc.line > 0) {
+                    msg += "  file: <script>, line " + std::to_string(loc.line)
+                         + ", col " + std::to_string(loc.col) + "\n";
+                }
+                msg += "  expected: " + expected + "\n";
+                msg += "  got: " + got;
+                const auto src = get_source_line(loc.line);
+                if (!src.empty()) msg += "\n  > " + src;
+                throw std::runtime_error(msg);
+            }
             if (!env.assign_var(variable->name, value)) {
                 throw std::runtime_error("Assignment to unknown variable: " + variable->name);
             }
@@ -2118,24 +2287,6 @@ struct IfStmt final : Stmt {
     }
 };
 
-struct TryCatchStmt final : Stmt {
-    std::vector<std::unique_ptr<Stmt>> try_body;
-    std::string error_var;
-    std::vector<std::unique_ptr<Stmt>> catch_body;
-
-    void execute(Env& env, Value& last) const override {
-        try {
-            execute_statements(try_body, env, last);
-        } catch (const std::runtime_error& ex) {
-            Env catch_env(&env);
-            std::unordered_map<std::string, Value> fields;
-            fields.emplace("type", Value::String("RuntimeException"));
-            fields.emplace("message", Value::String(ex.what()));
-            catch_env.define_var(error_var, Value::Object("Exception", std::move(fields)));
-            execute_statements(catch_body, catch_env, last);
-        }
-    }
-};
 
 class Parser {
 public:
@@ -2166,7 +2317,6 @@ private:
         if (match(TokenType::Data)) return parse_data_class_decl();
         if (match(TokenType::For)) return parse_for();
         if (match(TokenType::While)) return parse_while();
-        if (match(TokenType::Try)) return parse_try_catch();
         if (match(TokenType::If)) return parse_if();
         if (match(TokenType::Fun)) return parse_function_decl();
         if (match(TokenType::On)) return parse_event_handler_decl();
@@ -2223,12 +2373,14 @@ private:
     std::unique_ptr<Stmt> parse_assignment(bool inside_for_clause) {
         auto target = parse_assignment_target();
 
-        consume(TokenType::Assign, "Expected '=' in assignment");
+        const auto eq_tok = consume(TokenType::Assign, "Expected '=' in assignment");
         auto value = parse_expression();
         if (!inside_for_clause) {
             match(TokenType::Semicolon);
         }
-        return std::make_unique<AssignStmt>(std::move(target), std::move(value));
+        auto stmt = std::make_unique<AssignStmt>(std::move(target), std::move(value));
+        stmt->loc = {eq_tok.line, eq_tok.col};
+        return stmt;
     }
 
     std::unique_ptr<Expr> parse_assignment_target() {
@@ -2307,7 +2459,24 @@ private:
         consume(TokenType::RightParen, "Expected ')' after function parameters");
         std::string return_type;
         if (match(TokenType::Colon)) {
-            return_type = consume(TokenType::Identifier, "Expected return type name").text;
+            if (match(TokenType::LeftParen)) {
+                // Tuple return type: (Type1, Type2, Type3)
+                std::string tuple_type = "(";
+                bool first_type = true;
+                while (!check(TokenType::RightParen) && !check(TokenType::Eof)) {
+                    if (!first_type) tuple_type += ", ";
+                    first_type = false;
+                    tuple_type += consume(TokenType::Identifier, "Expected type name in tuple return type").text;
+                    if (!check(TokenType::RightParen)) {
+                        consume(TokenType::Comma, "Expected ',' between tuple return types");
+                    }
+                }
+                consume(TokenType::RightParen, "Expected ')' after tuple return types");
+                tuple_type += ")";
+                return_type = std::move(tuple_type);
+            } else {
+                return_type = consume(TokenType::Identifier, "Expected return type name").text;
+            }
         }
         auto body = parse_block();
 
@@ -2424,21 +2593,6 @@ private:
         return if_stmt;
     }
 
-    std::unique_ptr<Stmt> parse_try_catch() {
-        auto try_body = parse_block();
-        consume(TokenType::Catch, "Expected 'catch' after try block");
-        consume(TokenType::LeftParen, "Expected '(' after catch");
-        const auto error_var = consume(TokenType::Identifier, "Expected catch variable name").text;
-        consume(TokenType::RightParen, "Expected ')' after catch variable");
-        auto catch_body = parse_block();
-
-        auto stmt = std::make_unique<TryCatchStmt>();
-        stmt->try_body = std::move(try_body);
-        stmt->error_var = error_var;
-        stmt->catch_body = std::move(catch_body);
-        return stmt;
-    }
-
     std::vector<std::unique_ptr<Stmt>> parse_block() {
         consume(TokenType::LeftBrace, "Expected '{' before block");
         std::vector<std::unique_ptr<Stmt>> body;
@@ -2548,13 +2702,19 @@ private:
                 continue;
             }
             if (match(TokenType::Slash)) {
+                const auto op_loc = SourceLoc{previous().line, previous().col};
                 auto rhs = parse_unary();
-                expr = std::make_unique<BinaryExpr>(TokenType::Slash, std::move(expr), std::move(rhs));
+                auto node = std::make_unique<BinaryExpr>(TokenType::Slash, std::move(expr), std::move(rhs));
+                node->loc = op_loc;
+                expr = std::move(node);
                 continue;
             }
             if (match(TokenType::Percent)) {
+                const auto op_loc = SourceLoc{previous().line, previous().col};
                 auto rhs = parse_unary();
-                expr = std::make_unique<BinaryExpr>(TokenType::Percent, std::move(expr), std::move(rhs));
+                auto node = std::make_unique<BinaryExpr>(TokenType::Percent, std::move(expr), std::move(rhs));
+                node->loc = op_loc;
+                expr = std::move(node);
                 continue;
             }
             break;
@@ -2598,9 +2758,12 @@ private:
             }
 
             if (match(TokenType::LeftBracket)) {
+                const auto bracket_loc = SourceLoc{previous().line, previous().col};
                 auto index = parse_expression();
                 consume(TokenType::RightBracket, "Expected ']' after array index");
-                expr = std::make_unique<ArrayAccessExpr>(std::move(expr), std::move(index));
+                auto node = std::make_unique<ArrayAccessExpr>(std::move(expr), std::move(index));
+                node->loc = bracket_loc;
+                expr = std::move(node);
                 continue;
             }
 
@@ -2728,9 +2891,19 @@ private:
         }
 
         if (match(TokenType::LeftParen)) {
-            auto inner = parse_expression();
+            auto first = parse_expression();
+            if (match(TokenType::Comma)) {
+                // Tuple literal: (expr, expr, ...)
+                std::vector<std::unique_ptr<Expr>> elements;
+                elements.push_back(std::move(first));
+                do {
+                    elements.push_back(parse_expression());
+                } while (match(TokenType::Comma));
+                consume(TokenType::RightParen, "Expected ')' after tuple elements");
+                return std::make_unique<TupleLiteralExpr>(std::move(elements));
+            }
             consume(TokenType::RightParen, "Expected ')' after expression");
-            return inner;
+            return first;
         }
 
         if (match(TokenType::LeftBracket)) {
@@ -3584,11 +3757,6 @@ static bool llvm_stmt_has_log_call(const Stmt* s) {
         for (const auto& stmt : fi->body) if (llvm_stmt_has_log_call(stmt.get())) return true;
         return false;
     }
-    if (const auto* t = dynamic_cast<const TryCatchStmt*>(s)) {
-        for (const auto& stmt : t->try_body) if (llvm_stmt_has_log_call(stmt.get())) return true;
-        for (const auto& stmt : t->catch_body) if (llvm_stmt_has_log_call(stmt.get())) return true;
-        return false;
-    }
     if (const auto* fn = dynamic_cast<const FunctionDeclStmt*>(s)) {
         for (const auto& stmt : fn->body) if (llvm_stmt_has_log_call(stmt.get())) return true;
         return false;
@@ -4091,6 +4259,7 @@ struct SmsSessionRuntime {
 constexpr std::size_t kMaxInvokeDepth = 256;
 
 static std::shared_ptr<SmsSessionRuntime> build_session_runtime_or_throw(const char* source) {
+    init_source_lines(source);
     Lexer lexer(source);
     auto tokens = lexer.tokenize();
     Parser parser(std::move(tokens));
@@ -4157,9 +4326,7 @@ static int invoke_event_on_runtime(
             bool armed = false;
             explicit InvokeDepthGuard(SmsSessionRuntime& runtime_ref, const std::string& invoke_key) : runtime(runtime_ref) {
                 if (runtime.invoke_depth >= kMaxInvokeDepth) {
-                    throw std::runtime_error(
-                        "RuntimeError: interpreter recursion limit exceeded while invoking '" + invoke_key
-                        + "' (possible stack overflow).");
+                    throw SmsGuruMeditation("recursion_limit_exceeded", invoke_key);
                 }
                 runtime.invoke_depth++;
                 armed = true;
@@ -4204,7 +4371,7 @@ static int invoke_event_on_runtime(
         write_error(error, error_capacity, ex.what());
         return 1;
     } catch (...) {
-        write_error(error, error_capacity, "unknown native exception");
+        write_error(error, error_capacity, SmsGuruMeditation("unknown_error").what());
         return 1;
     }
 }
@@ -4235,7 +4402,7 @@ int execute_sms_source(const char* source, std::int64_t* out_result, char* error
         write_error(error, error_capacity, ex.what());
         return 1;
     } catch (...) {
-        write_error(error, error_capacity, "unknown native exception");
+        write_error(error, error_capacity, SmsGuruMeditation("unknown_error").what());
         return 1;
     }
 }
@@ -4379,7 +4546,7 @@ int invoke_sms_event(
         write_error(error, error_capacity, ex.what());
         return 1;
     } catch (...) {
-        write_error(error, error_capacity, "unknown native exception");
+        write_error(error, error_capacity, SmsGuruMeditation("unknown_error").what());
         return 1;
     }
 }
@@ -4435,7 +4602,7 @@ extern "C" int sms_native_session_load(std::int64_t session, const char* source,
         write_error(error, error_capacity, ex.what());
         return 1;
     } catch (...) {
-        write_error(error, error_capacity, "unknown native exception");
+        write_error(error, error_capacity, SmsGuruMeditation("unknown_error").what());
         return 1;
     }
 }
@@ -4822,7 +4989,7 @@ extern "C" int sms_native_sml_parse(const char* source, std::int64_t* out_node_c
         write_error(error, error_capacity, ex.what());
         return 1;
     } catch (...) {
-        write_error(error, error_capacity, "unknown native exception");
+        write_error(error, error_capacity, SmsGuruMeditation("unknown_error").what());
         return 1;
     }
 }

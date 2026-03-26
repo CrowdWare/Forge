@@ -34,6 +34,7 @@ bool sms_error_is_missing_handler(const std::string& message) {
 bool sms_error_requires_exit(const std::string& message) {
     if (message.find("RuntimeError:") != std::string::npos) return true;
     if (message.find("Stack overflow") != std::string::npos) return true;
+    if (message.find("[SMS Guru Meditation]") != std::string::npos) return true;
     return false;
 }
 

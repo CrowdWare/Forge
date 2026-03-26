@@ -134,25 +134,66 @@ void test_import_forbid_deep_parent_traversal_after_scheme() {
         "must not contain '..' segments");
 }
 
-void test_try_catch_handles_runtime_error() {
-    expect_ok_value(
-        "try_catch_handles_runtime_error",
-        "try { 1 / 0; 0; } catch (e) { if (e.type == \"RuntimeException\" && e.message != \"\") { 1; } else { 0; } }",
-        1);
+void test_runtime_error_division_by_zero() {
+    expect_error_contains(
+        "runtime_error_division_by_zero",
+        "var x = 1 / 0;",
+        "[SMS Runtime Error] division_by_zero");
 }
 
-void test_try_catch_skips_catch_when_no_error() {
-    expect_ok_value(
-        "try_catch_skips_catch_when_no_error",
-        "var x = 0; try { x = 2; } catch (e) { x = 9; } x;",
-        2);
+void test_runtime_error_division_by_zero_thread_message() {
+    expect_error_contains(
+        "runtime_error_division_by_zero_thread_message",
+        "var x = 10 / 0;",
+        "SMS thread terminated. App continues.");
 }
 
-void test_try_catch_does_not_swallow_return() {
+void test_runtime_error_division_by_zero_has_location() {
+    expect_error_contains(
+        "runtime_error_division_by_zero_has_location",
+        "var x = 10 / 0;",
+        "line 1, col");
+}
+
+void test_runtime_error_modulo_by_zero() {
+    expect_error_contains(
+        "runtime_error_modulo_by_zero",
+        "var x = 5 % 0;",
+        "[SMS Runtime Error] modulo_by_zero");
+}
+
+void test_runtime_error_index_out_of_bounds() {
+    expect_error_contains(
+        "runtime_error_index_out_of_bounds",
+        "var a = [1, 2, 3]; a[10];",
+        "[SMS Runtime Error] index_out_of_bounds");
+}
+
+void test_runtime_error_tuple_index_out_of_bounds() {
+    expect_error_contains(
+        "runtime_error_tuple_index_out_of_bounds",
+        "var t = (1, 2); t[5];",
+        "[SMS Runtime Error] index_out_of_bounds");
+}
+
+void test_runtime_error_null_access() {
+    expect_error_contains(
+        "runtime_error_null_access",
+        "var x = null; x[0];",
+        "[SMS Runtime Error] null_access");
+}
+
+void test_tuple_return_replaces_try_catch() {
+    // Go-style error handling via tuple return — no try/catch needed
     expect_ok_value(
-        "try_catch_does_not_swallow_return",
-        "fun run() { try { return 7; } catch (e) { return 1; } } run();",
-        7);
+        "tuple_return_replaces_try_catch",
+        "fun safeDivide(a: Int32, b: Int32): (Bool, String, Int32) {"
+        "    if (b == 0) { return (false, \"division by zero\", 0); }"
+        "    return (true, \"ok\", a / b);"
+        "}"
+        "var result = safeDivide(10, 0);"
+        "if (result[0]) { result[2]; } else { 0; }",
+        0);
 }
 
 void test_export_function_named_args_and_defaults() {
@@ -260,6 +301,142 @@ void test_os_file_exists_trusted_fallback_without_sandbox_policy_callback() {
         "ui invoke bridge unavailable");
 }
 
+void test_tuple_literal_indexing() {
+    expect_ok_value(
+        "tuple_literal_indexing",
+        "var t = (10, 20, 30); t[1];",
+        20);
+}
+
+void test_tuple_literal_first_element() {
+    expect_ok_value(
+        "tuple_literal_first_element",
+        "var t = (99, 0, 0); t[0];",
+        99);
+}
+
+void test_tuple_return_from_function() {
+    expect_ok_value(
+        "tuple_return_from_function",
+        "fun safeDivide(a: Int32, b: Int32): (Bool, Int32) {"
+        "    if (b == 0) { return (false, 0); }"
+        "    return (true, a / b);"
+        "}"
+        "var result = safeDivide(10, 2);"
+        "result[1];",
+        5);
+}
+
+void test_tuple_return_error_case() {
+    expect_ok_value(
+        "tuple_return_error_case",
+        "fun safeDivide(a: Int32, b: Int32): (Bool, Int32) {"
+        "    if (b == 0) { return (false, 0); }"
+        "    return (true, a / b);"
+        "}"
+        "var result = safeDivide(10, 0);"
+        "result[1];",
+        0);
+}
+
+void test_tuple_return_success_flag() {
+    expect_ok_value(
+        "tuple_return_success_flag",
+        "fun safeDivide(a: Int32, b: Int32): (Bool, Int32) {"
+        "    if (b == 0) { return (false, 0); }"
+        "    return (true, a / b);"
+        "}"
+        "var result = safeDivide(10, 2);"
+        "if (result[0]) { 1; } else { 0; }",
+        1);
+}
+
+void test_tuple_return_failure_flag() {
+    expect_ok_value(
+        "tuple_return_failure_flag",
+        "fun safeDivide(a: Int32, b: Int32): (Bool, Int32) {"
+        "    if (b == 0) { return (false, 0); }"
+        "    return (true, a / b);"
+        "}"
+        "var result = safeDivide(5, 0);"
+        "if (result[0]) { 1; } else { 0; }",
+        0);
+}
+
+void test_type_mismatch_reassign_int_to_string() {
+    expect_error_contains(
+        "type_mismatch_reassign_int_to_string",
+        "var count = 0; count = \"hallo\";",
+        "type_mismatch");
+}
+
+void test_type_mismatch_reassign_string_to_int() {
+    expect_error_contains(
+        "type_mismatch_reassign_string_to_int",
+        "var name = \"foo\"; name = 42;",
+        "type_mismatch");
+}
+
+void test_type_mismatch_error_contains_expected_and_got() {
+    expect_error_contains(
+        "type_mismatch_error_contains_expected",
+        "var x = 1; x = \"bad\";",
+        "expected: Int32");
+    expect_error_contains(
+        "type_mismatch_error_contains_got",
+        "var x = 1; x = \"bad\";",
+        "got: String");
+}
+
+void test_type_mismatch_has_source_location() {
+    expect_error_contains(
+        "type_mismatch_has_source_location",
+        "var x = 1; x = \"bad\";",
+        "line 1, col");
+}
+
+void test_type_mismatch_has_source_line_context() {
+    expect_error_contains(
+        "type_mismatch_has_source_line_context",
+        "var x = 1; x = \"bad\";",
+        "> var x = 1; x = \"bad\";");
+}
+
+void test_runtime_error_has_source_line_context() {
+    expect_error_contains(
+        "runtime_error_has_source_line_context",
+        "var x = 5 / 0;",
+        "> var x = 5 / 0;");
+}
+
+void test_guru_meditation_recursion_limit() {
+    expect_error_contains(
+        "guru_meditation_recursion_limit",
+        "fun inf() { return inf(); } inf();",
+        "[SMS Guru Meditation] #0000002A.recursion_limit_exceeded");
+}
+
+void test_guru_meditation_contains_42() {
+    expect_error_contains(
+        "guru_meditation_contains_42",
+        "fun inf() { return inf(); } inf();",
+        "#0000002A");
+}
+
+void test_guru_meditation_point_of_no_return() {
+    expect_error_contains(
+        "guru_meditation_point_of_no_return",
+        "fun inf() { return inf(); } inf();",
+        "point of no return");
+}
+
+void test_type_consistent_reassign_allowed() {
+    expect_ok_value(
+        "type_consistent_reassign_allowed",
+        "var x = 10; x = 20; x;",
+        20);
+}
+
 const std::vector<TestCase>& all_tests() {
     static const std::vector<TestCase> tests = {
         {"import_res_scheme", test_import_res_scheme},
@@ -269,9 +446,14 @@ const std::vector<TestCase>& all_tests() {
         {"import_forbid_relative", test_import_forbid_relative},
         {"import_forbid_parent_traversal_after_scheme", test_import_forbid_parent_traversal_after_scheme},
         {"import_forbid_deep_parent_traversal_after_scheme", test_import_forbid_deep_parent_traversal_after_scheme},
-        {"try_catch_handles_runtime_error", test_try_catch_handles_runtime_error},
-        {"try_catch_skips_catch_when_no_error", test_try_catch_skips_catch_when_no_error},
-        {"try_catch_does_not_swallow_return", test_try_catch_does_not_swallow_return},
+        {"runtime_error_division_by_zero", test_runtime_error_division_by_zero},
+        {"runtime_error_division_by_zero_thread_message", test_runtime_error_division_by_zero_thread_message},
+        {"runtime_error_division_by_zero_has_location", test_runtime_error_division_by_zero_has_location},
+        {"runtime_error_modulo_by_zero", test_runtime_error_modulo_by_zero},
+        {"runtime_error_index_out_of_bounds", test_runtime_error_index_out_of_bounds},
+        {"runtime_error_tuple_index_out_of_bounds", test_runtime_error_tuple_index_out_of_bounds},
+        {"runtime_error_null_access", test_runtime_error_null_access},
+        {"tuple_return_replaces_try_catch", test_tuple_return_replaces_try_catch},
         {"export_function_named_args_and_defaults", test_export_function_named_args_and_defaults},
         {"data_class_named_args_and_defaults", test_data_class_named_args_and_defaults},
         {"for_in_typed_variable", test_for_in_typed_variable},
@@ -286,6 +468,22 @@ const std::vector<TestCase>& all_tests() {
         {"os_file_exists_rejects_non_sandbox_path", test_os_file_exists_rejects_non_sandbox_path},
         {"fs_read_text_rejects_non_sandbox_path", test_fs_read_text_rejects_non_sandbox_path},
         {"os_file_exists_trusted_fallback_without_sandbox_policy_callback", test_os_file_exists_trusted_fallback_without_sandbox_policy_callback},
+        {"tuple_literal_indexing", test_tuple_literal_indexing},
+        {"tuple_literal_first_element", test_tuple_literal_first_element},
+        {"tuple_return_from_function", test_tuple_return_from_function},
+        {"tuple_return_error_case", test_tuple_return_error_case},
+        {"tuple_return_success_flag", test_tuple_return_success_flag},
+        {"tuple_return_failure_flag", test_tuple_return_failure_flag},
+        {"type_mismatch_reassign_int_to_string", test_type_mismatch_reassign_int_to_string},
+        {"type_mismatch_reassign_string_to_int", test_type_mismatch_reassign_string_to_int},
+        {"type_mismatch_error_contains_expected_and_got", test_type_mismatch_error_contains_expected_and_got},
+        {"type_mismatch_has_source_location", test_type_mismatch_has_source_location},
+        {"type_mismatch_has_source_line_context", test_type_mismatch_has_source_line_context},
+        {"runtime_error_has_source_line_context", test_runtime_error_has_source_line_context},
+        {"type_consistent_reassign_allowed", test_type_consistent_reassign_allowed},
+        {"guru_meditation_recursion_limit", test_guru_meditation_recursion_limit},
+        {"guru_meditation_contains_42", test_guru_meditation_contains_42},
+        {"guru_meditation_point_of_no_return", test_guru_meditation_point_of_no_return},
     };
     return tests;
 }

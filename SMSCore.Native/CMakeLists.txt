@@ -34,9 +34,30 @@ if(BUILD_TESTING)
         import_forbid_relative
         import_forbid_parent_traversal_after_scheme
         import_forbid_deep_parent_traversal_after_scheme
-        try_catch_handles_runtime_error
-        try_catch_skips_catch_when_no_error
-        try_catch_does_not_swallow_return
+        runtime_error_division_by_zero
+        runtime_error_division_by_zero_thread_message
+        runtime_error_division_by_zero_has_location
+        runtime_error_modulo_by_zero
+        runtime_error_index_out_of_bounds
+        runtime_error_tuple_index_out_of_bounds
+        runtime_error_null_access
+        runtime_error_has_source_line_context
+        tuple_return_replaces_try_catch
+        tuple_literal_indexing
+        tuple_literal_first_element
+        tuple_return_from_function
+        tuple_return_error_case
+        tuple_return_success_flag
+        tuple_return_failure_flag
+        type_mismatch_reassign_int_to_string
+        type_mismatch_reassign_string_to_int
+        type_mismatch_error_contains_expected_and_got
+        type_mismatch_has_source_location
+        type_mismatch_has_source_line_context
+        type_consistent_reassign_allowed
+        guru_meditation_recursion_limit
+        guru_meditation_contains_42
+        guru_meditation_point_of_no_return
         export_function_named_args_and_defaults
         data_class_named_args_and_defaults
         for_in_typed_variable
@@ -74,6 +95,9 @@ if(BUILD_TESTING)
         sms_parser_integer_literal_uses_integer_runtime_value
         sms_parser_double_literals_are_rejected_in_native_subset
         sms_parser_exponentials_are_rejected
+        sms_runtime_recursive_function_hits_recursion_limit
+        sms_parser_string_concat_dollar_operator_with_call_parses_and_executes
+        sms_parser_string_interpolation_braces_with_call_parses_and_executes
     )
     foreach(CASE_NAME IN LISTS SMS_EVENTS_PARSER_CASES)
         add_test(NAME ${CASE_NAME} COMMAND sms_native_parser_events_tests ${CASE_NAME})

@@ -215,7 +215,8 @@ void test_runtime_recursive_function_hits_recursion_limit() {
     if (result.rc == 0) {
         throw std::runtime_error("runtime_recursive_function_hits_recursion_limit unexpectedly succeeded.");
     }
-    if (result.error.find("RuntimeError: interpreter recursion limit exceeded") == std::string::npos) {
+    if (result.error.find("Guru Meditation") == std::string::npos
+        && result.error.find("recursion_limit_exceeded") == std::string::npos) {
         throw std::runtime_error("unexpected error: " + result.error);
     }
 }
