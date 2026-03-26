@@ -147,7 +147,41 @@ fun update(deltaMs: Int32) {
 }
 ```
 
-## 7) Relaxed vs Strict Mode (Compiler/Transpiler)
+## 7) Tuple Return (Error Handling ohne try-catch)
+
+Funktionen können ein Tuple zurückgeben – immer `(Bool, String, ...)` als Konvention:
+
+```sms
+fun fetchData(url: String): (Bool, String, Data) {
+    // bei Fehler:
+    return (false, "Netzwerk nicht erreichbar", null)
+    // bei Erfolg:
+    return (true, "ok", result)
+}
+```
+
+Aufrufer destrukturiert direkt:
+
+```sms
+var (ok, msg, data) = fetchData("https://example.com")
+if (!ok) {
+    log.error(msg)
+}
+```
+
+Kurzform für einfache Fälle (nur Bool + Nachricht):
+
+```sms
+fun saveFile(path: String): (Bool, String) {
+    return (true, "saved")
+}
+
+var (ok, msg) = saveFile("/tmp/scene.forge")
+```
+
+Kein try-catch, kein null-Crash, deterministisch. Der Aufrufer entscheidet, was mit dem Fehler passiert.
+
+## 8) Relaxed vs Strict Mode (Compiler/Transpiler)
 
 Relaxed:
 - unknown type -> warning

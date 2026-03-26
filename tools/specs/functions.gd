@@ -258,6 +258,18 @@ const FUNCTIONS := {
         "category": "OS",
         "signature": "os.callStatic(assemblyPath: String, typeName: String, methodName: String, ...args)",
         "description": "Loads a .NET assembly and invokes a static method by reflection. Returns the method result converted to an SMS value."
+    },
+
+    "os.smsRuntimeMode": {
+        "category": "OS",
+        "signature": "os.smsRuntimeMode()",
+        "description": "Returns the currently active SMS execution mode as String: interpreter or native."
+    },
+
+    "os.runtimeMode": {
+        "category": "OS",
+        "signature": "os.runtimeMode()",
+        "description": "Alias for os.smsRuntimeMode(). Returns interpreter or native."
     }
 }
 

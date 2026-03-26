@@ -3,6 +3,14 @@ Forge 4D is an open platform for building applications using SML (Simple Markup 
 
 [![Manifest CI](https://img.shields.io/github/actions/workflow/status/CrowdWare/Forge/generate-manifest.yml?branch=main&label=manifest%20ci)](https://github.com/CrowdWare/Forge/actions/workflows/generate-manifest.yml) [![Release](https://img.shields.io/github/v/tag/CrowdWare/Forge?sort=semver&label=release)](https://github.com/CrowdWare/Forge/releases) [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/CrowdWare/Forge/blob/main/LICENSE)
 
+**Native First. Write once, run anywhere – without the VM.**
+
+Java had the idea in 1995. .NET followed in 2002. Both achieved portability through a virtual machine layer.
+Forge takes the same goal further: one language, every platform, compiled natively via LLVM.
+No garbage collector. No GC pauses. No VM overhead. Just your code, running directly on the hardware.
+
+---
+
 Forge 4D is not about avoiding code.  
 It is about removing unnecessary barriers between ideas and reality.  
 

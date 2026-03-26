@@ -141,6 +141,8 @@ Usage:
                              Build macOS app zip via ForgeCli.Native (wraps 'forgecli-native build mac')
   ./run.sh build-android [forgecli-build-args]
                              Build Android apk via ForgeCli.Native (wraps 'forgecli-native build android')
+  ./run.sh build-android-autosign [forgecli-build-args]
+                             Build Android apk and force local test signing config
   ./run.sh test               Run native tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)
   ./run.sh clean              Remove native build/dist folders
 
@@ -152,6 +154,10 @@ Environment:
   FORGE_ANDROID_RELEASE_KEYSTORE Optional path to Android release keystore for Godot signing
   FORGE_ANDROID_RELEASE_USER      Optional keystore alias/user for Godot signing
   FORGE_ANDROID_RELEASE_PASSWORD  Optional keystore password for Godot signing
+                                 Required for build-android.
+                                 build-android-autosign creates/uses local test signing.
+  FORGE_ANDROID_PACKAGE_ID       Optional Android app id (e.g. com.example.myapp)
+  FORGE_ANDROID_VERSION_CODE     Optional explicit Android version/code override
   GODOT_CPP_DIR               Required for build-host/build
   ./.godot_cpp_dir            Optional file with one line: absolute GODOT_CPP_DIR
   FORGE_APP_SERVER_BASE_URL   Base URL for hosted app manifests (default: https://crowdware.github.io/Forge)
@@ -180,6 +186,12 @@ run_forgecli_build_target() {
 
   local native_lib_dir="$REPO_ROOT/ForgeRunner.Native/build"
   if [[ "$target" == "android" ]]; then
+    if ! ensure_android_signing_env; then
+      return 1
+    fi
+    if ! ensure_incremented_android_version_code; then
+      return 1
+    fi
     if ! resolve_android_native_lib_dir; then
       return 1
     fi
@@ -193,6 +205,114 @@ run_forgecli_build_target() {
   FORGE_HOST_PROJECT_DIR="$REPO_ROOT/ForgeRunner.Native/host" \
   FORGE_NATIVE_LIB_DIR="$native_lib_dir" \
     "$forgecli_bin" build "$target" --project "$default_project" "$@"
+}
+
+ensure_android_signing_env() {
+  local has_keystore=false
+  local has_user=false
+  local has_password=false
+  [[ -n "${FORGE_ANDROID_RELEASE_KEYSTORE:-}" ]] && has_keystore=true
+  [[ -n "${FORGE_ANDROID_RELEASE_USER:-}" ]] && has_user=true
+  [[ -n "${FORGE_ANDROID_RELEASE_PASSWORD:-}" ]] && has_password=true
+
+  if [[ "$has_keystore" == true && "$has_user" == true && "$has_password" == true ]]; then
+    return 0
+  fi
+
+  if [[ "$has_keystore" == true || "$has_user" == true || "$has_password" == true ]]; then
+    echo "ERROR: Android signing config is partially set." >&2
+    echo "Set all 3 env vars together or none:" >&2
+    echo "  FORGE_ANDROID_RELEASE_KEYSTORE" >&2
+    echo "  FORGE_ANDROID_RELEASE_USER" >&2
+    echo "  FORGE_ANDROID_RELEASE_PASSWORD" >&2
+    return 1
+  fi
+
+  echo "ERROR: Missing Android release signing config." >&2
+  echo "Set FORGE_ANDROID_RELEASE_KEYSTORE, FORGE_ANDROID_RELEASE_USER, FORGE_ANDROID_RELEASE_PASSWORD." >&2
+  echo "Or use: ./run.sh build-android-autosign" >&2
+  return 1
+}
+
+ensure_android_test_signing_env() {
+  if ! command -v keytool >/dev/null 2>&1; then
+    echo "ERROR: keytool not found. Install a JDK or set FORGE_ANDROID_RELEASE_* manually." >&2
+    return 1
+  fi
+
+  local signing_dir="$REPO_ROOT/.local/android-signing"
+  local keystore_path="$signing_dir/forge-test.keystore"
+  local alias="forge-test"
+  local password="android"
+  mkdir -p "$signing_dir"
+
+  if [[ ! -f "$keystore_path" ]]; then
+    echo "Creating local Android test keystore: $keystore_path"
+    if ! keytool -genkeypair \
+      -keystore "$keystore_path" \
+      -storepass "$password" \
+      -keypass "$password" \
+      -alias "$alias" \
+      -keyalg RSA \
+      -keysize 2048 \
+      -validity 10000 \
+      -dname "CN=Forge Test,O=CrowdWare,C=DE" >/dev/null 2>&1; then
+      echo "ERROR: Failed to create Android test keystore." >&2
+      return 1
+    fi
+  fi
+
+  export FORGE_ANDROID_RELEASE_KEYSTORE="$keystore_path"
+  export FORGE_ANDROID_RELEASE_USER="$alias"
+  export FORGE_ANDROID_RELEASE_PASSWORD="$password"
+  echo "Using local Android test signing config from run.sh (keystore: $keystore_path, alias: $alias)."
+  return 0
+}
+
+ensure_incremented_android_version_code() {
+  if [[ -n "${FORGE_ANDROID_VERSION_CODE:-}" ]]; then
+    return 0
+  fi
+
+  local channel="${FORGE_ANDROID_BUILD_CHANNEL:-release}"
+  local state_dir="$REPO_ROOT/.local/android-build"
+  local state_file="$state_dir/version_code_${channel}.txt"
+  mkdir -p "$state_dir"
+
+  local current=0
+  if [[ -f "$state_file" ]]; then
+    local raw=""
+    raw="$(tr -d '[:space:]' < "$state_file")"
+    if [[ "$raw" =~ ^[0-9]+$ ]]; then
+      current="$raw"
+    fi
+  fi
+
+  local next=$((current + 1))
+  printf '%s\n' "$next" > "$state_file"
+  export FORGE_ANDROID_VERSION_CODE="$next"
+  echo "Using Android version/code: $FORGE_ANDROID_VERSION_CODE (channel: $channel)"
+  return 0
+}
+
+set_autosign_android_package_id() {
+  local base_id="${FORGE_ANDROID_PACKAGE_ID:-}"
+  local autosign_suffix="autosign"
+  local autosign_id=""
+
+  if [[ -n "$base_id" ]]; then
+    if [[ "$base_id" == *".${autosign_suffix}" ]]; then
+      autosign_id="$base_id"
+    else
+      autosign_id="${base_id}.${autosign_suffix}"
+    fi
+  else
+    autosign_id="io.crowdware.forge.autosign"
+  fi
+
+  export FORGE_ANDROID_PACKAGE_ID="$autosign_id"
+  echo "Using autosign Android package id: $FORGE_ANDROID_PACKAGE_ID"
+  return 0
 }
 
 resolve_android_native_lib_dir() {
@@ -577,11 +697,12 @@ if [[ -z "$MODE" ]]; then
   echo "  9) build-host      -> nur ForgeRunner.Native bauen"
   echo " 10) build-mac       -> forgecli build mac (inkl. prerequisites)"
   echo " 11) build-android   -> forgecli build android (inkl. prerequisites)"
-  echo " 12) test            -> Native Tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)"
-  echo " 13) clean           -> Native Build-Artefakte entfernen"
-  echo " 14) pub             -> Lokaler Publish-Override (run.local.sh)"
-  echo " 15) help            -> Hilfe anzeigen"
-  read -r -p "Auswahl [1-15] (Default 1): " CHOICE || true
+  echo " 12) build-android-autosign -> forgecli build android mit lokalem Test-Signing"
+  echo " 13) test            -> Native Tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)"
+  echo " 14) clean           -> Native Build-Artefakte entfernen"
+  echo " 15) pub             -> Lokaler Publish-Override (run.local.sh)"
+  echo " 16) help            -> Hilfe anzeigen"
+  read -r -p "Auswahl [1-16] (Default 1): " CHOICE || true
   CHOICE="$(printf '%s' "${CHOICE:-}" | tr -d '[:space:]')"
   if [[ -z "$CHOICE" ]]; then
     CHOICE="1"
@@ -599,10 +720,11 @@ if [[ -z "$MODE" ]]; then
     9|build-host|build-native-host) MODE="build-host" ;;
    10|build-mac) MODE="build-mac" ;;
    11|build-android) MODE="build-android" ;;
-   12|test|test-native) MODE="test" ;;
-   13|clean) MODE="clean" ;;
-   14|pub) MODE="pub" ;;
-   15|help|-h|--help) MODE="help" ;;
+   12|build-android-autosign) MODE="build-android-autosign" ;;
+   13|test|test-native) MODE="test" ;;
+   14|clean) MODE="clean" ;;
+   15|pub) MODE="pub" ;;
+   16|help|-h|--help) MODE="help" ;;
     *)
       echo "Ungültige Auswahl. Abbruch."
       exit 1
@@ -700,6 +822,17 @@ case "$MODE" in
     run_forgecli_build_target "mac" "$@"
     ;;
   build-android)
+    export FORGE_ANDROID_BUILD_CHANNEL="release"
+    run_forgecli_build_target "android" "$@"
+    ;;
+  build-android-autosign)
+    if ! ensure_android_test_signing_env; then
+      exit 1
+    fi
+    if ! set_autosign_android_package_id; then
+      exit 1
+    fi
+    export FORGE_ANDROID_BUILD_CHANNEL="autosign"
     run_forgecli_build_target "android" "$@"
     ;;
   test|test-native)

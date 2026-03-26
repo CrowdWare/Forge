@@ -131,6 +131,40 @@ If a proposal conflicts with:
 
 the proposal is out for v0/v1.
 
+## Tuple Return (Normative v0)
+
+SMS verwendet Tuple-Returns als primäres Fehlerbehandlungsmuster. Es gibt kein try-catch.
+
+### Konvention
+
+- Erster Wert: `Bool` (Erfolg/Fehler)
+- Zweiter Wert: `String` (Nachricht, leer bei Erfolg)
+- Weitere Werte: optionale Nutzdaten (`null` bei Fehler erlaubt)
+
+### Regeln
+
+1. Funktionen die fehlschlagen können, geben ein Tuple zurück.
+2. Der Aufrufer muss das `ok`-Flag auswerten – kein silent ignore.
+3. `null` als Datenwert ist nur in Tuple-Returns erlaubt (nicht als allgemeiner Typ).
+4. Strict mode: unausgewertetes Tuple-Return ist ein Compiler-Fehler.
+
+### Beispiel
+
+```sms
+fun readFile(path: String): (Bool, String, String) {
+    return (false, "Datei nicht gefunden", null)
+}
+
+var (ok, msg, content) = readFile("/tmp/scene.forge")
+if (!ok) {
+    log.error(msg)
+}
+```
+
+### Ahimsa-Prinzip
+
+Kein Programm darf stillschweigend abstürzen. Tuple-Returns erzwingen explizites Fehlerhandling – das ist die technische Umsetzung von "tuet keinem Lebewesen Leid an" auf Code-Ebene.
+
 ## Developer Promise For Async (Normative)
 
 Async in SMS must feel predictable from the developer perspective.

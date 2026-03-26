@@ -76,12 +76,10 @@
 ## Tasks Forge-Runner
 - [x] tasks/forgecli_build_command.md
 - [x] tasks/sms_llvm_aot_migration.md
+- [ ] tasks/TASKS_crystallize_tools.md -> siehe /docs/SPEC_sms_to_wasm_v0.md
 - [ ] tasks/pose_library_and_retarget_workflow.md
 - [ ] tasks/partial.md
 
-fun main() {
-    log.success("The answer of all questions is: ${getAnswer()}")
-}
 
 ## Future Tasks
 - [ ] Texture-Cache in `NodePropertyMapper` einbauen: `Dictionary<string, Texture2D>` nach resolved path, geteilt über alle Controls. Nur umsetzen wenn Ladezeiten > 1 Sekunde messbar sind.
