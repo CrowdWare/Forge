@@ -1,1 +1,0 @@
-/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/RelWithDebInfo/4x2q719y/obj/armeabi-v7a

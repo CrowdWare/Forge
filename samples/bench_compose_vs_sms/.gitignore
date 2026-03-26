@@ -1,0 +1,11 @@
+.gradle/
+.cxx/
+build/
+app/build/
+gradlew
+gradlew.bat
+gradle/
+*.apk
+*.aab
+*.idsig
+local.properties
