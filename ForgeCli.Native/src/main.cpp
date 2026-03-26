@@ -50,6 +50,7 @@ using SmsSessionLoadFn = int (*)(std::int64_t, const char*, char*, int);
 using SmsSessionInvokeFn = int (*)(std::int64_t, const char*, const char*, const char*, std::int64_t*, char*, int);
 using SmsSessionDisposeFn = int (*)(std::int64_t, char*, int);
 using SmsCodegenLlvmIrFn = int (*)(const char*, char*, int, char*, int);
+using SmsCodegenLlvmIrModeFn = int (*)(const char*, const char*, char*, int, char*, int);
 using SmsSandboxPathAllowFn = int (*)(const char*, const char*, char*, int);
 using SmsSetSandboxPathCallbackFn = int (*)(SmsSandboxPathAllowFn, char*, int);
 using SmsUiGetPropFn = int (*)(const char*, const char*, char*, int, char*, int);
@@ -253,7 +254,7 @@ static std::string quote_shell_arg(const fs::path& p) {
 
 static int cmd_sms(const std::vector<std::string>& args) {
     if (args.empty()) {
-        std::cerr << "Missing sms subcommand. Use: sms run <file.sms> | sms llvm-ir <file.sms> [--out <file.ll>] | sms build <file.sms> [--out <binary>] | sms demo [--build] [--out <binary>] [--force]\n";
+        std::cerr << "Missing sms subcommand. Use: sms run <file.sms> | sms llvm-ir <file.sms> [--out <file.ll>] [--mode <exe|lib>] | sms build <file.sms> [--out <binary>] | sms demo [--build] [--out <binary>] [--force]\n";
         return 1;
     }
 
@@ -348,10 +349,13 @@ static int cmd_sms(const std::vector<std::string>& args) {
 
     if (sub == "llvm-ir" || sub == "build") {
         fs::path out_file;
+        std::string llvm_mode = "exe";
         bool keep_ir = false;
         for (std::size_t i = 2; i < args.size(); i++) {
             if (args[i] == "--out" && i + 1 < args.size()) {
                 out_file = args[++i];
+            } else if (args[i] == "--mode" && i + 1 < args.size()) {
+                llvm_mode = args[++i];
             } else if (args[i] == "--keep-ir") {
                 keep_ir = true;
             } else {
@@ -359,8 +363,13 @@ static int cmd_sms(const std::vector<std::string>& args) {
                 return 1;
             }
         }
+        if (llvm_mode != "exe" && llvm_mode != "lib") {
+            std::cerr << "--mode expects 'exe' or 'lib', got: " << llvm_mode << "\n";
+            return 1;
+        }
 
         auto sms_codegen_ir = reinterpret_cast<SmsCodegenLlvmIrFn>(load_symbol(sms_lib, "sms_native_codegen_llvm_ir"));
+        auto sms_codegen_ir_mode = reinterpret_cast<SmsCodegenLlvmIrModeFn>(load_symbol(sms_lib, "sms_native_codegen_llvm_ir_mode"));
         if (!sms_codegen_ir) {
             std::cerr << "Missing symbol: sms_native_codegen_llvm_ir\n";
             return 1;
@@ -371,7 +380,9 @@ static int cmd_sms(const std::vector<std::string>& args) {
         while (capacity <= 8 * 1024 * 1024) {
             std::vector<char> buffer(static_cast<std::size_t>(capacity), '\0');
             char error[2048] = {0};
-            const int rc = sms_codegen_ir(source.c_str(), buffer.data(), capacity, error, static_cast<int>(sizeof(error)));
+            const int rc = sms_codegen_ir_mode != nullptr
+                ? sms_codegen_ir_mode(source.c_str(), llvm_mode.c_str(), buffer.data(), capacity, error, static_cast<int>(sizeof(error)))
+                : sms_codegen_ir(source.c_str(), buffer.data(), capacity, error, static_cast<int>(sizeof(error)));
             if (rc == 0) {
                 ir_text = std::string(buffer.data());
                 break;
@@ -426,6 +437,10 @@ static int cmd_sms(const std::vector<std::string>& args) {
             out << ir_text;
         }
 
+        if (llvm_mode == "lib") {
+            std::cerr << "sms build currently supports only --mode exe.\n";
+            return 1;
+        }
         const std::string cmd = "clang -O2 -o " + quote_shell_arg(out_file) + " " + quote_shell_arg(ir_file);
         const int rc = std::system(cmd.c_str());
         if (rc != 0) {
@@ -750,10 +765,10 @@ static void help() {
     std::cout << "  forgecli-native new <name> [--output <dir>] [--force]\n";
     std::cout << "  forgecli-native validate [--project <dir>]\n";
     std::cout << "  forgecli-native build mac     --project <dir> [--output <path>] [--godot-version <ver>]\n";
-    std::cout << "  forgecli-native build android --project <dir> [--output <path>] [--godot-version <ver>]\n";
+    std::cout << "  forgecli-native build android --project <dir> [--output <path>] [--godot-version <ver>] [--android-package-id <id>]\n";
     std::cout << "  forgecli-native toolchain doctor\n";
     std::cout << "  forgecli-native sms run <file.sms> [--invoke <target.event>] [--args <json-array>]\n";
-    std::cout << "  forgecli-native sms llvm-ir <file.sms> [--out <file.ll>]\n";
+    std::cout << "  forgecli-native sms llvm-ir <file.sms> [--out <file.ll>] [--mode <exe|lib>]\n";
     std::cout << "  forgecli-native sms build <file.sms> [--out <binary>] [--keep-ir]\n";
     std::cout << "  forgecli-native sms demo [--build] [--out <binary>] [--force]\n";
 }

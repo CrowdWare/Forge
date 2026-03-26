@@ -109,6 +109,8 @@ Desktop.ini
 # Local Run Overrides
 # =========================================================
 run.local.sh
+.local/
+*.keystore
 .godot_cpp_dir
 /main
 /aoaq_native

@@ -119,6 +119,13 @@ SMS_EXPORT int sms_native_codegen_llvm_ir(
     int out_ir_capacity,
     char* error,
     int error_capacity);
+SMS_EXPORT int sms_native_codegen_llvm_ir_mode(
+    const char* source,
+    const char* mode,
+    char* out_ir,
+    int out_ir_capacity,
+    char* error,
+    int error_capacity);
 SMS_EXPORT int sms_native_aot_invoke(
     const char* source,
     const char* target_id,

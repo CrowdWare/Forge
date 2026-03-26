@@ -31,6 +31,8 @@ using SmlParseFn = int (*)(const char*, std::int64_t*, char*, int);
 using SmsSessionCreateFn = int (*)(std::int64_t*, char*, int);
 using SmsSessionLoadFn = int (*)(std::int64_t, const char*, char*, int);
 using SmsSessionDisposeFn = int (*)(std::int64_t, char*, int);
+using SmsCodegenLlvmIrFn = int (*)(const char*, char*, int, char*, int);
+using SmsCodegenLlvmIrModeFn = int (*)(const char*, const char*, char*, int, char*, int);
 using SmsSandboxPathAllowFn = int (*)(const char*, const char*, char*, int);
 using SmsSetSandboxPathCallbackFn = int (*)(SmsSandboxPathAllowFn, char*, int);
 
@@ -152,6 +154,192 @@ bool parse_sms(SmsSessionCreateFn create_fn,
     return false;
 }
 
+bool codegen_sms_llvm_ir(SmsCodegenLlvmIrFn codegen_fn,
+                         SmsCodegenLlvmIrModeFn codegen_mode_fn,
+                         const std::string& source,
+                         const std::string& mode,
+                         std::string& out_ir,
+                         std::string& err) {
+    int capacity = 64 * 1024;
+    while (capacity <= 8 * 1024 * 1024) {
+        std::vector<char> buffer(static_cast<std::size_t>(capacity), '\0');
+        char e[2048] = {0};
+        const int rc = codegen_mode_fn != nullptr
+            ? codegen_mode_fn(source.c_str(), mode.c_str(), buffer.data(), capacity, e, static_cast<int>(sizeof(e)))
+            : codegen_fn(source.c_str(), buffer.data(), capacity, e, static_cast<int>(sizeof(e)));
+        if (rc == 0) {
+            out_ir = std::string(buffer.data());
+            return true;
+        }
+        const std::string msg = e[0] ? std::string(e) : std::string("llvm-ir generation failed");
+        if (msg.find("output buffer too small") != std::string::npos) {
+            capacity *= 2;
+            continue;
+        }
+        err = msg;
+        return false;
+    }
+    err = "llvm-ir output exceeds supported buffer size";
+    return false;
+}
+
+bool is_expected_llvm_codegen_skip(const std::string& error) {
+    return error.find("no top-level function call and no 'main' function fallback") != std::string::npos;
+}
+
+std::string sanitize_filename_token(const std::string& input) {
+    std::string out;
+    out.reserve(input.size());
+    for (char c : input) {
+        if (std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_') {
+            out.push_back(c);
+        } else {
+            out.push_back('_');
+        }
+    }
+    if (out.empty()) out = "script";
+    return out;
+}
+
+bool bundle_sms_llvm_ir_artifacts(const fs::path& project,
+                                  const fs::path& staging,
+                                  const bool strict_native,
+                                  std::string& err) {
+    const char* sms_dir = std::getenv("SMS_NATIVE_LIB_DIR");
+    if (!sms_dir || sms_dir[0] == '\0') {
+        std::cerr << "[WARN] SMS_NATIVE_LIB_DIR not set. Skipping SMS LLVM IR bundling.\n";
+        return true;
+    }
+
+    const fs::path sms_lib_path = fs::path(sms_dir) / ("libsms_native" + lib_ext());
+    void* sms_lib = load_lib(sms_lib_path);
+    if (!sms_lib) {
+        std::cerr << "[WARN] Failed to load SMS native library for LLVM bundling: "
+                  << sms_lib_path.string() << "\n";
+        return true;
+    }
+    auto cleanup = [&]() {
+        free_lib(sms_lib);
+    };
+
+    auto codegen_fn = reinterpret_cast<SmsCodegenLlvmIrFn>(load_symbol(sms_lib, "sms_native_codegen_llvm_ir"));
+    auto codegen_mode_fn = reinterpret_cast<SmsCodegenLlvmIrModeFn>(load_symbol(sms_lib, "sms_native_codegen_llvm_ir_mode"));
+    if (!codegen_fn) {
+        cleanup();
+        std::cerr << "[WARN] Missing symbol sms_native_codegen_llvm_ir. Skipping SMS LLVM IR bundling.\n";
+        return true;
+    }
+    if (strict_native && codegen_mode_fn == nullptr) {
+        cleanup();
+        err = "Native-only SMS compile requires symbol sms_native_codegen_llvm_ir_mode (compiler mode switch missing).";
+        return false;
+    }
+
+    std::vector<fs::path> sms_files;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(project, ec)) {
+        if (ec) {
+            cleanup();
+            err = "Failed to enumerate project SMS files: " + project.string();
+            return false;
+        }
+        if (!entry.is_regular_file()) continue;
+        std::string ext = entry.path().extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        if (ext == ".sms") {
+            sms_files.push_back(entry.path());
+        }
+    }
+    std::sort(sms_files.begin(), sms_files.end());
+    if (sms_files.empty()) {
+        cleanup();
+        return true;
+    }
+
+    const fs::path out_dir = staging / "sms_llvm";
+    fs::create_directories(out_dir, ec);
+    if (ec) {
+        cleanup();
+        err = "Failed to create SMS LLVM staging directory: " + out_dir.string();
+        return false;
+    }
+
+    int emitted_count = 0;
+    int expected_skipped_count = 0;
+    int unexpected_failed_count = 0;
+    std::vector<std::string> manifest_lines;
+    manifest_lines.reserve(sms_files.size());
+    for (const auto& sms_file : sms_files) {
+        std::ifstream in(sms_file, std::ios::binary);
+        if (!in.is_open()) {
+            std::cerr << "[WARN] Failed to read SMS for LLVM bundling: " << sms_file.string() << "\n";
+            unexpected_failed_count++;
+            continue;
+        }
+        const std::string source((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::string ir_text;
+        std::string codegen_error;
+        if (!codegen_sms_llvm_ir(codegen_fn, codegen_mode_fn, source, "lib", ir_text, codegen_error)) {
+            const bool expected_skip = is_expected_llvm_codegen_skip(codegen_error);
+            if (strict_native) {
+                cleanup();
+                err = "Native-only SMS compile failed for '" + sms_file.filename().string() + "': " + codegen_error;
+                return false;
+            }
+            if (expected_skip) {
+                expected_skipped_count++;
+                continue;
+            }
+            std::cerr << "[WARN] LLVM IR codegen skipped for " << sms_file.filename().string()
+                      << ": " << codegen_error << "\n";
+            unexpected_failed_count++;
+            continue;
+        }
+
+        const std::string stem = sanitize_filename_token(sms_file.stem().string());
+        const fs::path ir_out = out_dir / (stem + ".ll");
+        std::ofstream out(ir_out, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) {
+            cleanup();
+            err = "Failed to write SMS LLVM artifact: " + ir_out.string();
+            return false;
+        }
+        out << ir_text;
+        emitted_count++;
+        manifest_lines.push_back(sms_file.filename().string() + " -> " + ir_out.filename().string());
+    }
+
+    if (!manifest_lines.empty()) {
+        std::ostringstream manifest;
+        manifest << "# Generated SMS LLVM IR artifacts\n";
+        for (const auto& line : manifest_lines) {
+            manifest << line << "\n";
+        }
+        std::ofstream out(out_dir / "manifest.txt", std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) {
+            cleanup();
+            err = "Failed to write SMS LLVM artifact manifest.";
+            return false;
+        }
+        out << manifest.str();
+    }
+
+    if (strict_native && emitted_count != static_cast<int>(sms_files.size())) {
+        cleanup();
+        err = "Native-only SMS compile failed: not all SMS scripts produced LLVM IR.";
+        return false;
+    }
+
+    cleanup();
+    if (emitted_count > 0 || unexpected_failed_count > 0) {
+        std::cout << "[INFO] SMS LLVM artifacts bundled: " << emitted_count
+                  << " file(s), skipped: " << (expected_skipped_count + unexpected_failed_count) << "\n";
+    }
+    return true;
+}
+
 enum class BuildTarget {
     Mac,
     Android,
@@ -164,6 +352,7 @@ struct BuildOptions {
     std::string godot_version = "4.6-stable";
     fs::path host_project_dir;
     fs::path native_lib_dir;
+    std::string android_package_id;
 };
 
 bool parse_target(const std::string& value, BuildTarget& out) {
@@ -213,7 +402,35 @@ std::string ini_escape(std::string value) {
 }
 
 std::string usage_line() {
-    return "Usage: forgecli-native build <mac|android> --project <dir> [--output <path>] [--godot-version <ver>] [--host-project-dir <dir>] [--native-lib-dir <dir>]";
+    return "Usage: forgecli-native build <mac|android> --project <dir> [--output <path>] [--godot-version <ver>] [--host-project-dir <dir>] [--native-lib-dir <dir>] [--android-package-id <id>]";
+}
+
+bool is_valid_android_package_id(const std::string& id) {
+    if (id.empty()) return false;
+    if (id.front() == '.' || id.back() == '.') return false;
+
+    bool has_dot = false;
+    bool segment_started = false;
+    for (std::size_t i = 0; i < id.size(); ++i) {
+        const char c = id[i];
+        if (c == '.') {
+            if (!segment_started) return false;
+            segment_started = false;
+            has_dot = true;
+            continue;
+        }
+        const bool is_alpha = (c >= 'a' && c <= 'z');
+        const bool is_digit = (c >= '0' && c <= '9');
+        const bool is_underscore = c == '_';
+        if (!segment_started) {
+            if (!is_alpha) return false;
+            segment_started = true;
+            continue;
+        }
+        if (!is_alpha && !is_digit && !is_underscore) return false;
+    }
+    if (!segment_started) return false;
+    return has_dot;
 }
 
 bool parse_build_options(const std::vector<std::string>& args, BuildOptions& out, std::string& err) {
@@ -249,6 +466,10 @@ bool parse_build_options(const std::vector<std::string>& args, BuildOptions& out
             out.native_lib_dir = args[++i];
             continue;
         }
+        if (arg == "--android-package-id" && i + 1 < args.size()) {
+            out.android_package_id = to_lower_ascii(args[++i]);
+            continue;
+        }
         err = "Unknown or incomplete option: " + arg;
         return false;
     }
@@ -282,6 +503,10 @@ bool parse_build_options(const std::vector<std::string>& args, BuildOptions& out
         const char* env = std::getenv("FORGE_NATIVE_LIB_DIR");
         if (env != nullptr && env[0] != '\0') out.native_lib_dir = env;
     }
+    if (out.android_package_id.empty()) {
+        const char* env = std::getenv("FORGE_ANDROID_PACKAGE_ID");
+        if (env != nullptr && env[0] != '\0') out.android_package_id = to_lower_ascii(env);
+    }
 
     if (out.host_project_dir.empty()) {
         err = "Missing FORGE_HOST_PROJECT_DIR (or --host-project-dir).";
@@ -300,6 +525,11 @@ bool parse_build_options(const std::vector<std::string>& args, BuildOptions& out
     }
     if (!fs::exists(out.native_lib_dir) || !fs::is_directory(out.native_lib_dir)) {
         err = "Native library directory not found: " + out.native_lib_dir.string();
+        return false;
+    }
+    if (out.target == BuildTarget::Android && !out.android_package_id.empty() &&
+        !is_valid_android_package_id(out.android_package_id)) {
+        err = "Invalid Android package id: " + out.android_package_id;
         return false;
     }
 
@@ -530,7 +760,7 @@ std::string mac_export_preset(const fs::path& export_path) {
         << "dedicated_server=false\n"
         << "custom_features=\"\"\n"
         << "export_filter=\"all_resources\"\n"
-        << "include_filter=\"*.sml,*.sms\"\n"
+        << "include_filter=\"*.sml,*.sms,*.ll\"\n"
         << "exclude_filter=\"\"\n"
         << "export_path=\"" << export_path.string() << "\"\n"
         << "encryption_include_filters=\"\"\n"
@@ -555,9 +785,25 @@ std::string mac_export_preset(const fs::path& export_path) {
     return os.str();
 }
 
-std::string android_export_preset(const fs::path& export_path, const std::string& project_name) {
-    const std::string suffix = package_safe_suffix(project_name);
-    const std::string package_name = "io.crowdware." + suffix;
+std::string android_export_preset(const fs::path& export_path,
+                                  const std::string& project_name,
+                                  const std::string& package_id_override) {
+    std::string package_name = package_id_override;
+    if (package_name.empty()) {
+        package_name = env_or_empty("FORGE_ANDROID_PACKAGE_ID");
+    }
+    if (package_name.empty()) {
+        const std::string suffix = package_safe_suffix(project_name);
+        package_name = "io.crowdware." + suffix;
+    }
+    std::string version_code = env_or_empty("FORGE_ANDROID_VERSION_CODE");
+    if (version_code.empty()) {
+        version_code = "1";
+    }
+    std::string version_name = env_or_empty("FORGE_ANDROID_VERSION_NAME");
+    if (version_name.empty()) {
+        version_name = "1.0";
+    }
     const std::string release_keystore = env_or_empty("FORGE_ANDROID_RELEASE_KEYSTORE");
     const std::string release_user = env_or_empty("FORGE_ANDROID_RELEASE_USER");
     const std::string release_password = env_or_empty("FORGE_ANDROID_RELEASE_PASSWORD");
@@ -571,7 +817,7 @@ std::string android_export_preset(const fs::path& export_path, const std::string
         << "dedicated_server=false\n"
         << "custom_features=\"\"\n"
         << "export_filter=\"all_resources\"\n"
-        << "include_filter=\"*.sml,*.sms\"\n"
+        << "include_filter=\"*.sml,*.sms,*.ll\"\n"
         << "exclude_filter=\"\"\n"
         << "export_path=\"" << export_path.string() << "\"\n"
         << "encryption_include_filters=\"\"\n"
@@ -593,8 +839,8 @@ std::string android_export_preset(const fs::path& export_path, const std::string
         << "launcher_icons/adaptive_foreground_432x432=\"res://icon.svg\"\n"
         << "launcher_icons/adaptive_background_432x432=\"res://icon.svg\"\n"
         << "launcher_icons/adaptive_monochrome_432x432=\"res://icon.svg\"\n"
-        << "version/code=1\n"
-        << "version/name=\"1.0\"\n"
+        << "version/code=" << version_code << "\n"
+        << "version/name=\"" << ini_escape(version_name) << "\"\n"
         << "user_data_folder=\"" << package_name << "\"\n";
     if (!release_keystore.empty()) {
         os << "keystore/release=\"" << ini_escape(release_keystore) << "\"\n";
@@ -1003,7 +1249,6 @@ int cmd_build(const std::vector<std::string>& args) {
     const std::string project_name = opts.project.filename().string().empty()
         ? std::string("forge-app")
         : opts.project.filename().string();
-
     const fs::path staging = fs::temp_directory_path() / ("forge-build-" + make_temp_id());
     struct StagingCleanup {
         fs::path path;
@@ -1039,6 +1284,13 @@ int cmd_build(const std::vector<std::string>& args) {
     const fs::path assets_dir = opts.project / "assets";
     if (fs::exists(assets_dir) && fs::is_directory(assets_dir)) {
         if (!copy_recursive(assets_dir, staging / "assets", err)) {
+            std::cerr << err << "\n";
+            return 1;
+        }
+    }
+
+    if (opts.target == BuildTarget::Android) {
+        if (!bundle_sms_llvm_ir_artifacts(opts.project, staging, true, err)) {
             std::cerr << err << "\n";
             return 1;
         }
@@ -1090,7 +1342,7 @@ int cmd_build(const std::vector<std::string>& args) {
 
     const std::string preset_text = opts.target == BuildTarget::Mac
         ? mac_export_preset(export_path)
-        : android_export_preset(export_path, project_name);
+        : android_export_preset(export_path, project_name, opts.android_package_id);
     if (!write_text_file(staging / "export_presets.cfg", preset_text, err)) {
         std::cerr << err << "\n";
         return 1;

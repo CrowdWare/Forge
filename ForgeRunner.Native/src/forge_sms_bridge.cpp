@@ -92,6 +92,20 @@ namespace forge {
 
 namespace {
 constexpr int kMaxSmsDispatchDepth = 256;
+enum class SmsRuntimeMode : int {
+    Interpreter = 0,
+    Native = 1
+};
+std::atomic<int> g_sms_runtime_mode{static_cast<int>(SmsRuntimeMode::Interpreter)};
+
+void set_sms_runtime_mode(SmsRuntimeMode mode) {
+    g_sms_runtime_mode.store(static_cast<int>(mode), std::memory_order_relaxed);
+}
+
+const char* current_sms_runtime_mode_name() {
+    const int raw = g_sms_runtime_mode.load(std::memory_order_relaxed);
+    return raw == static_cast<int>(SmsRuntimeMode::Native) ? "native" : "interpreter";
+}
 
 bool starts_with_http_scheme(const std::string& label) {
     return label.rfind("http://", 0) == 0 || label.rfind("https://", 0) == 0;
@@ -951,6 +965,11 @@ static int sms_ui_invoke(
                 appres_root_dir().utf8().get_data());
         };
 
+        if (mname == "smsRuntimeMode" || mname == "runtimeMode") {
+            write_out(out_json, out_cap, json_string(current_sms_runtime_mode_name()));
+            return 0;
+        }
+
         if (mname == "quit" || mname == "exit") {
             auto* main_loop = Engine::get_singleton() ? Engine::get_singleton()->get_main_loop() : nullptr;
             auto* tree = Object::cast_to<SceneTree>(main_loop);
@@ -1414,6 +1433,7 @@ void SmsBridge::unload() {
     set_ui_string_cb_fn_ = nullptr;
     session_meta_.clear();
     loaded_       = false;
+    set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
 }
 
 std::int64_t SmsBridge::start_session(const std::string& script_path) {
@@ -1457,6 +1477,7 @@ std::int64_t SmsBridge::start_session_from_source(const std::string& source, con
     meta.has_event_handlers = has_sms_event_handlers(source);
     meta.source = source;
     session_meta_[session] = std::move(meta);
+    set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
     return session;
 }
 
@@ -1493,6 +1514,7 @@ void SmsBridge::dispatch_event(std::int64_t session,
     if (meta_it != session_meta_.end() && meta_it->second.is_local_source &&
         !meta_it->second.has_event_handlers) {
         if (meta_it->second.aot_succeeded) {
+            set_sms_runtime_mode(SmsRuntimeMode::Native);
             return;
         }
 
@@ -1512,19 +1534,22 @@ void SmsBridge::dispatch_event(std::int64_t session,
                                               static_cast<int>(sizeof(aot_err)));
             if (aot_rc == 0) {
                 meta_it->second.aot_succeeded = true;
+                set_sms_runtime_mode(SmsRuntimeMode::Native);
                 UtilityFunctions::print(String((
                     "[ForgeRunner.Native] SMS AOT active for local session (dispatch: "
                     + object_id + "." + event_name + ").").c_str()));
                 return;
             }
             meta_it->second.aot_failed = true;
+            set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
             const std::string aot_msg = aot_err[0] != '\0' ? std::string(aot_err) : std::string("unknown aot invoke error");
             UtilityFunctions::push_warning(String((
-                "[ForgeRunner.Native] SMS AOT unavailable for local session; using interpreter fallback: "
+                "[ForgeRunner.Native] SMS AOT unavailable for local session; switching to interpreter mode: "
                 + aot_msg).c_str()));
         }
     }
 
+    set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
     std::int64_t result_session = -1;
     char err[512] = {};
     const int rc = invoke_fn_(session, object_id.c_str(), event_name.c_str(), args_json,
@@ -1542,6 +1567,9 @@ void SmsBridge::dispatch_event(std::int64_t session,
 void SmsBridge::dispose_session(std::int64_t session) {
     if (!loaded_ || session < 0) return;
     session_meta_.erase(session);
+    if (session_meta_.empty()) {
+        set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
+    }
     dispose_fn_(session, nullptr, 0);
 }
 

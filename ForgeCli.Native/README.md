@@ -85,6 +85,29 @@ FORGE_NATIVE_LIB_DIR="$(pwd)/ForgeRunner.Native/build" \
 ./ForgeCli.Native/build/forgecli-native build mac --project ./samples/mac_demo --output ./mac_demo.zip
 ```
 
+Build (Android apk):
+
+```bash
+SML_NATIVE_LIB_DIR="$(pwd)/SMLCore.Native/build" \
+SMS_NATIVE_LIB_DIR="$(pwd)/SMSCore.Native/build" \
+FORGE_HOST_PROJECT_DIR="$(pwd)/ForgeRunner.Native/host" \
+FORGE_NATIVE_LIB_DIR="/abs/path/to/android/libs" \
+./ForgeCli.Native/build/forgecli-native build android --project ./samples/android_demo --output ./android_demo.apk --android-package-id com.example.myapp
+```
+
+Install APK on device:
+
+```bash
+adb install -r ./android_demo.apk
+```
+
+Android build note:
+- During `build android`, ForgeCli generates SMS LLVM IR artifacts for project-root `.sms` files and stages them under `sms_llvm/*.ll` in the export project.
+- LLVM codegen supports explicit compiler mode switch: `exe` (requires entry/main) and `lib` (module/library generation for event-driven scripts).
+- Package id can be provided externally via `--android-package-id <id>` or `FORGE_ANDROID_PACKAGE_ID`.
+- Android version code can be overridden via `FORGE_ANDROID_VERSION_CODE`.
+- Android packaging is native-strict: build fails if any `.sms` cannot be compiled to LLVM IR.
+
 Run sandbox tests:
 
 ```bash
