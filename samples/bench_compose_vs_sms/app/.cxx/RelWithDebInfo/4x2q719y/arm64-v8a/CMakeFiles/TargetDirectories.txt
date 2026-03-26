@@ -1,0 +1,3 @@
+/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/RelWithDebInfo/4x2q719y/arm64-v8a/CMakeFiles/bench_sms_bridge.dir
+/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/RelWithDebInfo/4x2q719y/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/RelWithDebInfo/4x2q719y/arm64-v8a/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,12 @@
+# ninja log v5
+224	301	1774487855096946117	/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/RelWithDebInfo/4x2q719y/obj/x86/libbench_sms_bridge.so	af3ccffc0ef9ef1f
+0	5269	1774485204853491885	CMakeFiles/bench_sms_bridge.dir/Users/art/SourceCode/Forge/SMSCore.Native/src/sms_native.cpp.o	18f1eeafa544bd2a
+2	223	1774487855039505183	CMakeFiles/bench_sms_bridge.dir/sms_bridge_jni.cpp.o	aa2b4a9b87d2880f
+4	263	1774489412147371060	CMakeFiles/bench_sms_bridge.dir/bench_sms_aot.cpp.o	6e24209be1ffd565
+3	266	1774489412148108483	CMakeFiles/bench_sms_bridge.dir/sms_bridge_jni.cpp.o	aa2b4a9b87d2880f
+266	342	1774489412206142534	/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/RelWithDebInfo/4x2q719y/obj/x86/libbench_sms_bridge.so	6441f6e4f17a4a0e
+2	279	1774490414863699108	CMakeFiles/bench_sms_bridge.dir/sms_bridge_jni.cpp.o	aa2b4a9b87d2880f
+2	280	1774490414864936618	CMakeFiles/bench_sms_bridge.dir/bench_sms_aot.cpp.o	6e24209be1ffd565
+280	356	1774490414924831975	/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/RelWithDebInfo/4x2q719y/obj/x86/libbench_sms_bridge.so	6441f6e4f17a4a0e
+2	223	1774490502627694473	CMakeFiles/bench_sms_bridge.dir/bench_sms_aot.cpp.o	6e24209be1ffd565
+223	287	1774490502679404056	/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/RelWithDebInfo/4x2q719y/obj/x86/libbench_sms_bridge.so	6441f6e4f17a4a0e

@@ -1,0 +1,17 @@
+[
+{
+  "directory": "/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/RelWithDebInfo/4x2q719y/x86_64",
+  "command": "/Users/art/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android24 --sysroot=/Users/art/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -Dbench_sms_bridge_EXPORTS -I/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/../../../../../../SMSCore.Native/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/bench_sms_bridge.dir/sms_bridge_jni.cpp.o -c /Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/sms_bridge_jni.cpp",
+  "file": "/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/sms_bridge_jni.cpp"
+},
+{
+  "directory": "/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/RelWithDebInfo/4x2q719y/x86_64",
+  "command": "/Users/art/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android24 --sysroot=/Users/art/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -Dbench_sms_bridge_EXPORTS -I/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/../../../../../../SMSCore.Native/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/bench_sms_bridge.dir/bench_sms_aot.cpp.o -c /Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/bench_sms_aot.cpp",
+  "file": "/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/bench_sms_aot.cpp"
+},
+{
+  "directory": "/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/RelWithDebInfo/4x2q719y/x86_64",
+  "command": "/Users/art/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android24 --sysroot=/Users/art/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -Dbench_sms_bridge_EXPORTS -I/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/src/main/cpp/../../../../../../SMSCore.Native/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/bench_sms_bridge.dir/Users/art/SourceCode/Forge/SMSCore.Native/src/sms_native.cpp.o -c /Users/art/SourceCode/Forge/SMSCore.Native/src/sms_native.cpp",
+  "file": "/Users/art/SourceCode/Forge/SMSCore.Native/src/sms_native.cpp"
+}
+]

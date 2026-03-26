@@ -1,0 +1,254 @@
+// Forge SMS benchmark (native-compatible subset)
+// Triggered from UI buttons in main.sml.
+
+var benchRunning = 0
+var lastSmsDurationMs = 0
+var lastKotlinDurationMs = 0
+
+fun fib(n) {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+fun double(x) {
+    return x * 2
+}
+
+fun loopTest() {
+    var sum = 0
+    var i = 0
+    while (i < 2000) {
+        sum = sum + double(i)
+        i = i + 1
+    }
+    return sum
+}
+
+fun nestedTest() {
+    var sum = 0
+    var i = 0
+    while (i < 15) {
+        var j = 0
+        while (j < 15) {
+            var k = 0
+            while (k < 15) {
+                sum = sum + 1
+                k = k + 1
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return sum
+}
+
+fun mathCheck() {
+    var acc = 7
+    var i = 1
+    while (i <= 1000) {
+        acc = (acc * 31 + i * 17) % 1000000007
+        i = i + 1
+    }
+    return acc
+}
+
+fun stringTouch(a, b, sel) {
+    var chosen = a
+    if (sel == 1) {
+        chosen = b
+    }
+    var joined = chosen + "-books"
+    if (joined == "crowdware-books") {
+        return 11
+    }
+    return 17
+}
+
+fun stringBench() {
+    var acc = 0
+    var i = 0
+    while (i < 2000) {
+        var sel = i % 2
+        acc = acc + stringTouch("crowdware", "forge", sel)
+        i = i + 1
+    }
+    return acc
+}
+
+fun runBench() {
+    var t1 = fib(20)
+    var t2 = loopTest()
+    var t3 = nestedTest()
+    var t4 = mathCheck()
+    var t5 = stringBench()
+    return t1 + t2 + t3 + t4 + t5
+}
+
+fun runBenchSeries() {
+    var warmupRuns = 0
+    var measuredRuns = 10
+    var tStart = os.now()
+
+    var w = 0
+    while (w < warmupRuns) {
+        runBench()
+        w = w + 1
+    }
+    log.info(1000 + warmupRuns)
+
+    var checksum = 0
+    var i = 0
+    while (i < measuredRuns) {
+        var total = runBench()
+        checksum = checksum + total
+        log.info(total)
+        i = i + 1
+    }
+    var tEnd = os.now()
+    var durationMs = tEnd - tStart
+    var avgMs = 0
+    if (measuredRuns > 0) {
+        avgMs = durationMs / measuredRuns
+    }
+    log.info(checksum)
+    log.info(7000)
+    log.info(durationMs)
+    log.info(7001)
+    log.info(avgMs)
+    lastSmsDurationMs = durationMs
+    logComparisonIfReady()
+    return checksum
+}
+
+fun stackKiller(depth) {
+    if ((depth % 1000) == 0) {
+        log.info(depth)
+    }
+    return stackKiller(depth + 1)
+}
+
+fun kotlinKillerLoop() {
+    var i = 0
+    var acc = 0
+    while (i < 250000000) {
+        acc = (acc + i * 13) % 1000000007
+        i = i + 1
+    }
+    log.info(acc)
+    return acc
+}
+
+fun setStatusReady() {
+    var status = ui.getObject("status")
+    status.text = "Ready"
+    status.modulate = "#E6E6E6"
+}
+
+fun setStatusSmsRunning() {
+    var status = ui.getObject("status")
+    status.text = "SMS running"
+    status.modulate = "#FFD166"
+}
+
+fun setStatusSmsDone() {
+    var status = ui.getObject("status")
+    status.text = "SMS done"
+    status.modulate = "#5FD35F"
+}
+
+fun setStatusKotlinRunning() {
+    var status = ui.getObject("status")
+    status.text = "Kotlin running"
+    status.modulate = "#FFD166"
+}
+
+fun setStatusKotlinDone() {
+    var status = ui.getObject("status")
+    status.text = "Kotlin done"
+    status.modulate = "#5FD35F"
+}
+
+fun logComparisonIfReady() {
+    if (lastSmsDurationMs <= 0) {
+        return
+    }
+    if (lastKotlinDurationMs <= 0) {
+        return
+    }
+    var ratioX1000 = lastKotlinDurationMs * 1000 / lastSmsDurationMs
+    log.info(7200)
+    log.info(lastSmsDurationMs)
+    log.info(7201)
+    log.info(lastKotlinDurationMs)
+    log.info(7202)
+    log.info(ratioX1000)
+}
+
+fun setStatusKillerSms() {
+    var status = ui.getObject("status")
+    status.text = "Killer SMS running"
+    status.modulate = "#FF7A7A"
+}
+
+fun setStatusKillerKotlin() {
+    var status = ui.getObject("status")
+    status.text = "Killer Kotlin running"
+    status.modulate = "#FF7A7A"
+}
+
+on mainWindow.ready() {
+    setStatusReady()
+    log.info(1)
+}
+
+on btnRun.clicked() {
+    if (benchRunning == 1) {
+        log.info(9000)
+        return
+    }
+    benchRunning = 1
+    setStatusSmsRunning()
+    runBenchSeries()
+    setStatusSmsDone()
+    log.info(2000)
+    benchRunning = 0
+}
+
+on btnKotlin.clicked() {
+    if (benchRunning == 1) {
+        log.info(9001)
+        return
+    }
+    benchRunning = 1
+    setStatusKotlinRunning()
+    benchmark.start("cpu")
+}
+
+on benchmark.completed(name, durationMs, smsScore, kotlinScore, summary) {
+    if (benchRunning == 0) {
+        return
+    }
+    setStatusKotlinDone()
+    log.info(7100)
+    log.info(durationMs)
+    log.info(7101)
+    log.info(smsScore)
+    log.info(7102)
+    log.info(kotlinScore)
+    lastKotlinDurationMs = durationMs
+    logComparisonIfReady()
+    log.info(2001)
+    benchRunning = 0
+}
+
+on btnSmsKiller.clicked() {
+    setStatusKillerSms()
+    stackKiller(0)
+}
+
+on btnKotlinKiller.clicked() {
+    setStatusKillerKotlin()
+    kotlinKillerLoop()
+}

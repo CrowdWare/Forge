@@ -1,0 +1,3 @@
+/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/Debug/2w315921/x86_64/CMakeFiles/bench_sms_bridge.dir
+/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/Debug/2w315921/x86_64/CMakeFiles/edit_cache.dir
+/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/.cxx/Debug/2w315921/x86_64/CMakeFiles/rebuild_cache.dir

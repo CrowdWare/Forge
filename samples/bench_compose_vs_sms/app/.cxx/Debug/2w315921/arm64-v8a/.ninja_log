@@ -1,0 +1,7 @@
+# ninja log v5
+1970	2118	1774485007685253806	/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/Debug/2w315921/obj/arm64-v8a/libbench_sms_bridge.so	ad1d5e9847f549c2
+0	1970	1774485007551644436	CMakeFiles/bench_sms_bridge.dir/Users/art/SourceCode/Forge/SMSCore.Native/src/sms_native.cpp.o	ab5f8c135df7d724
+0	521	1774485006114744038	CMakeFiles/bench_sms_bridge.dir/sms_bridge_jni.cpp.o	e2449f2068cd62d2
+2	539	1774489484361889215	CMakeFiles/bench_sms_bridge.dir/sms_bridge_jni.cpp.o	e2449f2068cd62d2
+2	545	1774489484371878587	CMakeFiles/bench_sms_bridge.dir/bench_sms_aot.cpp.o	3fc57e489954fb66
+545	744	1774489484552936711	/Users/art/SourceCode/Forge/samples/bench_compose_vs_sms/app/build/intermediates/cxx/Debug/2w315921/obj/arm64-v8a/libbench_sms_bridge.so	6e1757eacc95f766
