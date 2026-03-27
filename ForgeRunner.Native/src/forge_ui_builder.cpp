@@ -614,6 +614,14 @@ Control* UiBuilder::create_control(const std::string& nl) {
         }
         return memnew(Control);
     }
+    if (nl == "speechrecognizer") {
+        Variant v = ClassDB::instantiate("ForgeSpeechRecognizerControl");
+        if (v.get_type() != Variant::NIL) {
+            Object* obj = v;
+            if (auto* c = Object::cast_to<Control>(obj)) return c;
+        }
+        return memnew(Control);
+    }
     if (nl == "timeline") {
         Variant v = ClassDB::instantiate("ForgeTimelineControl");
         if (v.get_type() != Variant::NIL) {

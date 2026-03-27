@@ -166,6 +166,76 @@ USAGE
 
 FORGE_RESOLVED_ANDROID_NATIVE_LIB_DIR=""
 
+resolve_android_java_home() {
+  if [[ -n "${FORGE_ANDROID_JAVA_HOME:-}" ]]; then
+    if [[ -x "${FORGE_ANDROID_JAVA_HOME}/bin/jlink" ]]; then
+      echo "$FORGE_ANDROID_JAVA_HOME"
+      return 0
+    fi
+    echo "ERROR: FORGE_ANDROID_JAVA_HOME is set but invalid (missing bin/jlink): $FORGE_ANDROID_JAVA_HOME" >&2
+    return 1
+  fi
+
+  local candidates=(
+    "/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+    "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home"
+    "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home"
+    "/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home"
+    "/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home"
+  )
+
+  local detected_java_home=""
+  detected_java_home="$(/usr/libexec/java_home -v 21 2>/dev/null || true)"
+  if [[ -n "$detected_java_home" ]]; then
+    candidates+=("$detected_java_home")
+  fi
+  detected_java_home="$(/usr/libexec/java_home -v 17 2>/dev/null || true)"
+  if [[ -n "$detected_java_home" ]]; then
+    candidates+=("$detected_java_home")
+  fi
+
+  local candidate=""
+  for candidate in "${candidates[@]}"; do
+    [[ -n "$candidate" ]] || continue
+    [[ -x "$candidate/bin/jlink" ]] || continue
+    if [[ "$candidate" == *graal* || "$candidate" == *Graal* ]]; then
+      continue
+    fi
+    echo "$candidate"
+    return 0
+  done
+
+  if [[ -n "${JAVA_HOME:-}" && -x "${JAVA_HOME}/bin/jlink" ]]; then
+    if [[ "$JAVA_HOME" == *graal* || "$JAVA_HOME" == *Graal* ]]; then
+      echo "ERROR: JAVA_HOME points to GraalVM, which breaks Android jlink in this build path: $JAVA_HOME" >&2
+      echo "Set FORGE_ANDROID_JAVA_HOME to a non-Graal JDK (Android Studio JBR or Temurin)." >&2
+      return 1
+    fi
+    echo "$JAVA_HOME"
+    return 0
+  fi
+
+  return 1
+}
+
+ensure_android_java_env() {
+  local java_home=""
+  if ! java_home="$(resolve_android_java_home)"; then
+    echo "ERROR: Could not resolve a compatible Android JDK with jlink." >&2
+    echo "Set FORGE_ANDROID_JAVA_HOME explicitly (non-Graal), e.g. Android Studio JBR." >&2
+    return 1
+  fi
+
+  export JAVA_HOME="$java_home"
+  export PATH="$JAVA_HOME/bin:$PATH"
+  export GRADLE_OPTS="-Dorg.gradle.java.home=$JAVA_HOME ${GRADLE_OPTS:-}"
+  export ORG_GRADLE_PROJECT_org_gradle_java_home="$JAVA_HOME"
+  echo "Using Android JAVA_HOME: $JAVA_HOME"
+  if [[ "$JAVA_HOME" == *graal* || "$JAVA_HOME" == *Graal* ]]; then
+    echo "WARN: JAVA_HOME points to GraalVM; Android Gradle jlink may fail." >&2
+  fi
+}
+
 run_forgecli_build_target() {
   local target="$1"
   shift || true
@@ -187,6 +257,9 @@ run_forgecli_build_target() {
   local native_lib_dir="$REPO_ROOT/ForgeRunner.Native/build"
   if [[ "$target" == "android" ]]; then
     if ! ensure_android_signing_env; then
+      return 1
+    fi
+    if ! ensure_android_java_env; then
       return 1
     fi
     if ! ensure_incremented_android_version_code; then

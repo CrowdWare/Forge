@@ -81,6 +81,7 @@
 #include <godot_cpp/classes/line_edit.hpp>
 #include <godot_cpp/classes/menu_button.hpp>
 #include <godot_cpp/classes/material.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/panel_container.hpp>
 #include <godot_cpp/classes/popup_menu.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
@@ -94,14 +95,20 @@
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/immediate_mesh.hpp>
+#include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/v_box_container.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/classes/window.hpp>
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/object.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
 #include <godot_cpp/variant/rect2.hpp>
+
+#if defined(__ANDROID__)
+#include <jni.h>
+#endif
 
 #include <vector>
 
@@ -1194,6 +1201,338 @@ public:
             }
         }
     }
+};
+
+// ---------------------------------------------------------------------------
+// ForgeSpeechRecognizerControl
+// Native speech hook + text post-processing pipeline scaffold.
+// ---------------------------------------------------------------------------
+
+class ForgeSpeechRecognizerControl : public Control {
+    GDCLASS(ForgeSpeechRecognizerControl, Control);
+
+protected:
+    static void _bind_methods() {
+        ClassDB::bind_method(D_METHOD("listen"), &ForgeSpeechRecognizerControl::listen);
+        ClassDB::bind_method(D_METHOD("stop"), &ForgeSpeechRecognizerControl::stop);
+        ClassDB::bind_method(D_METHOD("submitText", "text"), &ForgeSpeechRecognizerControl::submit_text);
+        ClassDB::bind_method(D_METHOD("_bridgeRawResult", "text"), &ForgeSpeechRecognizerControl::bridge_raw_result);
+        ClassDB::bind_method(D_METHOD("_bridgeResult", "text"), &ForgeSpeechRecognizerControl::bridge_result);
+        ClassDB::bind_method(D_METHOD("_bridgeError", "message"), &ForgeSpeechRecognizerControl::bridge_error);
+
+        ClassDB::bind_method(D_METHOD("set_language", "value"), &ForgeSpeechRecognizerControl::set_language);
+        ClassDB::bind_method(D_METHOD("get_language"), &ForgeSpeechRecognizerControl::get_language);
+        ClassDB::bind_method(D_METHOD("set_mode", "value"), &ForgeSpeechRecognizerControl::set_mode);
+        ClassDB::bind_method(D_METHOD("get_mode"), &ForgeSpeechRecognizerControl::get_mode);
+        ClassDB::bind_method(D_METHOD("set_filters", "value"), &ForgeSpeechRecognizerControl::set_filters);
+        ClassDB::bind_method(D_METHOD("get_filters"), &ForgeSpeechRecognizerControl::get_filters);
+        ClassDB::bind_method(D_METHOD("set_suffix", "value"), &ForgeSpeechRecognizerControl::set_suffix);
+        ClassDB::bind_method(D_METHOD("get_suffix"), &ForgeSpeechRecognizerControl::get_suffix);
+        ClassDB::bind_method(D_METHOD("setMode", "value"), &ForgeSpeechRecognizerControl::set_mode);
+        ClassDB::bind_method(D_METHOD("getMode"), &ForgeSpeechRecognizerControl::get_mode);
+        ClassDB::bind_method(D_METHOD("setFilters", "value"), &ForgeSpeechRecognizerControl::set_filters);
+        ClassDB::bind_method(D_METHOD("getFilters"), &ForgeSpeechRecognizerControl::get_filters);
+        ClassDB::bind_method(D_METHOD("setSuffix", "value"), &ForgeSpeechRecognizerControl::set_suffix);
+        ClassDB::bind_method(D_METHOD("getSuffix"), &ForgeSpeechRecognizerControl::get_suffix);
+        ClassDB::bind_method(D_METHOD("setLanguage", "value"), &ForgeSpeechRecognizerControl::set_language);
+        ClassDB::bind_method(D_METHOD("getLanguage"), &ForgeSpeechRecognizerControl::get_language);
+
+        ADD_PROPERTY(PropertyInfo(Variant::STRING, "language"), "set_language", "get_language");
+        ADD_PROPERTY(PropertyInfo(Variant::STRING, "mode"), "set_mode", "get_mode");
+        ADD_PROPERTY(PropertyInfo(Variant::STRING, "filters"), "set_filters", "get_filters");
+        ADD_PROPERTY(PropertyInfo(Variant::STRING, "suffix"), "set_suffix", "get_suffix");
+
+        ADD_SIGNAL(MethodInfo("started"));
+        ADD_SIGNAL(MethodInfo("stopped"));
+        ADD_SIGNAL(MethodInfo("rawResult", PropertyInfo(Variant::STRING, "text")));
+        ADD_SIGNAL(MethodInfo("partialResult", PropertyInfo(Variant::STRING, "text")));
+        ADD_SIGNAL(MethodInfo("result", PropertyInfo(Variant::STRING, "text")));
+        ADD_SIGNAL(MethodInfo("error", PropertyInfo(Variant::STRING, "message")));
+    }
+
+public:
+    void _ready() override {
+        // Non-visual helper control.
+        set_custom_minimum_size(Vector2(0, 0));
+        set_visible(false);
+        set_process(true);
+    }
+
+    void _process(double) override {
+        poll_bridge_events();
+    }
+
+    void listen() {
+        emit_signal("started");
+
+        OS* os = OS::get_singleton();
+        Engine* engine = Engine::get_singleton();
+        if (os == nullptr) {
+            emit_signal("error", String("SpeechRecognizer backend unavailable."));
+            return;
+        }
+
+        const bool is_android = os->has_feature("android");
+        if (!is_android) {
+            emit_signal("error", String("SpeechRecognizer native capture is Android-only. Use keyboard mic or submitText()."));
+            return;
+        }
+
+        // Request microphone permission (if already granted this is effectively a no-op).
+        const bool permission_ok = os->request_permission("android.permission.RECORD_AUDIO");
+        if (!permission_ok) {
+            if (engine != nullptr && engine->has_singleton("ForgeSpeechBridge")) {
+                Object* bridge = engine->get_singleton("ForgeSpeechBridge");
+                if (bridge != nullptr) {
+                    bridge->call("showToast", String("Microphone permission denied."));
+                }
+            }
+            emit_signal("error", String("Microphone permission denied."));
+            return;
+        }
+
+        // Preferred path: fixed Android host singleton bridge.
+        // Security: method names and singleton name are hardcoded in C++, not script-provided.
+        if (engine != nullptr && engine->has_singleton("ForgeSpeechBridge")) {
+            Object* bridge = engine->get_singleton("ForgeSpeechBridge");
+            if (bridge != nullptr) {
+                const Variant ret = bridge->call("startListening", static_cast<int64_t>(get_instance_id()), language_);
+                bool started = false;
+                if (ret.get_type() == Variant::BOOL) {
+                    started = static_cast<bool>(ret);
+                } else if (ret.get_type() == Variant::INT) {
+                    started = static_cast<int64_t>(ret) != 0;
+                }
+                if (started) {
+                    return;
+                }
+                bridge->call("showToast", String("Could not start speech recognition."));
+            }
+            emit_signal("error", String("ForgeSpeechBridge startListening failed."));
+            return;
+        }
+
+        emit_signal("error", String("ForgeSpeechBridge not found."));
+    }
+
+    void stop() {
+        Engine* engine = Engine::get_singleton();
+        if (engine != nullptr && engine->has_singleton("ForgeSpeechBridge")) {
+            Object* bridge = engine->get_singleton("ForgeSpeechBridge");
+            if (bridge != nullptr) {
+                bridge->call("stopListening", static_cast<int64_t>(get_instance_id()));
+            }
+        }
+        emit_signal("stopped");
+    }
+
+    void submit_text(const String& text) {
+        emit_signal("rawResult", text);
+        const String processed = apply_mode(text);
+        emit_signal("result", processed);
+    }
+
+    // Bridge entry points for Android host singleton callbacks.
+    void bridge_raw_result(const String& text) {
+        emit_signal("rawResult", text);
+        emit_signal("partialResult", text);
+    }
+
+    void bridge_result(const String& text) {
+        emit_signal("rawResult", text);
+        const String processed = apply_mode(text);
+        emit_signal("result", processed);
+    }
+
+    void bridge_error(const String& message) {
+        emit_signal("error", message);
+    }
+
+    void set_language(const String& value) {
+        language_ = value.strip_edges();
+        if (language_.is_empty()) {
+            language_ = "de-DE";
+        }
+    }
+    String get_language() const { return language_; }
+
+    void set_mode(const String& value) {
+        const String normalized = value.to_lower().strip_edges();
+        if (normalized == "raw" || normalized == "clean" || normalized == "markdown") {
+            mode_ = normalized;
+            return;
+        }
+        mode_ = "clean";
+    }
+    String get_mode() const { return mode_; }
+
+    void set_filters(const String& value) {
+        filters_ = value.strip_edges();
+    }
+    String get_filters() const { return filters_; }
+
+    void set_suffix(const String& value) {
+        suffix_ = value;
+    }
+    String get_suffix() const { return suffix_; }
+
+private:
+    void poll_bridge_events() {
+        Engine* engine = Engine::get_singleton();
+        if (engine == nullptr || !engine->has_singleton("ForgeSpeechBridge")) {
+            return;
+        }
+
+        Object* bridge = engine->get_singleton("ForgeSpeechBridge");
+        if (bridge == nullptr) return;
+
+        const int64_t object_id = static_cast<int64_t>(get_instance_id());
+        for (int i = 0; i < 32; ++i) {
+            const Variant kind_var = bridge->call("popEventKind", object_id);
+            int64_t kind = 0;
+            if (kind_var.get_type() == Variant::INT) {
+                kind = static_cast<int64_t>(kind_var);
+            } else if (kind_var.get_type() == Variant::FLOAT) {
+                kind = static_cast<int64_t>(static_cast<double>(kind_var));
+            } else {
+                break;
+            }
+            if (kind <= 0) break;
+
+            const Variant text_var = bridge->call("popEventText", object_id);
+            String text;
+            if (text_var.get_type() == Variant::STRING) {
+                text = static_cast<String>(text_var);
+            } else {
+                text = String();
+            }
+
+            if (kind == 1) {
+                bridge_raw_result(text);
+            } else if (kind == 2) {
+                bridge_result(text);
+            } else if (kind == 3) {
+                bridge_error(text);
+            }
+        }
+    }
+
+    static std::string to_lower_ascii(std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return s;
+    }
+
+    static std::string trim_ascii(const std::string& s) {
+        size_t start = 0;
+        while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start]))) ++start;
+        if (start == s.size()) return "";
+        size_t end = s.size() - 1;
+        while (end > start && std::isspace(static_cast<unsigned char>(s[end]))) --end;
+        return s.substr(start, (end - start) + 1);
+    }
+
+    static void replace_all_case_variants(std::string& text, const std::string& needle_raw) {
+        const std::string needle = trim_ascii(needle_raw);
+        if (needle.empty()) return;
+
+        const std::string lower = to_lower_ascii(needle);
+        std::string upper = lower;
+        std::transform(upper.begin(), upper.end(), upper.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        std::string title = lower;
+        if (!title.empty()) {
+            title[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(title[0])));
+        }
+
+        const std::string candidates[3] = { lower, upper, title };
+        for (const auto& candidate : candidates) {
+            size_t pos = 0;
+            while (true) {
+                pos = text.find(candidate, pos);
+                if (pos == std::string::npos) break;
+                text.replace(pos, candidate.size(), " ");
+                pos += 1;
+            }
+        }
+    }
+
+    static std::string collapse_spaces(const std::string& in) {
+        std::string out;
+        out.reserve(in.size());
+        bool prev_space = false;
+        for (char c : in) {
+            if (std::isspace(static_cast<unsigned char>(c))) {
+                if (!prev_space) {
+                    out.push_back(' ');
+                    prev_space = true;
+                }
+            } else {
+                out.push_back(c);
+                prev_space = false;
+            }
+        }
+        return trim_ascii(out);
+    }
+
+    static void replace_phrase_case_insensitive(std::string& text, const std::string& phrase, const std::string& replacement) {
+        if (phrase.empty()) return;
+        const std::string text_lower = to_lower_ascii(text);
+        const std::string phrase_lower = to_lower_ascii(phrase);
+        size_t search_from = 0;
+        while (true) {
+            const size_t pos = text_lower.find(phrase_lower, search_from);
+            if (pos == std::string::npos) break;
+            text.replace(pos, phrase.size(), replacement);
+            search_from = pos + replacement.size();
+        }
+    }
+
+    String apply_clean(const String& text) const {
+        std::string out = std::string(text.utf8().get_data());
+        const std::string filters = std::string(filters_.utf8().get_data());
+
+        std::stringstream ss(filters);
+        std::string item;
+        while (std::getline(ss, item, ',')) {
+            replace_all_case_variants(out, item);
+        }
+
+        out = collapse_spaces(out);
+        return String::utf8(out.c_str());
+    }
+
+    String apply_markdown(const String& text) const {
+        std::string out = std::string(apply_clean(text).utf8().get_data());
+
+        replace_phrase_case_insensitive(out, "neuer absatz", "\n\n");
+        replace_phrase_case_insensitive(out, "neue zeile", "\n");
+        out = trim_ascii(out);
+
+        if (!out.empty()) {
+            const char tail = out.back();
+            if (tail != '.' && tail != '!' && tail != '?') {
+                out.push_back('.');
+            }
+        }
+
+        return String::utf8(out.c_str());
+    }
+
+    String apply_mode(const String& text) const {
+        if (mode_ == "raw") {
+            return text + suffix_;
+        }
+        if (mode_ == "markdown") {
+            return apply_markdown(text) + suffix_;
+        }
+        return apply_clean(text) + suffix_;
+    }
+
+    String language_ = "de-DE";
+    String mode_ = "clean";
+    String filters_ = "zdf,wdr,applaus,musik";
+    String suffix_;
 };
 
 // ---------------------------------------------------------------------------
@@ -5614,6 +5953,7 @@ void initialize_forge_runner_native(ModuleInitializationLevel p_level) {
     ClassDB::register_class<ForgeBgVBoxContainer>();
     ClassDB::register_class<ForgeBgHBoxContainer>();
     ClassDB::register_class<ForgeMarkdownContainer>();
+    ClassDB::register_class<ForgeSpeechRecognizerControl>();
     ClassDB::register_class<ForgeWindowDragControl>();
     ClassDB::register_class<ForgeDockingHostControl>();
     ClassDB::register_class<ForgeDockingContainerControl>();
@@ -5629,6 +5969,43 @@ void uninitialize_forge_runner_native(ModuleInitializationLevel p_level) {
 }
 
 extern "C" {
+
+#if defined(__ANDROID__)
+JNIEXPORT void JNICALL Java_io_crowdware_forgestudio_speech_GodotSpeechBridgeNative_callControlMethod(
+    JNIEnv* env,
+    jclass,
+    jlong object_id,
+    jstring method_name,
+    jstring value_text) {
+    if (env == nullptr || object_id <= 0 || method_name == nullptr || value_text == nullptr) {
+        return;
+    }
+
+    const char* method_utf = env->GetStringUTFChars(method_name, nullptr);
+    const char* value_utf = env->GetStringUTFChars(value_text, nullptr);
+    if (method_utf == nullptr || value_utf == nullptr) {
+        if (method_utf != nullptr) env->ReleaseStringUTFChars(method_name, method_utf);
+        if (value_utf != nullptr) env->ReleaseStringUTFChars(value_text, value_utf);
+        return;
+    }
+
+    const std::string method(method_utf);
+    const std::string value(value_utf);
+    env->ReleaseStringUTFChars(method_name, method_utf);
+    env->ReleaseStringUTFChars(value_text, value_utf);
+
+    // Strict whitelist: do not allow arbitrary method invocation from Java.
+    if (method != "_bridgeRawResult" && method != "_bridgeResult" && method != "_bridgeError") {
+        return;
+    }
+
+    godot::Object* obj = godot::ObjectDB::get_instance(static_cast<uint64_t>(object_id));
+    if (obj == nullptr) return;
+
+    obj->call_deferred(godot::StringName(method.c_str()), godot::String::utf8(value.c_str()));
+}
+#endif
+
 GDExtensionBool GDE_EXPORT forge_runner_native_library_init(
     GDExtensionInterfaceGetProcAddress p_get_proc_address,
     const GDExtensionClassLibraryPtr   p_library,

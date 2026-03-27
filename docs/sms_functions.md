@@ -99,14 +99,14 @@ Returns the current Unix epoch time in milliseconds.
 ### os.resolvePath(path: String)
 Resolves res:/, user:/ and relative paths to an absolute filesystem path.
 
+### os.runtimeMode()
+Alias for os.smsRuntimeMode(). Returns interpreter or native.
+
 ### os.setEnv(name: String, value: String)
 Sets a process-level environment variable for the running app session. Not persisted system-wide.
 
 ### os.smsRuntimeMode()
 Returns the currently active SMS execution mode as String: interpreter or native.
-
-### os.runtimeMode()
-Alias for os.smsRuntimeMode(). Returns interpreter or native.
 
 ## UI
 
@@ -136,3 +136,4 @@ Gets a Window flag value by enum constant (recommended) or integer value. Exampl
 
 ### <windowId>.setFlag(flag: int, enabled: bool)
 Sets a Window flag by enum constant (recommended) or integer value. Example: mainWindow.setFlag(extendToTitle, true).
+

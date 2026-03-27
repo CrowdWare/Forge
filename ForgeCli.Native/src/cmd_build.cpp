@@ -787,7 +787,9 @@ std::string mac_export_preset(const fs::path& export_path) {
 
 std::string android_export_preset(const fs::path& export_path,
                                   const std::string& project_name,
-                                  const std::string& package_id_override) {
+                                  const std::string& package_id_override,
+                                  bool use_gradle_build,
+                                  const std::vector<std::string>& plugin_names) {
     std::string package_name = package_id_override;
     if (package_name.empty()) {
         package_name = env_or_empty("FORGE_ANDROID_PACKAGE_ID");
@@ -827,7 +829,7 @@ std::string android_export_preset(const fs::path& export_path,
         << "[preset.0.options]\n\n"
         << "custom_template/debug=\"\"\n"
         << "custom_template/release=\"\"\n"
-        << "gradle_build/use_gradle_build=false\n"
+        << "gradle_build/use_gradle_build=" << (use_gradle_build ? "true" : "false") << "\n"
         << "gradle_build/export_format=0\n"
         << "architectures/armeabi-v7a=true\n"
         << "architectures/arm64-v8a=true\n"
@@ -841,7 +843,14 @@ std::string android_export_preset(const fs::path& export_path,
         << "launcher_icons/adaptive_monochrome_432x432=\"res://icon.svg\"\n"
         << "version/code=" << version_code << "\n"
         << "version/name=\"" << ini_escape(version_name) << "\"\n"
-        << "user_data_folder=\"" << package_name << "\"\n";
+        << "user_data_folder=\"" << package_name << "\"\n"
+        << "permissions/internet=true\n"
+        << "permissions/record_audio=true\n"
+        << "plugins/ForgeSpeechBridge=true\n"
+        << "plugins/ForgeSpeechBridge.gdap=true\n";
+    for (const auto& plugin_name : plugin_names) {
+        os << "plugins/" << ini_escape(plugin_name) << "=true\n";
+    }
     if (!release_keystore.empty()) {
         os << "keystore/release=\"" << ini_escape(release_keystore) << "\"\n";
     }
@@ -854,6 +863,36 @@ std::string android_export_preset(const fs::path& export_path,
     return os.str();
 }
 
+std::vector<std::string> detect_android_plugins(const fs::path& android_dir) {
+    std::vector<std::string> out;
+    const fs::path plugins_dir = android_dir / "plugins";
+    if (!fs::exists(plugins_dir) || !fs::is_directory(plugins_dir)) return out;
+
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(plugins_dir, ec)) {
+        if (ec) break;
+        if (!entry.is_directory()) continue;
+
+        const fs::path plugin_dir = entry.path();
+        bool has_plugin_artifact = false;
+        for (const auto& nested : fs::directory_iterator(plugin_dir, ec)) {
+            if (ec) break;
+            if (!nested.is_regular_file()) continue;
+            const std::string ext = to_lower_ascii(nested.path().extension().string());
+            if (ext == ".gdap" || ext == ".aar") {
+                has_plugin_artifact = true;
+                break;
+            }
+        }
+        if (!ec && has_plugin_artifact) {
+            out.push_back(plugin_dir.filename().string());
+        }
+    }
+
+    std::sort(out.begin(), out.end());
+    out.erase(std::unique(out.begin(), out.end()), out.end());
+    return out;
+}
 bool write_text_file(const fs::path& path, const std::string& text, std::string& err) {
     std::error_code ec;
     fs::create_directories(path.parent_path(), ec);
@@ -1289,6 +1328,28 @@ int cmd_build(const std::vector<std::string>& args) {
         }
     }
 
+    const fs::path addons_dir = opts.project / "addons";
+    if (fs::exists(addons_dir) && fs::is_directory(addons_dir)) {
+        if (!copy_recursive(addons_dir, staging / "addons", err)) {
+            std::cerr << err << "\n";
+            return 1;
+        }
+    }
+
+    bool use_gradle_build = false;
+    std::vector<std::string> android_plugins;
+    if (opts.target == BuildTarget::Android) {
+        const fs::path android_dir = opts.project / "android";
+        if (fs::exists(android_dir) && fs::is_directory(android_dir)) {
+            if (!copy_recursive(android_dir, staging / "android", err)) {
+                std::cerr << err << "\n";
+                return 1;
+            }
+            use_gradle_build = true;
+            android_plugins = detect_android_plugins(android_dir);
+        }
+    }
+
     if (opts.target == BuildTarget::Android) {
         if (!bundle_sms_llvm_ir_artifacts(opts.project, staging, true, err)) {
             std::cerr << err << "\n";
@@ -1342,7 +1403,7 @@ int cmd_build(const std::vector<std::string>& args) {
 
     const std::string preset_text = opts.target == BuildTarget::Mac
         ? mac_export_preset(export_path)
-        : android_export_preset(export_path, project_name, opts.android_package_id);
+        : android_export_preset(export_path, project_name, opts.android_package_id, use_gradle_build, android_plugins);
     if (!write_text_file(staging / "export_presets.cfg", preset_text, err)) {
         std::cerr << err << "\n";
         return 1;
@@ -1350,8 +1411,13 @@ int cmd_build(const std::vector<std::string>& args) {
 
     const fs::path export_log_path = staging / "godot_export.log";
     const std::string export_mode = "--export-release";
+    const bool should_install_android_template =
+        opts.target == BuildTarget::Android && use_gradle_build;
+    const std::string install_android_template_flag =
+        should_install_android_template ? " --install-android-build-template" : "";
     const std::string export_cmd_base = shell_quote(godot_path)
         + " --headless --path " + shell_quote(staging.string())
+        + install_android_template_flag
         + " " + export_mode + " " + shell_quote(preset_name)
         + " " + shell_quote(export_path.string());
     const std::string export_cmd = export_cmd_base + " > " + shell_quote(export_log_path.string()) + " 2>&1";

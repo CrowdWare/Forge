@@ -103,6 +103,8 @@ adb install -r ./android_demo.apk
 
 Android build note:
 - During `build android`, ForgeCli generates SMS LLVM IR artifacts for project-root `.sms` files and stages them under `sms_llvm/*.ll` in the export project.
+- Project-level `assets/` and `addons/` folders are staged into the export project.
+- If a project-level `android/` folder exists, ForgeCli stages it and enables `gradle_build/use_gradle_build=true`.
 - LLVM codegen supports explicit compiler mode switch: `exe` (requires entry/main) and `lib` (module/library generation for event-driven scripts).
 - Package id can be provided externally via `--android-package-id <id>` or `FORGE_ANDROID_PACKAGE_ID`.
 - Android version code can be overridden via `FORGE_ANDROID_VERSION_CODE`.

@@ -477,6 +477,18 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
         if (ctrl->has_signal("frameChanged"))      cbItem(ctrl, "frameChanged", "frameChanged");
         if (ctrl->has_signal("playbackStarted"))   cb0(ctrl, "playbackStarted", "playbackStarted");
         if (ctrl->has_signal("playbackStopped"))   cb0(ctrl, "playbackStopped", "playbackStopped");
+
+        // SpeechRecognizer custom control signals.
+        if (ctrl->has_signal("started"))           cb0(ctrl, "started", "started");
+        if (ctrl->has_signal("stopped"))           cb0(ctrl, "stopped", "stopped");
+        if (ctrl->has_signal("rawResult"))         cbText(ctrl, "rawResult", "rawResult");
+        if (ctrl->has_signal("partialResult"))     cbText(ctrl, "partialResult", "partialResult");
+        if (ctrl->has_signal("result"))            cbText(ctrl, "result", "result");
+        if (ctrl->has_signal("error"))             cbText(ctrl, "error", "error");
+        if (ctrl->has_signal("started") || ctrl->has_signal("result") || ctrl->has_signal("error")) {
+            UtilityFunctions::print(
+                String(("[ForgeRunner.Native][SMSDBG] bound speech signals for id=" + id).c_str()));
+        }
     }
 
     // Dispatch ready event
@@ -617,6 +629,9 @@ void ForgeRunnerNativeMain::bind_popup_menu_events(Node* node) {
 // ---------------------------------------------------------------------------
 
 void ForgeRunnerNativeMain::on_sms_event(String object_id, String event_name) {
+    UtilityFunctions::print(String(("[ForgeRunner.Native][SMSDBG] event " +
+        std::string(object_id.utf8().get_data()) + "." +
+        std::string(event_name.utf8().get_data())).c_str()));
     sms_bridge_.dispatch_event(sms_session_,
         object_id.utf8().get_data(), event_name.utf8().get_data());
 }
@@ -628,6 +643,10 @@ void ForgeRunnerNativeMain::on_sms_bool_event(bool value, String object_id, Stri
 }
 
 void ForgeRunnerNativeMain::on_sms_text_event(String text, String object_id, String event_name) {
+    UtilityFunctions::print(String(("[ForgeRunner.Native][SMSDBG] text-event " +
+        std::string(object_id.utf8().get_data()) + "." +
+        std::string(event_name.utf8().get_data()) + " -> " +
+        std::string(text.utf8().get_data())).c_str()));
     std::string json = "[\"";
     const std::string raw = text.utf8().get_data();
     for (unsigned char c : raw) {
