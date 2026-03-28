@@ -145,12 +145,15 @@ Usage:
                              Build Android apk and force local test signing config
   ./run.sh test               Run native tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)
   ./run.sh clean              Remove native build/dist folders
+  ./run.sh pin <file-or-dir> [--name <n>]
+                             Pin a file or directory to IPFS via Pinata (requires PINATA_JWT env var)
 
 Environment:
   FORGE_RUNNER_NATIVE_BIN     Optional explicit native runner executable path
   FORGE_NATIVE_ANDROID_LIB_DIR Optional dir with Android ForgeRunner .so libs (used by build-android)
   ANDROID_SDK_ROOT / ANDROID_HOME Optional Android SDK root (used for NDK + godot-cpp Android build)
   ANDROID_NDK_ROOT            Optional explicit Android NDK path for Android native build
+  PINATA_JWT                  Pinata API JWT — required for the 'pin' mode
   FORGE_ANDROID_RELEASE_KEYSTORE Optional path to Android release keystore for Godot signing
   FORGE_ANDROID_RELEASE_USER      Optional keystore alias/user for Godot signing
   FORGE_ANDROID_RELEASE_PASSWORD  Optional keystore password for Godot signing
@@ -938,6 +941,13 @@ case "$MODE" in
            "$REPO_ROOT/ForgeRunner.Native/build" \
            "$REPO_ROOT/ForgeRunner.Native/dist"
     echo "Native build artifacts cleaned."
+    ;;
+  pin)
+    if ! command -v go >/dev/null 2>&1; then
+      echo "ERROR: 'go' not found in PATH. Install Go to use the pin mode." >&2
+      exit 1
+    fi
+    go run "$REPO_ROOT/tools/pinata/main.go" pin "$@"
     ;;
   pub)
     echo "ERROR: mode 'pub' is not handled by default run.sh. Add it to run.local.sh via forge_local_handle_mode()." >&2

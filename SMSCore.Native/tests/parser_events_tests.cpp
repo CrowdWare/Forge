@@ -33,6 +33,8 @@
 
 namespace {
 
+static const std::string kMantra = "Tu keinem Lebewesen Leid an.\n";
+
 struct ExecResult {
     int rc = 0;
     std::int64_t value = 0;
@@ -40,13 +42,15 @@ struct ExecResult {
 };
 
 ExecResult execute(const std::string& source) {
+    const std::string full = kMantra + source;
     char error[1024] = {0};
     std::int64_t value = 0;
-    const auto rc = sms_native_execute(source.c_str(), &value, error, static_cast<int>(sizeof(error)));
+    const auto rc = sms_native_execute(full.c_str(), &value, error, static_cast<int>(sizeof(error)));
     return {rc, value, error};
 }
 
 ExecResult session_invoke(const std::string& source, const char* target, const char* event_name, const char* args_json) {
+    const std::string full = kMantra + source;
     char error[1024] = {0};
     std::int64_t session = 0;
     std::int64_t result = 0;
@@ -56,7 +60,7 @@ ExecResult session_invoke(const std::string& source, const char* target, const c
         return {rc, 0, error};
     }
 
-    rc = sms_native_session_load(session, source.c_str(), error, static_cast<int>(sizeof(error)));
+    rc = sms_native_session_load(session, full.c_str(), error, static_cast<int>(sizeof(error)));
     if (rc != 0) {
         sms_native_session_dispose(session, nullptr, 0);
         return {rc, 0, error};

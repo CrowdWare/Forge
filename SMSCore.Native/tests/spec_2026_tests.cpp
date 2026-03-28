@@ -65,10 +65,13 @@ int strict_scheme_only_sandbox_callback(const char*, const char* uri_path, char*
     return 1;
 }
 
+static const std::string kMantra = "Tu keinem Lebewesen Leid an.\n";
+
 ExecResult execute(const std::string& source) {
+    const std::string full = kMantra + source;
     char error[1024] = {0};
     std::int64_t value = 0;
-    const auto rc = sms_native_execute(source.c_str(), &value, error, static_cast<int>(sizeof(error)));
+    const auto rc = sms_native_execute(full.c_str(), &value, error, static_cast<int>(sizeof(error)));
     return {rc, value, error};
 }
 
@@ -152,7 +155,7 @@ void test_runtime_error_division_by_zero_has_location() {
     expect_error_contains(
         "runtime_error_division_by_zero_has_location",
         "var x = 10 / 0;",
-        "line 1, col");
+        "line 2, col");
 }
 
 void test_runtime_error_modulo_by_zero() {
@@ -392,7 +395,7 @@ void test_type_mismatch_has_source_location() {
     expect_error_contains(
         "type_mismatch_has_source_location",
         "var x = 1; x = \"bad\";",
-        "line 1, col");
+        "line 2, col");
 }
 
 void test_type_mismatch_has_source_line_context() {
@@ -435,6 +438,45 @@ void test_type_consistent_reassign_allowed() {
         "type_consistent_reassign_allowed",
         "var x = 10; x = 20; x;",
         20);
+}
+
+void test_ahimsa_english() {
+    const std::string src = "Do not harm to living beings.\n42;";
+    char error[1024] = {0};
+    std::int64_t value = 0;
+    const int rc = sms_native_execute(src.c_str(), &value, error, static_cast<int>(sizeof(error)));
+    if (rc != 0) {
+        throw std::runtime_error(std::string("ahimsa_english failed: ") + error);
+    }
+    if (value != 42) {
+        throw std::runtime_error("ahimsa_english returned " + std::to_string(value) + " (expected 42)");
+    }
+}
+
+void test_ahimsa_esperanto() {
+    const std::string src = "Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.\n42;";
+    char error[1024] = {0};
+    std::int64_t value = 0;
+    const int rc = sms_native_execute(src.c_str(), &value, error, static_cast<int>(sizeof(error)));
+    if (rc != 0) {
+        throw std::runtime_error(std::string("ahimsa_esperanto failed: ") + error);
+    }
+    if (value != 42) {
+        throw std::runtime_error("ahimsa_esperanto returned " + std::to_string(value) + " (expected 42)");
+    }
+}
+
+void test_ahimsa_missing() {
+    const std::string src = "42;";
+    char error[1024] = {0};
+    std::int64_t value = 0;
+    const int rc = sms_native_execute(src.c_str(), &value, error, static_cast<int>(sizeof(error)));
+    if (rc == 0) {
+        throw std::runtime_error("ahimsa_missing: expected compile error but succeeded");
+    }
+    if (std::string(error).find("mantra") == std::string::npos) {
+        throw std::runtime_error(std::string("ahimsa_missing: unexpected error: ") + error);
+    }
 }
 
 const std::vector<TestCase>& all_tests() {
@@ -484,6 +526,9 @@ const std::vector<TestCase>& all_tests() {
         {"guru_meditation_recursion_limit", test_guru_meditation_recursion_limit},
         {"guru_meditation_contains_42", test_guru_meditation_contains_42},
         {"guru_meditation_point_of_no_return", test_guru_meditation_point_of_no_return},
+        {"ahimsa_english", test_ahimsa_english},
+        {"ahimsa_esperanto", test_ahimsa_esperanto},
+        {"ahimsa_missing", test_ahimsa_missing},
     };
     return tests;
 }

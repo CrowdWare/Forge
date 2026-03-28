@@ -49,6 +49,8 @@
 
 namespace {
 
+static const std::string kMantra = "Tu keinem Lebewesen Leid an.\n";
+
 // ==========================================================================
 // Assertion helpers
 // ==========================================================================
@@ -76,13 +78,14 @@ struct SmsSession {
     std::int64_t id = -1;
 
     bool load(const std::string& source, std::string& out_err) {
+        const std::string full = kMantra + source;
         char err[512] = {};
         if (sms_native_session_create(&id, err, static_cast<int>(sizeof(err))) != 0
                 || id < 0) {
             out_err = err;
             return false;
         }
-        if (sms_native_session_load(id, source.c_str(), err,
+        if (sms_native_session_load(id, full.c_str(), err,
                                     static_cast<int>(sizeof(err))) != 0) {
             out_err = err;
             dispose();

@@ -35,6 +35,8 @@
 
 namespace {
 
+static const std::string kMantra = "Tu keinem Lebewesen Leid an.\n";
+
 struct ApiResult {
     int rc = 0;
     std::string text;
@@ -48,10 +50,11 @@ void assert_true(bool condition, const std::string& message) {
 }
 
 ApiResult codegen_llvm_ir(const std::string& source, int out_capacity = 1024 * 128) {
+    const std::string full = kMantra + source;
     std::vector<char> out(static_cast<std::size_t>(out_capacity), '\0');
     char error[2048] = {};
     const int rc = sms_native_codegen_llvm_ir(
-        source.c_str(),
+        full.c_str(),
         out.data(),
         out_capacity,
         error,
@@ -60,10 +63,11 @@ ApiResult codegen_llvm_ir(const std::string& source, int out_capacity = 1024 * 1
 }
 
 ApiResult aot_invoke(const std::string& source, const std::string& target, const std::string& event, const std::string& args_json) {
+    const std::string full = kMantra + source;
     char error[4096] = {};
     std::int64_t result = 0;
     const int rc = sms_native_aot_invoke(
-        source.c_str(),
+        full.c_str(),
         target.c_str(),
         event.c_str(),
         args_json.c_str(),

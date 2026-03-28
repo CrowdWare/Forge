@@ -1,3 +1,5 @@
+Tu keinem Lebewesen Leid an.
+
 fun run() {
     var i = 0
     var acc = 0

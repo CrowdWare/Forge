@@ -1,3 +1,5 @@
+// Tu keinem Lebewesen Leid an.
+
 /*
 #############################################################################
 # Copyright (C) 2026 CrowdWare
@@ -399,12 +401,27 @@ private:
     char peek() const { return is_at_end() ? '\0' : source_[index_]; }
 
     void skip_whitespace() {
+        static constexpr std::string_view kAhimsa[]  = {
+            "Tu keinem Lebewesen Leid an.",
+            "Do not harm to living beings.",
+            "Ne dama\xc4\xa5u iun ajn vivantan esta\xc4\xb5on.",
+        };
         while (!is_at_end()) {
             const char c = peek();
             if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
                 advance();
                 continue;
             }
+            // Easter egg: mantra line in any supported language is a valid no-op.
+            bool skipped = false;
+            for (const auto& m : kAhimsa) {
+                if (source_.compare(index_, m.size(), m) == 0) {
+                    while (!is_at_end() && peek() != '\n') advance();
+                    skipped = true;
+                    break;
+                }
+            }
+            if (skipped) continue;
             break;
         }
     }
@@ -4259,6 +4276,22 @@ struct SmsSessionRuntime {
 constexpr std::size_t kMaxInvokeDepth = 256;
 
 static std::shared_ptr<SmsSessionRuntime> build_session_runtime_or_throw(const char* source) {
+    static constexpr std::string_view kMantraDe = "Tu keinem Lebewesen Leid an.";
+    static constexpr std::string_view kMantraEn = "Do not harm to living beings.";
+    static constexpr std::string_view kMantraEo = "Ne damaĝu iun ajn vivantan estaĵon.";
+    const auto src = std::string_view(source);
+    const bool hasMantra =
+        src.substr(0, kMantraDe.size()) == kMantraDe ||
+        src.substr(0, kMantraEn.size()) == kMantraEn ||
+        src.substr(0, kMantraEo.size()) == kMantraEo;
+    if (!hasMantra) {
+        throw std::runtime_error(
+            "SyntaxError: do no harm - mantra missing\n"
+            "  hint: first line must be one of:\n"
+            "    Tu keinem Lebewesen Leid an.\n"
+            "    Do not harm to living beings.\n"
+            "    Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.");
+    }
     init_source_lines(source);
     Lexer lexer(source);
     auto tokens = lexer.tokenize();
@@ -4782,6 +4815,23 @@ extern "C" int sms_native_codegen_llvm_ir(
     if (source == nullptr || out_ir == nullptr) {
         write_error(error, error_capacity, "source/out_ir must not be null");
         return 2;
+    }
+    static constexpr std::string_view kMantraDe2 = "Tu keinem Lebewesen Leid an.";
+    static constexpr std::string_view kMantraEn2 = "Do not harm to living beings.";
+    static constexpr std::string_view kMantraEo2 = "Ne dama\xc4\xa5u iun ajn vivantan esta\xc4\xb5on.";
+    const auto src2 = std::string_view(source);
+    const bool hasMantraAot =
+        src2.substr(0, kMantraDe2.size()) == kMantraDe2 ||
+        src2.substr(0, kMantraEn2.size()) == kMantraEn2 ||
+        src2.substr(0, kMantraEo2.size()) == kMantraEo2;
+    if (!hasMantraAot) {
+        write_error(error, error_capacity,
+            "SyntaxError: do no harm - mantra missing\n"
+            "  hint: first line must be one of:\n"
+            "    Tu keinem Lebewesen Leid an.\n"
+            "    Do not harm to living beings.\n"
+            "    Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.");
+        return 1;
     }
     try {
         Lexer lexer(source);

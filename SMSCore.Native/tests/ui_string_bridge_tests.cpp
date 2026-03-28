@@ -36,6 +36,8 @@
 
 namespace {
 
+static const std::string kMantra = "Tu keinem Lebewesen Leid an.\n";
+
 void assert_true(bool condition, const std::string& message) {
     if (!condition) {
         throw std::runtime_error(message);
@@ -132,12 +134,13 @@ struct SmsSession {
     std::int64_t id = -1;
 
     bool load(const std::string& source, std::string& out_error) {
+        const std::string full = kMantra + source;
         char error[1024] = {};
         if (sms_native_session_create(&id, error, static_cast<int>(sizeof(error))) != 0 || id < 0) {
             out_error = error;
             return false;
         }
-        if (sms_native_session_load(id, source.c_str(), error, static_cast<int>(sizeof(error))) != 0) {
+        if (sms_native_session_load(id, full.c_str(), error, static_cast<int>(sizeof(error))) != 0) {
             out_error = error;
             dispose();
             return false;
