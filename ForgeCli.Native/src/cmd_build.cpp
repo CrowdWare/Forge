@@ -184,7 +184,9 @@ bool codegen_sms_llvm_ir(SmsCodegenLlvmIrFn codegen_fn,
 }
 
 bool is_expected_llvm_codegen_skip(const std::string& error) {
-    return error.find("no top-level function call and no 'main' function fallback") != std::string::npos;
+    if (error.find("no top-level function call and no 'main' function fallback") != std::string::npos)
+        return true;
+    return false;
 }
 
 std::string sanitize_filename_token(const std::string& input) {
@@ -283,14 +285,14 @@ bool bundle_sms_llvm_ir_artifacts(const fs::path& project,
         std::string codegen_error;
         if (!codegen_sms_llvm_ir(codegen_fn, codegen_mode_fn, source, "lib", ir_text, codegen_error)) {
             const bool expected_skip = is_expected_llvm_codegen_skip(codegen_error);
+            if (expected_skip) {
+                expected_skipped_count++;
+                continue;
+            }
             if (strict_native) {
                 cleanup();
                 err = "Native-only SMS compile failed for '" + sms_file.filename().string() + "': " + codegen_error;
                 return false;
-            }
-            if (expected_skip) {
-                expected_skipped_count++;
-                continue;
             }
             std::cerr << "[WARN] LLVM IR codegen skipped for " << sms_file.filename().string()
                       << ": " << codegen_error << "\n";
@@ -326,7 +328,7 @@ bool bundle_sms_llvm_ir_artifacts(const fs::path& project,
         out << manifest.str();
     }
 
-    if (strict_native && emitted_count != static_cast<int>(sms_files.size())) {
+    if (strict_native && (emitted_count + expected_skipped_count) != static_cast<int>(sms_files.size())) {
         cleanup();
         err = "Native-only SMS compile failed: not all SMS scripts produced LLVM IR.";
         return false;

@@ -4095,6 +4095,15 @@ static void llvm_stmt(LlvmCtx& c, const Stmt* s) {
                 llvm_i(c, "call i64 @sms_native_llvm_set_ui_string_prop(i8* " + object_ref_ptr + ", i8* " + member_name_ptr + ", i8* " + text_ptr + ")");
                 return;
             }
+            if (value_kind == LlvmValueKind::Integer || value_kind == LlvmValueKind::Unknown) {
+                const auto object_ref_i64 = llvm_expr(c, member->receiver_.get());
+                const auto object_ref_ptr = llvm_t(c);
+                llvm_i(c, object_ref_ptr + " = inttoptr i64 " + object_ref_i64 + " to i8*");
+                const auto member_name_ptr = llvm_emit_const_string_ptr(c, member->member_);
+                const auto val = llvm_expr(c, a->value_expr.get());
+                llvm_i(c, "call i64 @sms_native_llvm_set_ui_int_prop(i8* " + object_ref_ptr + ", i8* " + member_name_ptr + ", i64 " + val + ")");
+                return;
+            }
             throw std::runtime_error("llvm codegen: unsupported member assignment target '" + member->member_ + "'");
         }
         const auto* var = dynamic_cast<const VarExpr*>(a->target_expr.get());
@@ -4222,6 +4231,7 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
     out += "declare i8* @sms_native_llvm_ui_get_object(i8*)\n";
     out += "declare i64 @sms_native_llvm_set_ui_text(i8*, i8*)\n\n";
     out += "declare i64 @sms_native_llvm_set_ui_string_prop(i8*, i8*, i8*)\n";
+    out += "declare i64 @sms_native_llvm_set_ui_int_prop(i8*, i8*, i64)\n";
     out += "declare i64 @sms_native_llvm_os_now_ms()\n";
     out += "declare i8* @sms_native_llvm_string_concat(i8*, i8*)\n";
     out += "declare i64 @sms_native_llvm_string_eq(i8*, i8*)\n\n";
@@ -4804,6 +4814,27 @@ extern "C" SMS_EXPORT int sms_native_llvm_set_ui_string_prop(
 
 extern "C" SMS_EXPORT int sms_native_llvm_set_ui_text(const char* object_id, const char* value_text) {
     return sms_native_llvm_set_ui_string_prop(object_id, "text", value_text);
+}
+
+extern "C" SMS_EXPORT int sms_native_llvm_set_ui_int_prop(
+    const char* object_id,
+    const char* property_name,
+    int64_t value) {
+    if (object_id == nullptr || property_name == nullptr) {
+        return 2;
+    }
+    char error[1024] = {0};
+    if (g_ui_set_prop != nullptr) {
+        const std::string payload = std::to_string(value);
+        const auto rc = g_ui_set_prop(
+            object_id,
+            property_name,
+            payload.c_str(),
+            error,
+            static_cast<int>(sizeof(error)));
+        return rc == 0 ? 0 : 1;
+    }
+    return 2;
 }
 
 extern "C" int sms_native_codegen_llvm_ir(

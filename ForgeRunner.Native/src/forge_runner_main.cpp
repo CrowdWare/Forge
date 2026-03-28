@@ -114,6 +114,10 @@ void ForgeRunnerNativeMain::_ready() {
     g_sms_main_instance = this;
     forge::set_ui_open_dialog_hook(&sms_open_dialog_hook);
 
+    if (Viewport* vp = get_viewport()) {
+        vp->connect("size_changed", callable_mp(this, &ForgeRunnerNativeMain::on_viewport_size_changed));
+    }
+
     const char* env_url = std::getenv("FORGE_RUNNER_URL");
     if (!env_url || env_url[0] == '\0') {
         UtilityFunctions::push_warning("[ForgeRunner.Native] FORGE_RUNNER_URL is not set. Falling back to res:/app.sml.");
@@ -640,6 +644,17 @@ void ForgeRunnerNativeMain::on_sms_bool_event(bool value, String object_id, Stri
     sms_bridge_.dispatch_event(sms_session_,
         object_id.utf8().get_data(), event_name.utf8().get_data(),
         value ? "[true]" : "[false]");
+}
+
+void ForgeRunnerNativeMain::on_viewport_size_changed() {
+    if (sms_session_ < 0) return;
+    Viewport* vp = get_viewport();
+    if (!vp) return;
+    const Vector2 sz = vp->get_visible_rect().size;
+    const bool is_landscape = sz.x > sz.y;
+    const std::string orientation = is_landscape ? "landscape" : "portrait";
+    const std::string payload = "[\"" + orientation + "\"]";
+    sms_bridge_.dispatch_event(sms_session_, "mainWindow", "orientationChanged", payload);
 }
 
 void ForgeRunnerNativeMain::on_sms_text_event(String text, String object_id, String event_name) {

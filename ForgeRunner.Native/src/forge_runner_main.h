@@ -74,6 +74,9 @@ public:
     void open_sms_file_dialog(const std::string& callback_name, const std::string& filter, bool save_mode);
     void on_sms_tree_button_clicked(godot::TreeItem* item, int column, int id, int mouse_button_index, godot::String object_id, godot::String event_name);
 
+    // Viewport resize -> mainWindow.orientationChanged SMS event
+    void on_viewport_size_changed();
+
 private:
     // ----- SML / Splash state -----
     godot::Control* content_root_    = nullptr;
