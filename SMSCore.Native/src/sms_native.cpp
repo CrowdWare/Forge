@@ -4277,6 +4277,7 @@ struct SmsSessionRuntime {
     std::vector<std::unique_ptr<Stmt>> program;
     Env env;
     Value top_level_last = Value::Null();
+    bool has_ahimsa = false;
     // Re-entrant because UI callbacks can synchronously trigger nested SMS events
     // while an outer event invoke is still on the stack (e.g. loadProject -> scenePropAdded).
     std::recursive_mutex mutex;
@@ -4285,23 +4286,21 @@ struct SmsSessionRuntime {
 
 constexpr std::size_t kMaxInvokeDepth = 256;
 
-static std::shared_ptr<SmsSessionRuntime> build_session_runtime_or_throw(const char* source) {
-    static constexpr std::string_view kMantraDe = "Tu keinem Lebewesen Leid an.";
-    static constexpr std::string_view kMantraEn = "Do not harm to living beings.";
-    static constexpr std::string_view kMantraEo = "Ne damaĝu iun ajn vivantan estaĵon.";
-    const auto src = std::string_view(source);
-    const bool hasMantra =
-        src.substr(0, kMantraDe.size()) == kMantraDe ||
-        src.substr(0, kMantraEn.size()) == kMantraEn ||
-        src.substr(0, kMantraEo.size()) == kMantraEo;
-    if (!hasMantra) {
-        throw std::runtime_error(
-            "SyntaxError: do no harm - mantra missing\n"
-            "  hint: first line must be one of:\n"
-            "    Tu keinem Lebewesen Leid an.\n"
-            "    Do not harm to living beings.\n"
-            "    Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.");
+static bool source_has_ahimsa_comment(std::string_view src) {
+    static constexpr std::string_view kComments[] = {
+        "// Do not harm any living being.",
+        "// Tu keinem Lebewesen Leid an.",
+        "// Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.",
+    };
+    for (const auto& c : kComments) {
+        if (src.substr(0, c.size()) == c) return true;
     }
+    return false;
+}
+
+static std::shared_ptr<SmsSessionRuntime> build_session_runtime_or_throw(const char* source) {
+    const auto src = std::string_view(source);
+    const bool hasAhimsa = source_has_ahimsa_comment(src);
     init_source_lines(source);
     Lexer lexer(source);
     auto tokens = lexer.tokenize();
@@ -4310,6 +4309,7 @@ static std::shared_ptr<SmsSessionRuntime> build_session_runtime_or_throw(const c
 
     auto runtime = std::make_shared<SmsSessionRuntime>();
     runtime->program = std::move(program);
+    runtime->has_ahimsa = hasAhimsa;
     runtime->env.define_var("log", Value::Object("log", {}));
     runtime->env.define_var("os", Value::Object("os", {}));
     runtime->env.define_var("fs", Value::Object("fs", {}));
@@ -4726,6 +4726,20 @@ extern "C" int sms_native_session_dispose(std::int64_t session, char* error, int
     return 0;
 }
 
+extern "C" int sms_native_session_has_ahimsa(std::int64_t session, char* error, int error_capacity) {
+    std::lock_guard<std::mutex> lock(g_sessions_mutex);
+    const auto it = g_sessions.find(session);
+    if (it == g_sessions.end()) {
+        write_error(error, error_capacity, "invalid session");
+        return -1;
+    }
+    if (!it->second.runtime) {
+        write_error(error, error_capacity, "session has no loaded source");
+        return -1;
+    }
+    return it->second.runtime->has_ahimsa ? 1 : 0;
+}
+
 extern "C" int sms_native_set_ui_callbacks(
     sms_native_ui_get_prop_fn get_prop,
     sms_native_ui_set_prop_fn set_prop,
@@ -4846,23 +4860,6 @@ extern "C" int sms_native_codegen_llvm_ir(
     if (source == nullptr || out_ir == nullptr) {
         write_error(error, error_capacity, "source/out_ir must not be null");
         return 2;
-    }
-    static constexpr std::string_view kMantraDe2 = "Tu keinem Lebewesen Leid an.";
-    static constexpr std::string_view kMantraEn2 = "Do not harm to living beings.";
-    static constexpr std::string_view kMantraEo2 = "Ne dama\xc4\xa5u iun ajn vivantan esta\xc4\xb5on.";
-    const auto src2 = std::string_view(source);
-    const bool hasMantraAot =
-        src2.substr(0, kMantraDe2.size()) == kMantraDe2 ||
-        src2.substr(0, kMantraEn2.size()) == kMantraEn2 ||
-        src2.substr(0, kMantraEo2.size()) == kMantraEo2;
-    if (!hasMantraAot) {
-        write_error(error, error_capacity,
-            "SyntaxError: do no harm - mantra missing\n"
-            "  hint: first line must be one of:\n"
-            "    Tu keinem Lebewesen Leid an.\n"
-            "    Do not harm to living beings.\n"
-            "    Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.");
-        return 1;
     }
     try {
         Lexer lexer(source);

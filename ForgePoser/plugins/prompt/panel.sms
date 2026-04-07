@@ -1,4 +1,4 @@
-Tu keinem Lebewesen Leid an.
+// Tu keinem Lebewesen Leid an.
 var pluginPromptRef = null
 var pluginNegativePromptRef = null
 var pluginApiKeyRef = null

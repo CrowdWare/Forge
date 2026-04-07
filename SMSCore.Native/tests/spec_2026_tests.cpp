@@ -440,7 +440,22 @@ void test_type_consistent_reassign_allowed() {
         20);
 }
 
+void test_ahimsa_comment() {
+    // Comment form is the canonical Ahimsa trigger; session flag must be set.
+    std::int64_t session = 0;
+    char error[1024] = {0};
+    int rc = sms_native_session_create(&session, error, static_cast<int>(sizeof(error)));
+    if (rc != 0) throw std::runtime_error(std::string("ahimsa_comment create: ") + error);
+    const std::string src = "// Do not harm any living being.\n42;";
+    rc = sms_native_session_load(session, src.c_str(), error, static_cast<int>(sizeof(error)));
+    if (rc != 0) throw std::runtime_error(std::string("ahimsa_comment load: ") + error);
+    const int flag = sms_native_session_has_ahimsa(session, error, static_cast<int>(sizeof(error)));
+    if (flag != 1) throw std::runtime_error("ahimsa_comment: has_ahimsa flag not set");
+    sms_native_session_dispose(session, error, static_cast<int>(sizeof(error)));
+}
+
 void test_ahimsa_english() {
+    // Legacy plain-text mantra is a no-op (skipped by lexer) — still compiles fine.
     const std::string src = "Do not harm to living beings.\n42;";
     char error[1024] = {0};
     std::int64_t value = 0;
@@ -454,6 +469,7 @@ void test_ahimsa_english() {
 }
 
 void test_ahimsa_esperanto() {
+    // Legacy plain-text mantra is a no-op (skipped by lexer) — still compiles fine.
     const std::string src = "Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.\n42;";
     char error[1024] = {0};
     std::int64_t value = 0;
@@ -467,15 +483,16 @@ void test_ahimsa_esperanto() {
 }
 
 void test_ahimsa_missing() {
+    // Mantra is no longer required — plain code without it compiles successfully.
     const std::string src = "42;";
     char error[1024] = {0};
     std::int64_t value = 0;
     const int rc = sms_native_execute(src.c_str(), &value, error, static_cast<int>(sizeof(error)));
-    if (rc == 0) {
-        throw std::runtime_error("ahimsa_missing: expected compile error but succeeded");
-    }
-    if (std::string(error).find("mantra") == std::string::npos) {
+    if (rc != 0) {
         throw std::runtime_error(std::string("ahimsa_missing: unexpected error: ") + error);
+    }
+    if (value != 42) {
+        throw std::runtime_error("ahimsa_missing returned " + std::to_string(value) + " (expected 42)");
     }
 }
 
@@ -526,6 +543,7 @@ const std::vector<TestCase>& all_tests() {
         {"guru_meditation_recursion_limit", test_guru_meditation_recursion_limit},
         {"guru_meditation_contains_42", test_guru_meditation_contains_42},
         {"guru_meditation_point_of_no_return", test_guru_meditation_point_of_no_return},
+        {"ahimsa_comment", test_ahimsa_comment},
         {"ahimsa_english", test_ahimsa_english},
         {"ahimsa_esperanto", test_ahimsa_esperanto},
         {"ahimsa_missing", test_ahimsa_missing},

@@ -505,6 +505,20 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
     if (!root_id.empty() && root_id != root_lower) {
         sms_bridge_.dispatch_event(sms_session_, root_id, "ready");
     }
+    {
+        static constexpr std::string_view kAhimsaComments[] = {
+            "// Do not harm any living being.",
+            "// Tu keinem Lebewesen Leid an.",
+            "// Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.",
+        };
+        bool has_ahimsa = false;
+        for (const auto& c : kAhimsaComments) {
+            if (std::string_view(script_source).substr(0, c.size()) == c) { has_ahimsa = true; break; }
+        }
+        if (has_ahimsa) {
+            UtilityFunctions::print("[ForgeRunner.Native] \xf0\x9f\x8c\xb1 Ahimsa \xe2\x80\x94 Do not harm any living being.");
+        }
+    }
     UtilityFunctions::print(String(("[ForgeRunner.Native] SMS session started: " + script_path).c_str()));
 }
 

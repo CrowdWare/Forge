@@ -1,4 +1,4 @@
-Tu keinem Lebewesen Leid an.
+// Tu keinem Lebewesen Leid an.
 
 on techDemoTerminal.ready() {
     log.success("ForgeTerminal is ready. Start to live free.")

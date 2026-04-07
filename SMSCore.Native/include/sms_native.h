@@ -92,6 +92,7 @@ SMS_EXPORT int sms_native_session_invoke(
     char* error,
     int error_capacity);
 SMS_EXPORT int sms_native_session_dispose(std::int64_t session, char* error, int error_capacity);
+SMS_EXPORT int sms_native_session_has_ahimsa(std::int64_t session, char* error, int error_capacity);
 SMS_EXPORT int sms_native_set_ui_callbacks(
     sms_native_ui_get_prop_fn get_prop,
     sms_native_ui_set_prop_fn set_prop,
