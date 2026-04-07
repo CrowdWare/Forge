@@ -31,6 +31,7 @@ using SmlParseFn = int (*)(const char*, std::int64_t*, char*, int);
 using SmsSessionCreateFn = int (*)(std::int64_t*, char*, int);
 using SmsSessionLoadFn = int (*)(std::int64_t, const char*, char*, int);
 using SmsSessionDisposeFn = int (*)(std::int64_t, char*, int);
+using SmsSessionHasAhimsaFn = int (*)(std::int64_t, char*, int);
 using SmsCodegenLlvmIrFn = int (*)(const char*, char*, int, char*, int);
 using SmsCodegenLlvmIrModeFn = int (*)(const char*, const char*, char*, int, char*, int);
 using SmsSandboxPathAllowFn = int (*)(const char*, const char*, char*, int);
@@ -131,8 +132,11 @@ bool parse_sml(SmlParseFn fn, const fs::path& p, std::string& err) {
 bool parse_sms(SmsSessionCreateFn create_fn,
                SmsSessionLoadFn load_fn,
                SmsSessionDisposeFn dispose_fn,
+               SmsSessionHasAhimsaFn has_ahimsa_fn,
                const fs::path& p,
-               std::string& err) {
+               std::string& err,
+               bool& out_ahimsa) {
+    out_ahimsa = false;
     std::ifstream in(p, std::ios::binary);
     if (!in.is_open()) {
         err = "File not found.";
@@ -146,6 +150,10 @@ bool parse_sms(SmsSessionCreateFn create_fn,
         return false;
     }
     int rc = load_fn(session, src.c_str(), e, static_cast<int>(sizeof(e)));
+    if (rc == 0 && has_ahimsa_fn) {
+        char ae[256] = {0};
+        out_ahimsa = (has_ahimsa_fn(session, ae, static_cast<int>(sizeof(ae))) == 1);
+    }
     dispose_fn(session, e, static_cast<int>(sizeof(e)));
     if (rc == 0) {
         return true;
@@ -1185,6 +1193,7 @@ bool validate_project(const fs::path& project, std::string& err) {
     auto sms_create = reinterpret_cast<SmsSessionCreateFn>(load_symbol(sms_lib, "sms_native_session_create"));
     auto sms_load = reinterpret_cast<SmsSessionLoadFn>(load_symbol(sms_lib, "sms_native_session_load"));
     auto sms_dispose = reinterpret_cast<SmsSessionDisposeFn>(load_symbol(sms_lib, "sms_native_session_dispose"));
+    auto sms_has_ahimsa = reinterpret_cast<SmsSessionHasAhimsaFn>(load_symbol(sms_lib, "sms_native_session_has_ahimsa"));
     auto sms_set_sandbox = reinterpret_cast<SmsSetSandboxPathCallbackFn>(load_symbol(sms_lib, "sms_native_set_sandbox_path_callback"));
     if (!sml_parse || !sms_create || !sms_load || !sms_dispose || !sms_set_sandbox) {
         cleanup();
@@ -1225,11 +1234,14 @@ bool validate_project(const fs::path& project, std::string& err) {
     for (const auto& script : scripts) {
         per_file_error.clear();
         const auto ext = to_lower_ascii(script.extension().string());
+        bool ahimsa = false;
         const bool file_ok = ext == ".sml"
             ? parse_sml(sml_parse, script, per_file_error)
-            : parse_sms(sms_create, sms_load, sms_dispose, script, per_file_error);
+            : parse_sms(sms_create, sms_load, sms_dispose, sms_has_ahimsa, script, per_file_error, ahimsa);
         if (file_ok) {
-            std::cout << "[OK]   " << script.string() << "\n";
+            std::cout << "[OK]   " << script.string();
+            if (ahimsa) std::cout << "  \xf0\x9f\x8c\xb1 Ahimsa";
+            std::cout << "\n";
             continue;
         }
         std::cout << "[FAIL] " << script.string() << "\n  error: " << per_file_error << "\n";
