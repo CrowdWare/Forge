@@ -57,7 +57,7 @@ public:
     SmsBridge& operator=(const SmsBridge&) = delete;
 
     /// Load libsms_native from SMS_NATIVE_LIB_DIR env var or
-    /// <repo_root>/SMSCore.Native/build.  Returns false if the library is
+    /// <repo_root>/ForgeRunner.Native/build.  Returns false if the library is
     /// unavailable (SMS execution is silently disabled).
     bool load(const std::string& repo_root);
     void unload();

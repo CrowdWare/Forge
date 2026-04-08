@@ -1297,7 +1297,7 @@ private:
 
         const fs::path sms_lib_dir = std::getenv("SMS_NATIVE_LIB_DIR") != nullptr
             ? fs::path(std::getenv("SMS_NATIVE_LIB_DIR"))
-            : (repo_root_ / "SMSCore.Native" / "build");
+            : (repo_root_ / "ForgeRunner.Native" / "build");
         const fs::path sms_lib_path = sms_lib_dir / ("libsms_native" + shared_library_extension());
 
         lib_handle_ = load_library(sms_lib_path);

@@ -1344,7 +1344,7 @@ bool SmsBridge::load(const std::string& repo_root) {
     const char* env_dir = std::getenv("SMS_NATIVE_LIB_DIR");
     const fs::path lib_dir = (env_dir && env_dir[0] != '\0')
         ? fs::path(env_dir)
-        : fs::path(repo_root) / "SMSCore.Native" / "build";
+        : fs::path(repo_root) / "ForgeRunner.Native" / "build";
     const fs::path lib_path = lib_dir / ("libsms_native" + lib_extension());
 
     lib_handle_ = platform_load_lib(lib_path);

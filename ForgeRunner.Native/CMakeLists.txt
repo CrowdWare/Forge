@@ -5,6 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Collect all shared libraries (from FetchContent sub-builds too) in the
+# build root so that the SMS_NATIVE_LIB_DIR fallback path works without
+# having to know whether sms-cpp was fetched or used as a local override.
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
 include(CTest)
 
 # ---------------------------------------------------------------------------
