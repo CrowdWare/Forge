@@ -18,12 +18,12 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| draggable | draggable | bool | — |
-| position_offset | positionOffset | Vector2 | — |
-| resizable | resizable | bool | — |
-| scaling_menus | scalingMenus | bool | — |
-| selectable | selectable | bool | — |
-| selected | selected | bool | — |
+| draggable | draggable | bool | - |
+| position_offset | positionOffset | Vector2 | - |
+| resizable | resizable | bool | - |
+| scaling_menus | scalingMenus | bool | - |
+| selectable | selectable | bool | - |
+| selected | selected | bool | - |
 
 ## Events
 
@@ -32,12 +32,12 @@ Inherited signals are documented in: [Container](Container.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| delete_request | `on <id>.deleteRequest() { ... }` | — |
+| delete_request | `on <id>.deleteRequest() { ... }` | - |
 | dragged | `on <id>.dragged(from, to) { ... }` | Vector2 from, Vector2 to |
-| node_deselected | `on <id>.nodeDeselected() { ... }` | — |
-| node_selected | `on <id>.nodeSelected() { ... }` | — |
-| position_offset_changed | `on <id>.positionOffsetChanged() { ... }` | — |
-| raise_request | `on <id>.raiseRequest() { ... }` | — |
+| node_deselected | `on <id>.nodeDeselected() { ... }` | - |
+| node_selected | `on <id>.nodeSelected() { ... }` | - |
+| position_offset_changed | `on <id>.positionOffsetChanged() { ... }` | - |
+| raise_request | `on <id>.raiseRequest() { ... }` | - |
 | resize_end | `on <id>.resizeEnd(newSize) { ... }` | Vector2 newSize |
 | resize_request | `on <id>.resizeRequest(newSize) { ... }` | Vector2 newSize |
 

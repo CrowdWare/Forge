@@ -11,14 +11,14 @@ Inherited properties are documented in: [BaseButton](BaseButton.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| ellipsis_char | ellipsisChar | string | — |
-| language | language | string | — |
-| structured_text_bidi_override | structuredTextBidiOverride | int | — |
-| text | text | string | — |
-| text_direction | textDirection | int | — |
-| text_overrun_behavior | textOverrunBehavior | int | — |
-| underline | underline | int | — |
-| uri | uri | string | — |
+| ellipsis_char | ellipsisChar | string | - |
+| language | language | string | - |
+| structured_text_bidi_override | structuredTextBidiOverride | int | - |
+| text | text | string | - |
+| text_direction | textDirection | int | - |
+| text_overrun_behavior | textOverrunBehavior | int | - |
+| underline | underline | int | - |
+| uri | uri | string | - |
 
 ## Events
 
@@ -35,7 +35,7 @@ Inherited actions are documented in: [BaseButton](BaseButton.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_underline_mode | `<id>.getUnderlineMode()` | — | int |
+| get_underline_mode | `<id>.getUnderlineMode()` | - | int |
 | set_underline_mode | `<id>.setUnderlineMode(underlineMode)` | int underlineMode | void |
 
 ## Attached Properties

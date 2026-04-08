@@ -417,7 +417,7 @@ void UiBuilder::apply_window_props(const smlcore::Node& root, WindowConfig& out)
 }
 
 // ---------------------------------------------------------------------------
-// Node building — recursive
+// Node building - recursive
 // ---------------------------------------------------------------------------
 
 // Parse padding tuple "a, b, c, d" or single "a" into left/top/right/bottom.
@@ -511,7 +511,7 @@ Control* UiBuilder::build_node(const smlcore::Node& node) {
         return ctrl;
     }
 
-    // PopupMenu items — handled inside build_menubar_children, skip here
+    // PopupMenu items - handled inside build_menubar_children, skip here
     if (nl == "popupmenu") return ctrl;
 
     // Recurse children
@@ -524,7 +524,7 @@ Control* UiBuilder::build_node(const smlcore::Node& node) {
         auto* child_ctrl = build_node(child);
         if (!child_ctrl) continue;
 
-        // No auto size flags — explicit sizeFlagsHorizontal/Vertical in SML required
+        // No auto size flags - explicit sizeFlagsHorizontal/Vertical in SML required
 
         ctrl->add_child(child_ctrl);
 
@@ -1079,7 +1079,7 @@ void UiBuilder::apply_props(Control* ctrl, const smlcore::Node& node) {
         ctrl->add_theme_font_size_override("font_size",
             parse_int(resolve_value(node.get_value("fontSize"))));
 
-    // --- fontFace + fontWeight (deferred — resolved after full tree is built) ---
+    // --- fontFace + fontWeight (deferred - resolved after full tree is built) ---
     if (node.has_property("fontFace") || node.has_property("fontWeight")) {
         FontDeferred d;
         d.ctrl   = ctrl;
@@ -1346,7 +1346,7 @@ void UiBuilder::post_build_pass() {
             } else {
                 UtilityFunctions::push_warning(String(
                     ("[ForgeRunner] Font '" + d.face + "-" + weight +
-                     "' not found in Fonts block — using system font fallback").c_str()));
+                     "' not found in Fonts block - using system font fallback").c_str()));
                 Ref<SystemFont> sf; sf.instantiate();
                 sf->set_font_weight(weight_name_to_int(weight));
                 d.ctrl->add_theme_font_override("font", sf);
@@ -1402,7 +1402,7 @@ std::string UiBuilder::resolve_value(const std::string& v) const {
 std::string UiBuilder::resolve_ref(const smlcore::Property& prop) const {
     const auto& v = prop.value;
 
-    // Tuple: "@Strings.key, \"Fallback\"" — try the ref first, use fallback if not found
+    // Tuple: "@Strings.key, \"Fallback\"" - try the ref first, use fallback if not found
     if (prop.kind == smlcore::ValueKind::Tuple) {
         const auto comma = v.find(',');
         const auto ref   = (comma != std::string::npos) ? v.substr(0, comma) : v;

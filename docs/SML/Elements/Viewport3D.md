@@ -11,18 +11,18 @@ Inherited properties are documented in: [SubViewportContainer](SubViewportContai
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | model | string(url) | "" |
-| — | modelSource | string(url) | "" |
-| — | animation | string(url) | "" |
-| — | animationSource | string(url) | "" |
-| — | playAnimation | int | 0 |
-| — | playFirstAnimation | bool | false |
-| — | autoplayAnimation | bool | false |
-| — | defaultAnimation | string | "" |
-| — | playLoop | bool | false |
-| — | cameraDistance | int | 0 |
-| — | lightEnergy | int | 0 |
+| - | id | identifier | - |
+| - | model | string(url) | "" |
+| - | modelSource | string(url) | "" |
+| - | animation | string(url) | "" |
+| - | animationSource | string(url) | "" |
+| - | playAnimation | int | 0 |
+| - | playFirstAnimation | bool | false |
+| - | autoplayAnimation | bool | false |
+| - | defaultAnimation | string | "" |
+| - | playLoop | bool | false |
+| - | cameraDistance | int | 0 |
+| - | lightEnergy | int | 0 |
 
 ## Events
 
@@ -40,8 +40,8 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 | Action | SMS Call | Params | Returns |
 |-|-|-|-|
 | playAnimation | `<id>.playAnimation(index)` | int index | void |
-| stopAnimation | `<id>.stopAnimation()` | — | void |
-| rewind | `<id>.rewind()` | — | void |
+| stopAnimation | `<id>.stopAnimation()` | - | void |
+| rewind | `<id>.rewind()` | - | void |
 | setFrame | `<id>.setFrame(frame)` | int frame | void |
-| zoomIn | `<id>.zoomIn()` | — | void |
-| zoomOut | `<id>.zoomOut()` | — | void |
+| zoomIn | `<id>.zoomIn()` | - | void |
+| zoomOut | `<id>.zoomOut()` | - | void |

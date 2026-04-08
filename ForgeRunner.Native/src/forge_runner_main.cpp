@@ -516,7 +516,7 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
             if (std::string_view(script_source).substr(0, c.size()) == c) { has_ahimsa = true; break; }
         }
         if (has_ahimsa) {
-            UtilityFunctions::print("[ForgeRunner.Native] \xf0\x9f\x8c\xb1 Ahimsa \xe2\x80\x94 Do not harm any living being.");
+            UtilityFunctions::print(String::utf8("[ForgeRunner.Native] \xf0\x9f\x8c\xb1 Ahimsa - Do not harm any living being."));
         }
     }
     UtilityFunctions::print(String(("[ForgeRunner.Native] SMS session started: " + script_path).c_str()));
@@ -1151,7 +1151,7 @@ void ForgeRunnerNativeMain::on_manifest_downloaded(int result, int code,
     // Store manifest content and sha256 for later metadata save
     // (saved after all assets are done in on_all_assets_ready)
     // Keep cached_hashes around to skip already-valid files.
-    // We store sha256 in a temporary member — reuse per_manifest_dir_ as key.
+    // We store sha256 in a temporary member - reuse per_manifest_dir_ as key.
     // Pass manifest_sha256 through the static save at the end.
     // Store it as a member for use in on_all_assets_ready.
     manifest_sha256_ = manifest_sha256;
@@ -1161,7 +1161,7 @@ void ForgeRunnerNativeMain::on_manifest_downloaded(int result, int code,
     download_retry_     = 0;
 
     if (download_queue_.empty()) {
-        // No assets to download — go straight to entry point
+        // No assets to download - go straight to entry point
         const std::string entry_path = per_manifest_dir_ + "/files/" + manifest_entry_relative_;
         if (fs::exists(entry_path)) {
             show_sml(entry_path);
@@ -1187,7 +1187,7 @@ void ForgeRunnerNativeMain::start_next_asset_download() {
 
         if (fs::exists(dst_path)) {
             const auto meta_it = cached_asset_hashes_.find(asset.path);
-            // Hashes stored in metadata may carry "sha256:" prefix — normalize both
+            // Hashes stored in metadata may carry "sha256:" prefix - normalize both
             auto strip_prefix = [](const std::string& h) {
                 const std::string pfx = "sha256:";
                 return (h.size() > pfx.size() && h.substr(0, pfx.size()) == pfx)

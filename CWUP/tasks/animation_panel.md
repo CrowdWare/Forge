@@ -1,4 +1,4 @@
-# Forge: PosingEditor & Timeline Controls — Claude Code Task
+# Forge: PosingEditor & Timeline Controls - Claude Code Task
 
 ## Context
 
@@ -24,14 +24,14 @@ A runtime 3D rotation gizmo rendered directly in the Godot viewport. Inspired by
   - Y axis → green (`TorusMesh`)
   - Z axis → blue (`TorusMesh`)
 - Each ring has a small draggable **handle** (`SphereMesh`) positioned at 90° on the ring
-- Only the handle is interactive — dragging it rotates the bone on that axis
+- Only the handle is interactive - dragging it rotates the bone on that axis
 - The gizmo renders on top of the model (no depth occlusion)
 
 ### Behavior
 - Attach to a `Skeleton3D` bone by index
 - Position itself at the bone's global transform origin every frame
 - On handle drag: rotate the bone on the corresponding axis
-- **Min/Max limits per axis** — the ring visually shows the allowed arc, rotation is clamped:
+- **Min/Max limits per axis** - the ring visually shows the allowed arc, rotation is clamped:
   ```
   gizmo.limitX(minDeg: Float, maxDeg: Float)
   gizmo.limitY(minDeg: Float, maxDeg: Float)
@@ -41,9 +41,9 @@ A runtime 3D rotation gizmo rendered directly in the Godot viewport. Inspired by
 - Gizmo is hidden when no bone is selected
 
 ### Godot References to study
-- `editor/plugins/skeleton_3d_editor_plugin.cpp` — Godot's own bone gizmo implementation
-- `scene/3d/skeleton_3d.cpp` — `set_bone_pose_rotation()`, `get_bone_global_pose()`
-- `SkeletonIK3D` — for automatic IK solving after manual bone rotation
+- `editor/plugins/skeleton_3d_editor_plugin.cpp` - Godot's own bone gizmo implementation
+- `scene/3d/skeleton_3d.cpp` - `set_bone_pose_rotation()`, `get_bone_global_pose()`
+- `SkeletonIK3D` - for automatic IK solving after manual bone rotation
 
 ---
 
@@ -292,7 +292,7 @@ And maybe a scene (phase 2) as .glb.
 
 | Feature | Aufwand | Hinweis |
 |---|---|---|
-| `btnOpen` — Datei-Dialog um GLB zu laden | mittel | `ui.openFileDialog(callback)` in SmsUiRuntime; `main.sms` Handler |
+| `btnOpen` - Datei-Dialog um GLB zu laden | mittel | `ui.openFileDialog(callback)` in SmsUiRuntime; `main.sms` Handler |
 | Keyframe löschen (UI-Geste) | klein | Rechtsklick auf Diamond-Position oder Del-Taste in TimelineTrackArea |
 | SMS-Events `keyframeAdded` / `keyframeRemoved` | klein | In `SetKeyframe`/`RemoveKeyframe` gefeuert; Dispatcher + SmsUiRuntime-Handler |
 
@@ -329,17 +329,17 @@ scale: 1.0, 1.0, 1.0
 
 
 ### Last words from Claude
-Ah danke — das ändert die Diagnose komplett.
+Ah danke - das ändert die Diagnose komplett.
 
 Die Scale 10 kommt also von Dir in Blender, um den Mesh sichtbar zu machen. Das bedeutet der exportierte Mesh ist ~10× zu klein verglichen mit dem Skeleton. Das ist eine Bind-Matrix-Mismatch: in Godot's GLTF-Roundtrip (AppendFromScene) werden die Bone-Positionen und die Mesh-Vertex-Positionen in unterschiedlichen Koordinatenräumen exportiert.
 
 Dazu sehe ich im Outliner zwei weitere Probleme:
 
 _PhysicalBoneSimulator3D wird mitexportiert (Godot-interner Node, gehört nicht ins GLB)
-Animation / Pose — das sind AnimationPlayer-Nodes aus dem original Opa.glb, die auch unnötig mitgehen
-Bevor ich weiter daran arbeite: Woher stammt Opa.glb? Mixamo, ReadyPlayerMaker, selbst in Blender erstellt? Und was ist die scale im .scene-File — du hast scale: 1.0, 1.0, 1.0, aber hat der importierte Node in Godot vielleicht intern eine andere Scale? Das würde helfen, den genauen Skalierungsfaktor zu verstehen.
+Animation / Pose - das sind AnimationPlayer-Nodes aus dem original Opa.glb, die auch unnötig mitgehen
+Bevor ich weiter daran arbeite: Woher stammt Opa.glb? Mixamo, ReadyPlayerMaker, selbst in Blender erstellt? Und was ist die scale im .scene-File - du hast scale: 1.0, 1.0, 1.0, aber hat der importierte Node in Godot vielleicht intern eine andere Scale? Das würde helfen, den genauen Skalierungsfaktor zu verstehen.
 
-Den _PhysicalBoneSimulator3D und original-AnimationPlayer kann ich sofort rausfiltern — das ist eindeutig falsch. Soll ich das schon machen?
+Den _PhysicalBoneSimulator3D und original-AnimationPlayer kann ich sofort rausfiltern - das ist eindeutig falsch. Soll ich das schon machen?
 
 ---
 
@@ -348,7 +348,7 @@ User: Opa ist von Mixamo.
 
 ---
 
-Jetzt wird's klarer. Der Golfball kommt vermutlich von _PhysicalBoneSimulator3D — Mixamo-Charaktere haben Physics-Bones, und Godot erstellt dafür Sphere-Collision-Shapes. Diese werden beim Export mitgenommen und erscheinen in Blender als überlappende Kugeln → Golfball-Blob. Das erklärt auch warum Meshy-Objekte ähnlich aussehen könnten, wenn deren GLBs ebenfalls Physics-Nodes triggern.
+Jetzt wird's klarer. Der Golfball kommt vermutlich von _PhysicalBoneSimulator3D - Mixamo-Charaktere haben Physics-Bones, und Godot erstellt dafür Sphere-Collision-Shapes. Diese werden beim Export mitgenommen und erscheinen in Blender als überlappende Kugeln → Golfball-Blob. Das erklärt auch warum Meshy-Objekte ähnlich aussehen könnten, wenn deren GLBs ebenfalls Physics-Nodes triggern.
 
 Fix: Vor dem Export alle Physics-Nodes und Original-AnimationPlayers (von der GLB-Importierung) aus dem Export-Tree entfernen. Soll ich das implementieren?
 

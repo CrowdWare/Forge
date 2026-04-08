@@ -30,7 +30,7 @@ const SYNTAX := [
     {
         "name": "Basic reference",
         "syntax": "@Namespace.key",
-        "description": "Resolves the value of 'key' from the given namespace at runtime. For well-known namespaces (Strings, Colors, Icons, Layouts), no fallback is required — they are resolved from external files. A validation warning is emitted for unknown namespaces without a fallback.",
+        "description": "Resolves the value of 'key' from the given namespace at runtime. For well-known namespaces (Strings, Colors, Icons, Layouts), no fallback is required - they are resolved from external files. A validation warning is emitted for unknown namespaces without a fallback.",
         "example": "title: @Strings.windowTitle"
     },
     {
@@ -45,8 +45,8 @@ const NAMESPACES := {
     "Strings": {
         "description": "Text strings for UI labels, titles, menu entries, and any other displayed text. The Strings namespace is the only one with built-in locale-aware file selection.",
         "resolution": [
-            "1. Language-specific file (e.g. strings-de.sml) — overrides for the current system locale.",
-            "2. Default file (strings.sml) — English or app-default strings.",
+            "1. Language-specific file (e.g. strings-de.sml) - overrides for the current system locale.",
+            "2. Default file (strings.sml) - English or app-default strings.",
             "3. Fallback literal in the SML source (if provided).",
             "4. Empty string (with a runtime warning)."
         ],
@@ -115,7 +115,7 @@ const LOCALIZATION := {
     "example_file": "Strings {\n    windowTitle: \"ForgeRunner\"\n    menuAppAbout: \"Über ForgeRunner\"\n    menuAppQuit: \"ForgeRunner beenden\"\n}"
 }
 
-# This file is not an SML element spec — return an empty spec so the element doc
+# This file is not an SML element spec - return an empty spec so the element doc
 # generator can load it without errors.
 static func get_spec() -> Dictionary:
     return {

@@ -87,7 +87,7 @@ func get_spec() -> Dictionary:
         "name": "MyWidget",
         "backing": "Control",
         "properties": [
-            {"sml":"id", "type":"identifier", "default":"—"},
+            {"sml":"id", "type":"identifier", "default":"-"},
             {"sml":"title", "type":"string", "default":"\"\""},
         ],
         "actions": [

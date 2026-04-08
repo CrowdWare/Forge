@@ -54,4 +54,4 @@ SML `Window` root node properties already parsed by `apply_window_props()`:
 
 ## Reference
 - C#: `ForgeRunner/Main.cs` (`SwapToUiAsync`, `AttachUi`, `DetachUi`)
-- C#: `MEMORY.md` — "Architektur: Zwei-Fenster Splash/Main" section
+- C#: `MEMORY.md` - "Architektur: Zwei-Fenster Splash/Main" section

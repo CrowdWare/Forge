@@ -11,18 +11,18 @@ Inherited properties are documented in: [VBoxContainer](VBoxContainer.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| can_add_swatches | canAddSwatches | bool | — |
-| color | color | Color | — |
-| color_mode | colorMode | int | — |
-| color_modes_visible | colorModesVisible | bool | — |
-| deferred_mode | deferredMode | bool | — |
-| edit_alpha | editAlpha | bool | — |
-| edit_intensity | editIntensity | bool | — |
-| hex_visible | hexVisible | bool | — |
-| picker_shape | pickerShape | int | — |
-| presets_visible | presetsVisible | bool | — |
-| sampler_visible | samplerVisible | bool | — |
-| sliders_visible | slidersVisible | bool | — |
+| can_add_swatches | canAddSwatches | bool | - |
+| color | color | Color | - |
+| color_mode | colorMode | int | - |
+| color_modes_visible | colorModesVisible | bool | - |
+| deferred_mode | deferredMode | bool | - |
+| edit_alpha | editAlpha | bool | - |
+| edit_intensity | editIntensity | bool | - |
+| hex_visible | hexVisible | bool | - |
+| picker_shape | pickerShape | int | - |
+| presets_visible | presetsVisible | bool | - |
+| sampler_visible | samplerVisible | bool | - |
+| sliders_visible | slidersVisible | bool | - |
 
 ## Events
 
@@ -44,17 +44,17 @@ Inherited actions are documented in: [VBoxContainer](VBoxContainer.md)
 |-|-|-|-|
 | add_preset | `<id>.addPreset(color)` | Color color | void |
 | add_recent_preset | `<id>.addRecentPreset(color)` | Color color | void |
-| are_modes_visible | `<id>.areModesVisible()` | — | bool |
-| are_presets_visible | `<id>.arePresetsVisible()` | — | bool |
-| are_sliders_visible | `<id>.areSlidersVisible()` | — | bool |
-| are_swatches_enabled | `<id>.areSwatchesEnabled()` | — | bool |
+| are_modes_visible | `<id>.areModesVisible()` | - | bool |
+| are_presets_visible | `<id>.arePresetsVisible()` | - | bool |
+| are_sliders_visible | `<id>.areSlidersVisible()` | - | bool |
+| are_swatches_enabled | `<id>.areSwatchesEnabled()` | - | bool |
 | erase_preset | `<id>.erasePreset(color)` | Color color | void |
 | erase_recent_preset | `<id>.eraseRecentPreset(color)` | Color color | void |
-| get_pick_color | `<id>.getPickColor()` | — | Color |
-| get_presets | `<id>.getPresets()` | — | Variant |
-| get_recent_presets | `<id>.getRecentPresets()` | — | Variant |
-| is_editing_alpha | `<id>.isEditingAlpha()` | — | bool |
-| is_editing_intensity | `<id>.isEditingIntensity()` | — | bool |
+| get_pick_color | `<id>.getPickColor()` | - | Color |
+| get_presets | `<id>.getPresets()` | - | Variant |
+| get_recent_presets | `<id>.getRecentPresets()` | - | Variant |
+| is_editing_alpha | `<id>.isEditingAlpha()` | - | bool |
+| is_editing_intensity | `<id>.isEditingIntensity()` | - | bool |
 | set_modes_visible | `<id>.setModesVisible(visible)` | bool visible | void |
 | set_pick_color | `<id>.setPickColor(color)` | Color color | void |
 

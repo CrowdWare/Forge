@@ -3,7 +3,7 @@
 ---
 
 *"Be The One."*
-— Dua Lipa
+- Dua Lipa
 
 Today is Friday the 13th of March, 2026.
 

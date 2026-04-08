@@ -1,4 +1,4 @@
-# Task: forgecli build — macOS App & Android APK Export
+# Task: forgecli build - macOS App & Android APK Export
 
 ## Goal
 
@@ -16,7 +16,7 @@ downloads what it needs and runs the export automatically.
 | macOS | macOS | `.zip` containing `<name>.app` |
 | Android | macOS (+ Android NDK) | `.apk` |
 
-Linux builds are done natively on a Linux machine — no cross-compilation from macOS.
+Linux builds are done natively on a Linux machine - no cross-compilation from macOS.
 
 ## New Commands
 
@@ -36,7 +36,7 @@ Defaults:
 
 ### `ForgeCli.Native/src/godot_sdk.h` + `godot_sdk.cpp`
 
-Handles all Godot binary + template download/cache logic. No Godot dependency —
+Handles all Godot binary + template download/cache logic. No Godot dependency -
 pure C++17 + system tools (`curl`, `unzip`).
 
 #### Cache layout
@@ -45,7 +45,7 @@ pure C++17 + system tools (`curl`, `unzip`).
 ~/.cache/forge-runner/godot/<version>/
     godot           (the Godot editor binary, chmod +x on macOS/Linux)
     templates/      (extracted export templates, installed to Godot's template dir)
-    .ready          (sentinel file — present means binary + templates are ready)
+    .ready          (sentinel file - present means binary + templates are ready)
 ```
 
 Platform-specific Godot template install dir (where Godot expects them):
@@ -66,7 +66,7 @@ Base: `https://github.com/godotengine/godot/releases/download/<version>/`
 | `Godot_v<version>_win64.exe.zip` | Godot binary (Windows build host) |
 | `Godot_v<version>_export_templates.tpz` | Export templates (all platforms, one file) |
 
-The `.tpz` is a ZIP file — use `unzip` to extract it.
+The `.tpz` is a ZIP file - use `unzip` to extract it.
 
 #### API
 
@@ -113,7 +113,7 @@ Implements `cmd_build(platform, args)`.
 
 ```
 1.  Parse args: --project, --output, --godot-version, --native-lib-dir, --host-project-dir
-2.  Validate project (reuse validate logic — call parse_sml / parse_sms internally)
+2.  Validate project (reuse validate logic - call parse_sml / parse_sms internally)
 3.  godot_sdk::ensure_binary()       → godot_path
 4.  godot_sdk::ensure_export_templates()
 5.  Determine project name from --project dir name
@@ -144,7 +144,7 @@ staging/
     main.tscn                          (copied from host)
     icon.svg                           (copied from host)
     forge_runner_native.gdextension    (copied from host)
-    libforge_runner_native.dylib       (or .so / .dll — copied from native-lib-dir)
+    libforge_runner_native.dylib       (or .so / .dll - copied from native-lib-dir)
     app.sml                            (from user project)
     main.sml                           (from user project)
     main.sms                           (from user project)
@@ -164,7 +164,7 @@ Find line: `config/name=` → replace value with the project name.
 
 Use simple line-by-line string replacement (no regex needed).
 
-#### export_presets.cfg — macOS
+#### export_presets.cfg - macOS
 
 ```ini
 [preset.0]
@@ -204,7 +204,7 @@ application/copyright="CrowdWare"
 
 Replace `<output_path>` with the resolved `--output` path.
 
-#### export_presets.cfg — Android
+#### export_presets.cfg - Android
 
 ```ini
 [preset.0]
@@ -244,8 +244,8 @@ Replace `<output_path>`, `<project_name>`, `<project_name_lower>` accordingly.
 #### Android prerequisites check
 
 Before starting, verify:
-- `adb` in PATH (Android SDK) — print warning if missing, but don't abort
-- `java` in PATH (JDK 17+) — print warning if missing
+- `adb` in PATH (Android SDK) - print warning if missing, but don't abort
+- `java` in PATH (JDK 17+) - print warning if missing
 
 Android export will fail at the Godot step if these are missing; let Godot's error
 message speak for itself. The CLI should only pre-check and warn, not hard-block.
@@ -256,7 +256,7 @@ message speak for itself. The CLI should only pre-check and warn, not hard-block
 
 ### `samples/mac_demo/`
 
-A minimal Forge app for verifying macOS export. No 3D, no docking — just a clean
+A minimal Forge app for verifying macOS export. No 3D, no docking - just a clean
 Window to prove the round-trip works.
 
 **`app.sml`**
@@ -407,7 +407,7 @@ Window {
 
         Label {
             id: subline
-            text: "Vertical slice — build with forgecli build android."
+            text: "Vertical slice - build with forgecli build android."
             fontSize: 13
         }
 
@@ -519,7 +519,7 @@ Add to repo root `.gitignore`:
 
 ```
 # Godot SDK cache (downloaded by forgecli build)
-# (these live in ~/.cache/forge-runner/godot/ — already outside repo)
+# (these live in ~/.cache/forge-runner/godot/ - already outside repo)
 
 # Build staging
 /tmp/forge-build-*/

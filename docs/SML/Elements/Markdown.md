@@ -11,14 +11,14 @@ Inherited properties are documented in: [VBoxContainer](VBoxContainer.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | padding | padding | 0 |
-| — | text | string | "" |
-| — | src | string | "" |
-| — (drawn via MarkdownContainer._Draw) | bgColor | color | — |
-| — (drawn via MarkdownContainer._Draw) | borderColor | color | — |
-| — (drawn via MarkdownContainer._Draw) | borderWidth | int | — |
-| — (drawn via MarkdownContainer._Draw) | borderRadius | int | — |
+| - | id | identifier | - |
+| - | padding | padding | 0 |
+| - | text | string | "" |
+| - | src | string | "" |
+| - (drawn via MarkdownContainer._Draw) | bgColor | color | - |
+| - (drawn via MarkdownContainer._Draw) | borderColor | color | - |
+| - (drawn via MarkdownContainer._Draw) | borderWidth | int | - |
+| - (drawn via MarkdownContainer._Draw) | borderRadius | int | - |
 
 ## Events
 

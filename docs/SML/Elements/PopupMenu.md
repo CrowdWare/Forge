@@ -11,16 +11,16 @@ Inherited properties are documented in: [Popup](Popup.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| allow_search | allowSearch | bool | — |
-| hide_on_checkable_item_selection | hideOnCheckableItemSelection | bool | — |
-| hide_on_item_selection | hideOnItemSelection | bool | — |
-| hide_on_state_item_selection | hideOnStateItemSelection | bool | — |
-| item_count | itemCount | int | — |
-| prefer_native_menu | preferNativeMenu | bool | — |
-| shrink_height | shrinkHeight | bool | — |
-| shrink_width | shrinkWidth | bool | — |
-| submenu_popup_delay | submenuPopupDelay | float | — |
-| system_menu_id | systemMenuId | int | — |
+| allow_search | allowSearch | bool | - |
+| hide_on_checkable_item_selection | hideOnCheckableItemSelection | bool | - |
+| hide_on_item_selection | hideOnItemSelection | bool | - |
+| hide_on_state_item_selection | hideOnStateItemSelection | bool | - |
+| item_count | itemCount | int | - |
+| prefer_native_menu | preferNativeMenu | bool | - |
+| shrink_height | shrinkHeight | bool | - |
+| shrink_width | shrinkWidth | bool | - |
+| submenu_popup_delay | submenuPopupDelay | float | - |
+| system_menu_id | systemMenuId | int | - |
 
 ## Events
 
@@ -32,7 +32,7 @@ Inherited signals are documented in: [Popup](Popup.md)
 | id_focused | `on <id>.idFocused(id) { ... }` | int id |
 | id_pressed | `on <id>.idPressed(id) { ... }` | int id |
 | index_pressed | `on <id>.indexPressed(index) { ... }` | int index |
-| menu_changed | `on <id>.menuChanged() { ... }` | — |
+| menu_changed | `on <id>.menuChanged() { ... }` | - |
 
 ## Runtime Actions
 
@@ -48,7 +48,7 @@ Inherited actions are documented in: [Popup](Popup.md)
 | add_separator | `<id>.addSeparator(label, id)` | string label, int id | void |
 | add_submenu_item | `<id>.addSubmenuItem(label, submenu, id)` | string label, string submenu, int id | void |
 | clear | `<id>.clear(freeSubmenus)` | bool freeSubmenus | void |
-| get_focused_item | `<id>.getFocusedItem()` | — | int |
+| get_focused_item | `<id>.getFocusedItem()` | - | int |
 | get_item_accelerator | `<id>.getItemAccelerator(index)` | int index | int |
 | get_item_auto_translate_mode | `<id>.getItemAutoTranslateMode(index)` | int index | int |
 | get_item_icon | `<id>.getItemIcon(index)` | int index | Object |
@@ -67,15 +67,15 @@ Inherited actions are documented in: [Popup](Popup.md)
 | get_item_text | `<id>.getItemText(index)` | int index | string |
 | get_item_text_direction | `<id>.getItemTextDirection(index)` | int index | int |
 | get_item_tooltip | `<id>.getItemTooltip(index)` | int index | string |
-| get_system_menu | `<id>.getSystemMenu()` | — | int |
+| get_system_menu | `<id>.getSystemMenu()` | - | int |
 | is_item_checkable | `<id>.isItemCheckable(index)` | int index | bool |
 | is_item_checked | `<id>.isItemChecked(index)` | int index | bool |
 | is_item_disabled | `<id>.isItemDisabled(index)` | int index | bool |
 | is_item_radio_checkable | `<id>.isItemRadioCheckable(index)` | int index | bool |
 | is_item_separator | `<id>.isItemSeparator(index)` | int index | bool |
 | is_item_shortcut_disabled | `<id>.isItemShortcutDisabled(index)` | int index | bool |
-| is_native_menu | `<id>.isNativeMenu()` | — | bool |
-| is_system_menu | `<id>.isSystemMenu()` | — | bool |
+| is_native_menu | `<id>.isNativeMenu()` | - | bool |
+| is_system_menu | `<id>.isSystemMenu()` | - | bool |
 | remove_item | `<id>.removeItem(index)` | int index | void |
 | scroll_to_item | `<id>.scrollToItem(index)` | int index | void |
 | set_focused_item | `<id>.setFocusedItem(index)` | int index | void |
@@ -117,7 +117,7 @@ The runtime converts them to Godot menu items internally.
 
 | Property | Type | Default | Notes |
 |-|-|-|-|
-| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.clicked() { ... }`). |
+| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.clicked() { ... }`). |
 | text | string | "" | Display text. |
 | checked | bool | false | Only for `CheckItem`. |
 | disabled | bool | false | Optional. |

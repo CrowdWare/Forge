@@ -40,8 +40,8 @@ Inherited signals are documented in: [Control](Control.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| pre_sort_children | `on <id>.preSortChildren() { ... }` | — |
-| sort_children | `on <id>.sortChildren() { ... }` | — |
+| pre_sort_children | `on <id>.preSortChildren() { ... }` | - |
+| sort_children | `on <id>.sortChildren() { ... }` | - |
 
 ## Runtime Actions
 
@@ -50,7 +50,7 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| queue_sort | `<id>.queueSort()` | — | void |
+| queue_sort | `<id>.queueSort()` | - | void |
 
 ## Attached Properties
 

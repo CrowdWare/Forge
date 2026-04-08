@@ -103,7 +103,7 @@ set(v) { field = v - 32 / 1.8 } // 'field' is writable inside setter; parameter 
 `&&` (and), `||` (or), `!` (not)
 
 ### Increment / Decrement (postfix only)
-`x++`, `x--` — returns old value, then mutates variable
+`x++`, `x--` - returns old value, then mutates variable
 
 ### String Concatenation
 `+` between a string and any other type coerces the other to string:
@@ -122,8 +122,8 @@ var expr = "Result: ${1 + 2 * 3}"        // arbitrary expression
 var multi = "Hi ${name}, you have $count messages."
 ```
 
-- `$identifier` — inlines a simple variable
-- `${expression}` — inlines any expression
+- `$identifier` - inlines a simple variable
+- `${expression}` - inlines any expression
 - Escape with `\$` to use a literal dollar sign
 
 **Escape sequences inside strings:**
@@ -286,7 +286,7 @@ Called as methods on string values:
 
 ```kotlin
 var s = "  Hello World  "
-s.length           // returns number (no parentheses needed — actually a method call with no args)
+s.length           // returns number (no parentheses needed - actually a method call with no args)
 s.toUpperCase()    // "  HELLO WORLD  "
 s.toLowerCase()    // "  hello world  "
 s.trim()           // "Hello World"
@@ -321,7 +321,7 @@ These are accessed via dot notation: `namespace.method(args)`.
 
 The following namespaces are provided by the platform (registered externally via `ScriptEngine.RegisterFunction`):
 
-### `log` — Logging
+### `log` - Logging
 
 ```kotlin
 log.info("Message")
@@ -330,14 +330,14 @@ log.error("Something failed")
 log.debug("Debug value: " + x)
 ```
 
-### `os` — Operating System
+### `os` - Operating System
 
 ```kotlin
 var locale = os.getLocale()     // e.g. "de", "en", "fr"
 var platform = os.getPlatform() // e.g. "windows", "macos", "linux"
 ```
 
-### `fs` — File System (ProjectFs)
+### `fs` - File System (ProjectFs)
 
 ```kotlin
 fs.readText("data/config.txt")          // returns String
@@ -350,7 +350,7 @@ fs.delete("temp/file.txt")              // returns null
 
 > **Note:** `fs` is sandboxed to the project root. Absolute paths and `..` traversal are rejected.
 
-### `ui` — UI Interaction
+### `ui` - UI Interaction
 
 ```kotlin
 ui.setText("labelId", "New Text")
@@ -375,16 +375,16 @@ on <targetId>.<eventName>(<params>) {
 }
 ```
 
-- `targetId` — the `id` of an SML element
-- `eventName` — the event name (e.g. `clicked`, `changed`, `ready`, `textChanged`)
-- `params` — zero or more parameter names (matched positionally to event args)
+- `targetId` - the `id` of an SML element
+- `eventName` - the event name (e.g. `clicked`, `changed`, `ready`, `textChanged`)
+- `params` - zero or more parameter names (matched positionally to event args)
 
 ### Common Events
 
 | Event | Parameters | Fired when |
 |-------|-----------|------------|
-| `ready()` | — | Script/scene finishes loading |
-| `clicked()` | — | Button or item is clicked |
+| `ready()` | - | Script/scene finishes loading |
+| `clicked()` | - | Button or item is clicked |
 | `changed(value)` | new value | Input value changes |
 | `textChanged(text)` | new text | Text field content changes |
 | `selected(index)` | selected index | List selection changes |
@@ -415,7 +415,7 @@ on app.ready() {
 }
 ```
 
-### super() — Delegating to Platform Default
+### super() - Delegating to Platform Default
 
 Inside an event handler, `super(args...)` forwards the event to the platform's built-in handler:
 
@@ -558,20 +558,20 @@ on saveBtn.clicked() {
 
 ## Gotchas & Rules for Code Generation
 
-1. **No implicit return** — always use explicit `return` in functions to return a value.
-2. **Integer division** — `/` truncates: `7 / 2 == 3`. Use multiplication workarounds for float math.
-3. **Postfix only** — `++` and `--` are **postfix** only (`x++` ✅, `++x` ❌).
-4. **`&&` and `||` only** — single `&` or `|` is a lex error.
-5. **No `val`** — all variables declared with `var` are mutable.
-6. **`size` on arrays** — use `.size` as a member (no parentheses), or `size(array)` as a global function.
-7. **String methods need `()`** — `s.toUpperCase()`, `s.toLowerCase()`, `s.trim()` require parentheses; `s.length` does not.
-8. **One handler per event** — duplicating `on foo.clicked()` is a parse error.
-9. **`for-in` only iterates arrays** — using it on a non-array throws at runtime.
-10. **`super()` only inside event handlers** — calling it elsewhere throws.
-11. **No closures** — functions and event handlers do not capture lexical scope; use `var` at the appropriate scope level.
-12. **No type annotations** — SMS is fully dynamically typed; do not write type hints.
-13. **Newlines matter** — a newline ends a statement. Multi-line expressions must continue on the same line or use `{ }` blocks.
-14. **No `null` coalescing** — check `isNull(x)` or `x == null` explicitly.
+1. **No implicit return** - always use explicit `return` in functions to return a value.
+2. **Integer division** - `/` truncates: `7 / 2 == 3`. Use multiplication workarounds for float math.
+3. **Postfix only** - `++` and `--` are **postfix** only (`x++` ✅, `++x` ❌).
+4. **`&&` and `||` only** - single `&` or `|` is a lex error.
+5. **No `val`** - all variables declared with `var` are mutable.
+6. **`size` on arrays** - use `.size` as a member (no parentheses), or `size(array)` as a global function.
+7. **String methods need `()`** - `s.toUpperCase()`, `s.toLowerCase()`, `s.trim()` require parentheses; `s.length` does not.
+8. **One handler per event** - duplicating `on foo.clicked()` is a parse error.
+9. **`for-in` only iterates arrays** - using it on a non-array throws at runtime.
+10. **`super()` only inside event handlers** - calling it elsewhere throws.
+11. **No closures** - functions and event handlers do not capture lexical scope; use `var` at the appropriate scope level.
+12. **No type annotations** - SMS is fully dynamically typed; do not write type hints.
+13. **Newlines matter** - a newline ends a statement. Multi-line expressions must continue on the same line or use `{ }` blocks.
+14. **No `null` coalescing** - check `isNull(x)` or `x == null` explicitly.
 
 ---
 
@@ -630,4 +630,4 @@ newline        = "\n" | ";"
 
 ---
 
-*Generated from SMSCore source: Lexer.cs, Parser.cs, Interpreter.cs, Ast.cs, Value.cs, NativeFunction.cs — CrowdWare 2026*
+*Generated from SMSCore source: Lexer.cs, Parser.cs, Interpreter.cs, Ast.cs, Value.cs, NativeFunction.cs - CrowdWare 2026*

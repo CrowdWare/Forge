@@ -19,7 +19,7 @@ Inherited properties are documented in: [AcceptDialog](AcceptDialog.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| cancel_button_text | cancelButtonText | string | — |
+| cancel_button_text | cancelButtonText | string | - |
 
 ## Events
 
@@ -36,4 +36,4 @@ Inherited actions are documented in: [AcceptDialog](AcceptDialog.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_cancel_button | `<id>.getCancelButton()` | — | Object |
+| get_cancel_button | `<id>.getCancelButton()` | - | Object |

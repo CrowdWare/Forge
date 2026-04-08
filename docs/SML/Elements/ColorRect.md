@@ -11,7 +11,7 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| color | color | Color | — |
+| color | color | Color | - |
 
 ## Events
 

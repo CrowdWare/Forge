@@ -28,7 +28,7 @@ func get_spec() -> Dictionary:
         "name": "PosingEditor",
         "backing": "SubViewportContainer",
         "properties": [
-            {"sml":"id",              "type":"identifier", "default":"—"},
+            {"sml":"id",              "type":"identifier", "default":"-"},
             {"sml":"src",             "type":"string(url)", "default":"\"\""},
             {"sml":"showBoneTree",    "type":"bool",        "default":"false"},
             {"sml":"normalizeNames",  "type":"bool",        "default":"true"},
@@ -104,7 +104,7 @@ func get_spec() -> Dictionary:
             {"sms":"frameRangeExportFinished", "params":[{"name":"written","type":"int"},{"name":"outputDirectory","type":"string"}]},
         ],
         "dynamic_properties": [
-            {"sms":"poseData", "type":"object", "note":"Dictionary<boneName, Quaternion> — use with setKeyframe/loadPose"},
+            {"sms":"poseData", "type":"object", "note":"Dictionary<boneName, Quaternion> - use with setKeyframe/loadPose"},
             {"sms":"currentFrame", "type":"int"},
         ],
     }

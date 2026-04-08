@@ -352,7 +352,7 @@ std::string inline_to_bbcode(const std::string& raw) {
                     continue;
                 }
             }
-            // Not a link — escape bracket
+            // Not a link - escape bracket
             out += "\\[";
             ++i;
             continue;

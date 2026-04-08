@@ -29,10 +29,10 @@ func get_spec() -> Dictionary:
         "backing": "Panel",
         "notes": [
             "Startup screen shown before the main app loads. Shown immediately after entry files are downloaded. Remaining assets load in background with an optional ProgressBar child.",
-            "SplashScreen is always centered on screen and uses extendToTitle so the content fills the title bar area while the system close button remains visible. These behaviours are implicit — no properties needed.",
+            "SplashScreen is always centered on screen and uses extendToTitle so the content fills the title bar area while the system close button remains visible. These behaviours are implicit - no properties needed.",
         ],
         "properties": [
-            {"sml":"id",            "type":"identifier",   "default":"—"},
+            {"sml":"id",            "type":"identifier",   "default":"-"},
             {"sml":"title",         "type":"string",       "default":"\"\""},
             {"sml":"size",          "type":"vec2i",        "default":"640, 480"},
             {"sml":"pos",           "type":"vec2i",        "default":"0, 0"},

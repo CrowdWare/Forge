@@ -11,9 +11,9 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | fps | int | 24 |
-| — | totalFrames | int | 120 |
+| - | id | identifier | - |
+| - | fps | int | 24 |
+| - | totalFrames | int | 120 |
 
 ## Events
 
@@ -30,15 +30,15 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Action | SMS Call | Params | Returns |
 |-|-|-|-|
-| play | `<id>.play()` | — | void |
-| stop | `<id>.stop()` | — | void |
+| play | `<id>.play()` | - | void |
+| stop | `<id>.stop()` | - | void |
 | setKeyframe | `<id>.setKeyframe(frame, poseData)` | int frame, object poseData | void |
 | setKeyframeBone | `<id>.setKeyframeBone(frame, poseData, boneName)` | int frame, object poseData, string boneName | void |
 | setKeyframeMove | `<id>.setKeyframeMove(frame)` | int frame | void |
 | setKeyframeRotate | `<id>.setKeyframeRotate(frame)` | int frame | void |
 | removeKeyframe | `<id>.removeKeyframe(frame)` | int frame | void |
 | getPoseAt | `<id>.getPoseAt(frame)` | int frame | object |
-| getKeyframeCount | `<id>.getKeyframeCount()` | — | int |
+| getKeyframeCount | `<id>.getKeyframeCount()` | - | int |
 | getKeyframeFrameAt | `<id>.getKeyframeFrameAt(index)` | int index | int |
 | getKeyframeBoneCount | `<id>.getKeyframeBoneCount(frame)` | int frame | int |
 | getKeyframeBoneName | `<id>.getKeyframeBoneName(frame, boneIndex)` | int frame, int boneIndex | string |
@@ -48,4 +48,4 @@ Inherited actions are documented in: [Control](Control.md)
 | getKeyframeBoneNameForCharacter | `<id>.getKeyframeBoneNameForCharacter(frame, boneIndex, characterId)` | int frame, int boneIndex, string characterId | string |
 | setVisibleCharacterId | `<id>.setVisibleCharacterId(characterId)` | string characterId | void |
 | debugLogKeyframesForCharacter | `<id>.debugLogKeyframesForCharacter(characterId)` | string characterId | void |
-| clearAllKeyframes | `<id>.clearAllKeyframes()` | — | void |
+| clearAllKeyframes | `<id>.clearAllKeyframes()` | - | void |

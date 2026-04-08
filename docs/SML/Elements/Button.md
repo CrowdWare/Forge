@@ -21,15 +21,15 @@ Inherited properties are documented in: [BaseButton](BaseButton.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| font_color (theme override) | color | color | — |
-| font_size (theme override) | fontSize | int | — |
-| font (theme override) | font | string(path) | — |
-| font (theme override, via Fonts resource block) | fontFace | string | — |
+| font_color (theme override) | color | color | - |
+| font_size (theme override) | fontSize | int | - |
+| font (theme override) | font | string(path) | - |
+| font (theme override, via Fonts resource block) | fontFace | string | - |
 | font (theme override, via Fonts resource block) | fontWeight | identifier or int | regular |
-| normal StyleBoxFlat (theme override) | bgColor | color | — |
-| normal StyleBoxFlat (theme override) | borderColor | color | — |
-| normal StyleBoxFlat (theme override) | borderWidth | int | — |
-| normal StyleBoxFlat (theme override) | borderRadius | int | — |
+| normal StyleBoxFlat (theme override) | bgColor | color | - |
+| normal StyleBoxFlat (theme override) | borderColor | color | - |
+| normal StyleBoxFlat (theme override) | borderWidth | int | - |
+| normal StyleBoxFlat (theme override) | borderRadius | int | - |
 
 ## Events
 
@@ -46,8 +46,8 @@ Inherited actions are documented in: [BaseButton](BaseButton.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_button_icon | `<id>.getButtonIcon()` | — | Object |
-| get_text_alignment | `<id>.getTextAlignment()` | — | int |
+| get_button_icon | `<id>.getButtonIcon()` | - | Object |
+| get_text_alignment | `<id>.getTextAlignment()` | - | int |
 | set_text_alignment | `<id>.setTextAlignment(alignment)` | int alignment | void |
 
 ## Attached Properties

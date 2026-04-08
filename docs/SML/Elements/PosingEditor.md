@@ -11,10 +11,10 @@ Inherited properties are documented in: [SubViewportContainer](SubViewportContai
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | src | string(url) | "" |
-| — | showBoneTree | bool | false |
-| — | normalizeNames | bool | true |
+| - | id | identifier | - |
+| - | src | string(url) | "" |
+| - | showBoneTree | bool | false |
+| - | normalizeNames | bool | true |
 
 ## Events
 
@@ -31,7 +31,7 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 
 | Action | SMS Call | Params | Returns |
 |-|-|-|-|
-| resetPose | `<id>.resetPose()` | — | void |
+| resetPose | `<id>.resetPose()` | - | void |
 | setJointSpheresVisible | `<id>.setJointSpheresVisible(visible)` | bool visible | void |
 | setBoneTree | `<id>.setBoneTree(treeId)` | string treeId | void |
 | setModelSource | `<id>.setModelSource(src)` | string src | void |
@@ -44,16 +44,16 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 | addSceneAsset | `<id>.addSceneAsset(path, posX, posY, posZ)` | string path, float posX, float posY, float posZ | int |
 | addGreyboxItem | `<id>.addGreyboxItem(kind, posX, posY, posZ)` | string kind, float posX, float posY, float posZ | int |
 | addSceneProp | `<id>.addSceneProp(path, posX, posY, posZ)` | string path, float posX, float posY, float posZ | int |
-| getSceneCharacterCount | `<id>.getSceneCharacterCount()` | — | int |
-| getActiveCharacterId | `<id>.getActiveCharacterId()` | — | string |
+| getSceneCharacterCount | `<id>.getSceneCharacterCount()` | - | int |
+| getActiveCharacterId | `<id>.getActiveCharacterId()` | - | string |
 | getSceneCharacterPath | `<id>.getSceneCharacterPath(index)` | int index | string |
 | getSceneCharacterName | `<id>.getSceneCharacterName(index)` | int index | string |
 | getSceneCharacterVisible | `<id>.getSceneCharacterVisible(index)` | int index | bool |
 | selectSceneCharacter | `<id>.selectSceneCharacter(index)` | int index | void |
-| removeCharacter | `<id>.removeCharacter()` | — | void |
+| removeCharacter | `<id>.removeCharacter()` | - | void |
 | removeSceneCharacter | `<id>.removeSceneCharacter(index)` | int index | void |
 | removeSceneProp | `<id>.removeSceneProp(index)` | int index | void |
-| getScenePropCount | `<id>.getScenePropCount()` | — | int |
+| getScenePropCount | `<id>.getScenePropCount()` | - | int |
 | getScenePropPath | `<id>.getScenePropPath(index)` | int index | string |
 | getScenePropName | `<id>.getScenePropName(index)` | int index | string |
 | getScenePropVisible | `<id>.getScenePropVisible(index)` | int index | bool |
@@ -64,11 +64,11 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 | getScenePropRot | `<id>.getScenePropRot(index)` | int index | string |
 | setScenePropRot | `<id>.setScenePropRot(index, x, y, z)` | int index, float x, float y, float z | void |
 | placeSelectedOnGround | `<id>.placeSelectedOnGround(groundY)` | float groundY | bool |
-| rebaseSelectedPivotBottom | `<id>.rebaseSelectedPivotBottom()` | — | bool |
+| rebaseSelectedPivotBottom | `<id>.rebaseSelectedPivotBottom()` | - | bool |
 | getPoseDataForCharacter | `<id>.getPoseDataForCharacter(characterId)` | string characterId | object |
-| getPoseDataForActiveCharacter | `<id>.getPoseDataForActiveCharacter()` | — | object |
+| getPoseDataForActiveCharacter | `<id>.getPoseDataForActiveCharacter()` | - | object |
 | getPoseDataForBone | `<id>.getPoseDataForBone(boneName)` | string boneName | object |
-| getPoseDataForSelectedBone | `<id>.getPoseDataForSelectedBone()` | — | object |
+| getPoseDataForSelectedBone | `<id>.getPoseDataForSelectedBone()` | - | object |
 | setMode | `<id>.setMode(mode)` | string mode | void |
 | setEditMode | `<id>.setEditMode(mode)` | string mode | void |
 | exportGlb | `<id>.exportGlb(path, includeAnimation, includeProps, animationOnlyCharacter)` | string path, bool includeAnimation, bool includeProps, bool animationOnlyCharacter | bool |

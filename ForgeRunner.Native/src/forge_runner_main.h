@@ -38,7 +38,7 @@
 #include <godot_cpp/variant/packed_string_array.hpp>
 #include <godot_cpp/variant/string.hpp>
 
-// Forward declarations — full headers included in forge_runner_main.cpp
+// Forward declarations - full headers included in forge_runner_main.cpp
 namespace godot {
 class Control;
 class HTTPRequest;
@@ -59,7 +59,7 @@ public:
     void _ready() override;
     void _process(double delta) override;
 
-    // SMS event callbacks — called via Godot signal connections.
+    // SMS event callbacks - called via Godot signal connections.
     // Signal args come first; bound args (object_id, event_name) are appended.
     void on_sms_event(godot::String object_id, godot::String event_name);
     void on_sms_bool_event(bool value, godot::String object_id, godot::String event_name);

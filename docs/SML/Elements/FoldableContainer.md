@@ -11,13 +11,13 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| folded | folded | bool | — |
-| language | language | string | — |
-| title | title | string | — |
-| title_alignment | titleAlignment | int | — |
-| title_position | titlePosition | int | — |
-| title_text_direction | titleTextDirection | int | — |
-| title_text_overrun_behavior | titleTextOverrunBehavior | int | — |
+| folded | folded | bool | - |
+| language | language | string | - |
+| title | title | string | - |
+| title_alignment | titleAlignment | int | - |
+| title_position | titlePosition | int | - |
+| title_text_direction | titleTextDirection | int | - |
+| title_text_overrun_behavior | titleTextOverrunBehavior | int | - |
 
 ## Events
 
@@ -35,8 +35,8 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| expand | `<id>.expand()` | — | void |
-| fold | `<id>.fold()` | — | void |
+| expand | `<id>.expand()` | - | void |
+| fold | `<id>.fold()` | - | void |
 
 ## Attached Properties
 

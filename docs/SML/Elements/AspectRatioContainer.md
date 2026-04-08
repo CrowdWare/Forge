@@ -11,10 +11,10 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| alignment_horizontal | alignmentHorizontal | int | — |
-| alignment_vertical | alignmentVertical | int | — |
-| ratio | ratio | float | — |
-| stretch_mode | stretchMode | int | — |
+| alignment_horizontal | alignmentHorizontal | int | - |
+| alignment_vertical | alignmentVertical | int | - |
+| ratio | ratio | float | - |
+| stretch_mode | stretchMode | int | - |
 
 ## Events
 

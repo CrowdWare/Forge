@@ -17,8 +17,8 @@ Inherited properties are documented in: [Button](Button.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| item_count | itemCount | int | — |
-| switch_on_hover | switchOnHover | bool | — |
+| item_count | itemCount | int | - |
+| switch_on_hover | switchOnHover | bool | - |
 
 ## Events
 
@@ -27,7 +27,7 @@ Inherited signals are documented in: [Button](Button.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| about_to_popup | `on <id>.aboutToPopup() { ... }` | — |
+| about_to_popup | `on <id>.aboutToPopup() { ... }` | - |
 
 ## Runtime Actions
 
@@ -36,9 +36,9 @@ Inherited actions are documented in: [Button](Button.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_popup | `<id>.getPopup()` | — | Object |
+| get_popup | `<id>.getPopup()` | - | Object |
 | set_disable_shortcuts | `<id>.setDisableShortcuts(disabled)` | bool disabled | void |
-| show_popup | `<id>.showPopup()` | — | void |
+| show_popup | `<id>.showPopup()` | - | void |
 
 ## Attached Properties
 

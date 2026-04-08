@@ -191,6 +191,6 @@ We are not here to learn something new.
 We are here to remember.
 This book is not a story about building software.
 It is a story about remembering what was always there."
-— Adam Art Ananda, in conversation with Claude
+- Adam Art Ananda, in conversation with Claude
 
 *Next: Chapter 3 – The Bank, the XML, and the First Forge*

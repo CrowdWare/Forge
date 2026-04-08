@@ -24,13 +24,13 @@ while keeping the interpreter for remote/HTTP content.
 | `http://` / `https://`  | Interpreter      | Untrusted, sandboxed, no compile step possible |
 | `file://` / local path  | LLVM AOT (.so)   | Trusted, compile once, load fast               |
 
-## Phase 2 — AOT Pipeline (local)
+## Phase 2 - AOT Pipeline (local)
 
 1. `sms_native_codegen_llvm_ir(source)` → `.ll` string
 2. Compile via `llvm::Module` + LLVM JIT (in-process, no `clang` subprocess)
    OR write `.ll` + `clang -O2 -shared` → `.so` / `.dylib`
 3. Load `.so` via `dlopen`, resolve exported entry points
-4. Call compiled functions directly — no interpreter overhead
+4. Call compiled functions directly - no interpreter overhead
 
 Compiled artifacts are cached by source hash:
 - Cache key: `sha256(sms_source)`
@@ -47,7 +47,7 @@ Compiled artifacts are cached by source hash:
 - Remote HTTP/HTTPS app sources are forced to interpreter path.
 - Added compiler/AOT tests in `SMSCore.Native/tests/compiler_codegen_tests.cpp` and CTest registration in `SMSCore.Native/CMakeLists.txt`.
 
-## Phase 4 — ForgeRunner.Native Integration
+## Phase 4 - ForgeRunner.Native Integration
 
 `forge_runner_main.cpp` currently calls `sms_native_session_invoke` for all events.
 Add a dispatch layer:

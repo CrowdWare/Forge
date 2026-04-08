@@ -1,6 +1,6 @@
 # SML Resource System
 
-Resource references let SML properties pull values from named namespaces — most commonly translated strings from locale-aware files.
+Resource references let SML properties pull values from named namespaces - most commonly translated strings from locale-aware files.
 
 ## Syntax
 
@@ -10,7 +10,7 @@ Resource references let SML properties pull values from named namespaces — mos
 @Namespace.key
 ```
 
-Resolves the value of 'key' from the given namespace at runtime. For well-known namespaces (Strings, Colors, Icons, Layouts), no fallback is required — they are resolved from external files. A validation warning is emitted for unknown namespaces without a fallback.
+Resolves the value of 'key' from the given namespace at runtime. For well-known namespaces (Strings, Colors, Icons, Layouts), no fallback is required - they are resolved from external files. A validation warning is emitted for unknown namespaces without a fallback.
 
 **Example:**
 ```sml
@@ -136,8 +136,8 @@ Text strings for UI labels, titles, menu entries, and any other displayed text. 
 
 **Resolution order:**
 
-- 1. Language-specific file (e.g. strings-de.sml) — overrides for the current system locale.
-- 2. Default file (strings.sml) — English or app-default strings.
+- 1. Language-specific file (e.g. strings-de.sml) - overrides for the current system locale.
+- 2. Default file (strings.sml) - English or app-default strings.
 - 3. Fallback literal in the SML source (if provided).
 - 4. Empty string (with a runtime warning).
 
@@ -181,8 +181,8 @@ The SML parser emits warnings at parse time for unresolved references:
 
 | Case | Warning emitted? |
 |---|---|
-| `@Strings.key` — no inline block, no fallback | No (Strings is a well-known external namespace) |
-| `@Strings.key` — inline block present, key missing, no fallback | Yes |
-| `@UnknownNS.key` — unknown namespace, no fallback | Yes |
+| `@Strings.key` - no inline block, no fallback | No (Strings is a well-known external namespace) |
+| `@Strings.key` - inline block present, key missing, no fallback | Yes |
+| `@UnknownNS.key` - unknown namespace, no fallback | Yes |
 | Any reference with a fallback literal | No |
 

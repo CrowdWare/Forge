@@ -27,7 +27,7 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_gap | `<id>.getGap()` | — | float |
+| get_gap | `<id>.getGap()` | - | float |
 | set_gap | `<id>.setGap(value)` | float value | void |
 
 ## Attached Properties

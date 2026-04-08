@@ -11,10 +11,10 @@ Inherited properties are documented in: [Panel](Panel.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | title | string | "" |
-| — | size | vec2i | 640, 480 |
-| — | pos | vec2i | 0, 0 |
+| - | id | identifier | - |
+| - | title | string | "" |
+| - | size | vec2i | 640, 480 |
+| - | pos | vec2i | 0, 0 |
 
 > Headless/CLI-oriented root marker.
 > ForgeRunner uses this root to route startup download progress to console/log output.

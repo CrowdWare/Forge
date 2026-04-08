@@ -187,7 +187,7 @@ void test_runtime_error_null_access() {
 }
 
 void test_tuple_return_replaces_try_catch() {
-    // Go-style error handling via tuple return — no try/catch needed
+    // Go-style error handling via tuple return - no try/catch needed
     expect_ok_value(
         "tuple_return_replaces_try_catch",
         "fun safeDivide(a: Int32, b: Int32): (Bool, String, Int32) {"
@@ -455,7 +455,7 @@ void test_ahimsa_comment() {
 }
 
 void test_ahimsa_english() {
-    // Legacy plain-text mantra is a no-op (skipped by lexer) — still compiles fine.
+    // Legacy plain-text mantra is a no-op (skipped by lexer) - still compiles fine.
     const std::string src = "Do not harm to living beings.\n42;";
     char error[1024] = {0};
     std::int64_t value = 0;
@@ -469,7 +469,7 @@ void test_ahimsa_english() {
 }
 
 void test_ahimsa_esperanto() {
-    // Legacy plain-text mantra is a no-op (skipped by lexer) — still compiles fine.
+    // Legacy plain-text mantra is a no-op (skipped by lexer) - still compiles fine.
     const std::string src = "Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.\n42;";
     char error[1024] = {0};
     std::int64_t value = 0;
@@ -483,7 +483,7 @@ void test_ahimsa_esperanto() {
 }
 
 void test_ahimsa_missing() {
-    // Mantra is no longer required — plain code without it compiles successfully.
+    // Mantra is no longer required - plain code without it compiles successfully.
     const std::string src = "42;";
     char error[1024] = {0};
     std::int64_t value = 0;

@@ -46,7 +46,7 @@ func generate() -> void:
     var localization: Dictionary = spec_res.LOCALIZATION
 
     var md := "# SML Resource System\n\n"
-    md += "Resource references let SML properties pull values from named namespaces — "
+    md += "Resource references let SML properties pull values from named namespaces - "
     md += "most commonly translated strings from locale-aware files.\n\n"
 
     # --- Syntax ---
@@ -115,9 +115,9 @@ func generate() -> void:
     md += "The SML parser emits warnings at parse time for unresolved references:\n\n"
     md += "| Case | Warning emitted? |\n"
     md += "|---|---|\n"
-    md += "| `@Strings.key` — no inline block, no fallback | No (Strings is a well-known external namespace) |\n"
-    md += "| `@Strings.key` — inline block present, key missing, no fallback | Yes |\n"
-    md += "| `@UnknownNS.key` — unknown namespace, no fallback | Yes |\n"
+    md += "| `@Strings.key` - no inline block, no fallback | No (Strings is a well-known external namespace) |\n"
+    md += "| `@Strings.key` - inline block present, key missing, no fallback | Yes |\n"
+    md += "| `@UnknownNS.key` - unknown namespace, no fallback | Yes |\n"
     md += "| Any reference with a fallback literal | No |\n"
     md += "\n"
 

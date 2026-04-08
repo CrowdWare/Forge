@@ -11,9 +11,9 @@ Inherited properties are documented in: [GraphElement](GraphElement.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| ignore_invalid_connection_type | ignoreInvalidConnectionType | bool | — |
-| slots_focus_mode | slotsFocusMode | int | — |
-| title | title | string | — |
+| ignore_invalid_connection_type | ignoreInvalidConnectionType | bool | - |
+| slots_focus_mode | slotsFocusMode | int | - |
+| title | title | string | - |
 
 ## Events
 
@@ -22,7 +22,7 @@ Inherited signals are documented in: [GraphElement](GraphElement.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| slot_sizes_changed | `on <id>.slotSizesChanged() { ... }` | — |
+| slot_sizes_changed | `on <id>.slotSizesChanged() { ... }` | - |
 | slot_updated | `on <id>.slotUpdated(slotIndex) { ... }` | int slotIndex |
 
 ## Runtime Actions
@@ -32,15 +32,15 @@ Inherited actions are documented in: [GraphElement](GraphElement.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| clear_all_slots | `<id>.clearAllSlots()` | — | void |
+| clear_all_slots | `<id>.clearAllSlots()` | - | void |
 | clear_slot | `<id>.clearSlot(slotIndex)` | int slotIndex | void |
 | get_input_port_color | `<id>.getInputPortColor(portIdx)` | int portIdx | Color |
-| get_input_port_count | `<id>.getInputPortCount()` | — | int |
+| get_input_port_count | `<id>.getInputPortCount()` | - | int |
 | get_input_port_position | `<id>.getInputPortPosition(portIdx)` | int portIdx | Vector2 |
 | get_input_port_slot | `<id>.getInputPortSlot(portIdx)` | int portIdx | int |
 | get_input_port_type | `<id>.getInputPortType(portIdx)` | int portIdx | int |
 | get_output_port_color | `<id>.getOutputPortColor(portIdx)` | int portIdx | Color |
-| get_output_port_count | `<id>.getOutputPortCount()` | — | int |
+| get_output_port_count | `<id>.getOutputPortCount()` | - | int |
 | get_output_port_position | `<id>.getOutputPortPosition(portIdx)` | int portIdx | Vector2 |
 | get_output_port_slot | `<id>.getOutputPortSlot(portIdx)` | int portIdx | int |
 | get_output_port_type | `<id>.getOutputPortType(portIdx)` | int portIdx | int |
@@ -52,8 +52,8 @@ Inherited actions are documented in: [GraphElement](GraphElement.md)
 | get_slot_metadata_right | `<id>.getSlotMetadataRight(slotIndex)` | int slotIndex | void |
 | get_slot_type_left | `<id>.getSlotTypeLeft(slotIndex)` | int slotIndex | int |
 | get_slot_type_right | `<id>.getSlotTypeRight(slotIndex)` | int slotIndex | int |
-| get_titlebar_hbox | `<id>.getTitlebarHbox()` | — | Object |
-| is_ignoring_valid_connection_type | `<id>.isIgnoringValidConnectionType()` | — | bool |
+| get_titlebar_hbox | `<id>.getTitlebarHbox()` | - | Object |
+| is_ignoring_valid_connection_type | `<id>.isIgnoringValidConnectionType()` | - | bool |
 | is_slot_draw_stylebox | `<id>.isSlotDrawStylebox(slotIndex)` | int slotIndex | bool |
 | is_slot_enabled_left | `<id>.isSlotEnabledLeft(slotIndex)` | int slotIndex | bool |
 | is_slot_enabled_right | `<id>.isSlotEnabledRight(slotIndex)` | int slotIndex | bool |

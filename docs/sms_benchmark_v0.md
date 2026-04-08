@@ -49,7 +49,7 @@ Forge 4D hat seine Wurzeln im Noco Designer, der ursprünglich mit Kotlin/Compos
 ForgePoser nutzt 3D-Controls und Forge-spezifische UI-Elemente, die in Kotlin/Compose nicht existieren. Ein direkter Nachbau ist nicht möglich.
 
 > "Wir wollten Forge mit Compose vergleichen, aber da vergleichen wir Apple mit Kompost."
-> — Art, März 2026
+> - Art, März 2026
 
 ### Vergleichs-App (noch zu bauen)
 

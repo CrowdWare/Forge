@@ -44,7 +44,7 @@ code_edit->set_syntax_highlighter(hl);
 - `CodeEdit { language: sml }` highlights SML keywords in the accent color.
 - `CodeEdit { language: sms }` highlights SMS keywords.
 - `CodeEdit { language: markdown }` highlights headings and emphasis.
-- No syntax highlighter on unknown `language:` value — no crash.
+- No syntax highlighter on unknown `language:` value - no crash.
 
 ## Reference
 - C#: `ForgeRunner/Runtime/UI/CodeEditSyntaxRuntime.cs`

@@ -11,9 +11,9 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| border_color | borderColor | Color | — |
-| border_width | borderWidth | float | — |
-| editor_only | editorOnly | bool | — |
+| border_color | borderColor | Color | - |
+| border_width | borderWidth | float | - |
+| editor_only | editorOnly | bool | - |
 
 ## Events
 

@@ -11,16 +11,16 @@ Inherited properties are documented in: [Panel](Panel.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | title | string | "" |
-| — | size | vec2i | 640, 480 |
-| — | pos | vec2i | 0, 0 |
-| — | minSize | vec2i | 0, 0 |
-| — | duration | int | 0 |
-| — | loadOnReady | string(url) | "" |
+| - | id | identifier | - |
+| - | title | string | "" |
+| - | size | vec2i | 640, 480 |
+| - | pos | vec2i | 0, 0 |
+| - | minSize | vec2i | 0, 0 |
+| - | duration | int | 0 |
+| - | loadOnReady | string(url) | "" |
 
 > Startup screen shown before the main app loads. Shown immediately after entry files are downloaded. Remaining assets load in background with an optional ProgressBar child.
-> SplashScreen is always centered on screen and uses extendToTitle so the content fills the title bar area while the system close button remains visible. These behaviours are implicit — no properties needed.
+> SplashScreen is always centered on screen and uses extendToTitle so the content fills the title bar area while the system close button remains visible. These behaviours are implicit - no properties needed.
 
 ### Examples
 

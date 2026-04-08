@@ -11,10 +11,10 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| filters | filters | string | — |
-| language | language | string | — |
-| mode | mode | string | — |
-| suffix | suffix | string | — |
+| filters | filters | string | - |
+| language | language | string | - |
+| mode | mode | string | - |
+| suffix | suffix | string | - |
 
 ## Events
 
@@ -26,8 +26,8 @@ Inherited signals are documented in: [Control](Control.md)
 | error | `on <id>.error(message) { ... }` | string message |
 | rawResult | `on <id>.rawResult(text) { ... }` | string text |
 | result | `on <id>.result(text) { ... }` | string text |
-| started | `on <id>.started() { ... }` | — |
-| stopped | `on <id>.stopped() { ... }` | — |
+| started | `on <id>.started() { ... }` | - |
+| stopped | `on <id>.stopped() { ... }` | - |
 
 ## Runtime Actions
 
@@ -36,8 +36,8 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| listen | `<id>.listen()` | — | void |
-| stop | `<id>.stop()` | — | void |
+| listen | `<id>.listen()` | - | void |
+| stop | `<id>.stop()` | - | void |
 | submitText | `<id>.submitText(text)` | string text | void |
 
 ## Attached Properties

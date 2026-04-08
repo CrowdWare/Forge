@@ -11,12 +11,12 @@ Inherited properties are documented in: [Panel](Panel.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | anchors | string | "" |
-| — | x | int | 0 |
-| — | y | int | 0 |
-| — | width | int | 0 |
-| — | height | int | 32 |
+| - | id | identifier | - |
+| - | anchors | string | "" |
+| - | x | int | 0 |
+| - | y | int | 0 |
+| - | width | int | 0 |
+| - | height | int | 32 |
 
 > Provides a native draggable title/caption area for custom frameless layouts.
 > Single left click starts OS window drag.

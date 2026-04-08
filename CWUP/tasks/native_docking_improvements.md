@@ -10,7 +10,7 @@ The following features are still missing vs. the C# reference implementation.
 
 ## Tasks
 
-### 1 — Panel collapse when empty
+### 1 - Panel collapse when empty
 When a `ForgeDockingContainerControl` loses its last tab (tab count → 0), it must set
 `visible = false`. The host calls `queue_sort()` so the layout reflows without the
 collapsed column.
@@ -18,7 +18,7 @@ collapsed column.
 Reference (C#): `DockingContainerControl` calls `Host.QueueSort()` after a tab is
 removed when `GetTabCount() == 0`.
 
-### 2 — AlwaysOnTop for floating windows
+### 2 - AlwaysOnTop for floating windows
 When a panel is made floating (`_make_floating()`), set `FLAG_ALWAYS_ON_TOP` on the
 created `Window`:
 
@@ -26,7 +26,7 @@ created `Window`:
 win->set_flag(Window::FLAG_ALWAYS_ON_TOP, true);
 ```
 
-### 3 — Far column visibility on move
+### 3 - Far column visibility on move
 When a panel is moved to `farLeft`, `farLeftBottom`, `farRight`, or `farRightBottom`
 and that column currently contains only invisible/empty containers, make the target
 container visible.
@@ -34,7 +34,7 @@ container visible.
 Reference (C#): `DockingHostControl.DockPanel()` calls `container.Visible = true` after
 adding the tab, then calls `QueueSort()`.
 
-### 4 — *Bottom split layout
+### 4 - *Bottom split layout
 When a panel is moved to a `*Bottom` slot (`leftBottom`, `rightBottom`, `farLeftBottom`,
 `farRightBottom`), the column must be split top/bottom:
 
@@ -45,7 +45,7 @@ When a panel is moved to a `*Bottom` slot (`leftBottom`, `rightBottom`, `farLeft
 Reference (C#): `DockColumn.LayoutColumn()` + `ResolveTopSplitHeight()` in
 `DockingHostControl.cs`.
 
-### 5 — Horizontal resize handles (column gap)
+### 5 - Horizontal resize handles (column gap)
 Add a `ColorRect` resize handle in each interior column gap:
 
 - Cursor: `CURSOR_HSIZE`
@@ -56,7 +56,7 @@ Add a `ColorRect` resize handle in each interior column gap:
 Reference (C#): `DockResizeHandleControl` with `LeftNeighbor` / `RightNeighbor` in
 `DockingHostControl.cs`.
 
-### 6 — Vertical resize handles (top/bottom split gap)
+### 6 - Vertical resize handles (top/bottom split gap)
 Add a `ColorRect` resize handle in the gap between top and bottom panels of a split
 column:
 
@@ -65,7 +65,7 @@ column:
 - Same colour convention as horizontal handle.
 - ZIndex: 900.
 
-Reference (C#): `DockingHostControl.Vertical.cs` — `AddVerticalResizeHandle()` /
+Reference (C#): `DockingHostControl.Vertical.cs` - `AddVerticalResizeHandle()` /
 `OnVerticalHandleInput()`.
 
 ## Acceptance Criteria

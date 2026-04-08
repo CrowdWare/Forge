@@ -32,7 +32,7 @@ func get_spec() -> Dictionary:
             "All texture properties accept the same path formats as TextureRect: res:/, user:/, appRes:/, file://, or absolute paths.",
         ],
         "properties": [
-            {"sml":"id",               "type":"identifier",   "default":"—"},
+            {"sml":"id",               "type":"identifier",   "default":"-"},
             {"sml":"textureNormal",    "type":"string(url)",  "default":"\"\"",
              "notes":"Texture shown in the default (idle) state."},
             {"sml":"textureHover",     "type":"string(url)",  "default":"\"\"",

@@ -38,7 +38,7 @@
 #include <vector>
 
 // ---------------------------------------------------------------------------
-// Internal implementation — not exposed in any public header.
+// Internal implementation - not exposed in any public header.
 // ---------------------------------------------------------------------------
 namespace {
 

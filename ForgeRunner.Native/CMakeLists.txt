@@ -12,7 +12,7 @@ include(CTest)
 # ---------------------------------------------------------------------------
 if(NOT DEFINED GODOT_CPP_DIR OR GODOT_CPP_DIR STREQUAL "")
     set(GODOT_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/godot-cpp")
-    message(STATUS "GODOT_CPP_DIR not set — using bundled: ${GODOT_CPP_DIR}")
+    message(STATUS "GODOT_CPP_DIR not set - using bundled: ${GODOT_CPP_DIR}")
 endif()
 
 set(GODOT_CPP_GEN_DIR     "${GODOT_CPP_DIR}/gen")
@@ -55,7 +55,7 @@ list(GET GODOT_CPP_LIB_CANDIDATES 0 GODOT_CPP_LIB)
 message(STATUS "Using godot-cpp library: ${GODOT_CPP_LIB}")
 
 # ---------------------------------------------------------------------------
-# SMLCore.Native (parser — compiled directly into the extension)
+# SMLCore.Native (parser - compiled directly into the extension)
 # ---------------------------------------------------------------------------
 set(SMLCORE_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMLCore.Native")
 set(SMSCORE_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMSCore.Native")
@@ -110,7 +110,7 @@ if(APPLE)
 endif()
 
 # ---------------------------------------------------------------------------
-# Standalone executable (thin launcher — optional)
+# Standalone executable (thin launcher - optional)
 # ---------------------------------------------------------------------------
 add_executable(forge-runner-native
     src/main.cpp
@@ -162,7 +162,7 @@ if(BUILD_TESTING)
     # SMS Runner Integration Tests
     # Exercises SMS script execution + mock UI callbacks + dispatch depth guard.
     # Reproduces stack overflow scenarios (e.g. setKeyframe cycle in ForgePoser).
-    # No Godot dependency — links sms_native sources directly.
+    # No Godot dependency - links sms_native sources directly.
     # ---------------------------------------------------------------------------
     set(SMS_NATIVE_DIR "${SMSCORE_NATIVE_DIR}")
 
@@ -203,6 +203,6 @@ if(BUILD_TESTING)
                 COMMAND forge_runner_native_sms_integration_tests ${CASE_NAME})
         endforeach()
     else()
-        message(WARNING "SMSCore.Native not found — skipping SMS integration tests.")
+        message(WARNING "SMSCore.Native not found - skipping SMS integration tests.")
     endif()
 endif()

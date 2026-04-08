@@ -46,10 +46,10 @@ bg properties are present). Each block becomes a child:
 - HRule → `HSeparator`.
 
 ## Properties to Support
-- `text:` — inline markdown string or `@Strings.key` ref.
-- `src:` — path to external `.md` file to load and render.
-- `fontSize:` — base font size (headings scale from this).
-- `bgColor:`, `borderRadius:`, etc. — forwarded to root VBoxContainer.
+- `text:` - inline markdown string or `@Strings.key` ref.
+- `src:` - path to external `.md` file to load and render.
+- `fontSize:` - base font size (headings scale from this).
+- `bgColor:`, `borderRadius:`, etc. - forwarded to root VBoxContainer.
 
 ## Acceptance Criteria
 - A `Markdown { text: "# Hello\nWorld" }` node renders a large heading and a paragraph.

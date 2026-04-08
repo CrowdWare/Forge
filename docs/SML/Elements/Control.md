@@ -146,23 +146,23 @@ Inherited properties are documented in: [CanvasItem](CanvasItem.md)
 | mouse_filter | mouseFilter | enum | stop |
 | size_flags_horizontal | shrinkH | bool | false |
 | size_flags_vertical | shrinkV | bool | false |
-| — (drawn via BgControl._Draw) | bgColor | color | — |
-| — (drawn via BgControl._Draw) | borderColor | color | — |
-| — (drawn via BgControl._Draw) | borderWidth | int | — |
-| — (drawn via BgControl._Draw) | borderRadius | int | — |
-| StyleBoxFlat.border_width_top | borderTop | int | — |
-| StyleBoxFlat.border_width_bottom | borderBottom | int | — |
-| StyleBoxFlat.border_width_left | borderLeft | int | — |
-| StyleBoxFlat.border_width_right | borderRight | int | — |
-| StyleBoxFlat.shadow_color | shadowColor | color | — |
-| StyleBoxFlat.shadow_size | shadowSize | int | — |
+| - (drawn via BgControl._Draw) | bgColor | color | - |
+| - (drawn via BgControl._Draw) | borderColor | color | - |
+| - (drawn via BgControl._Draw) | borderWidth | int | - |
+| - (drawn via BgControl._Draw) | borderRadius | int | - |
+| StyleBoxFlat.border_width_top | borderTop | int | - |
+| StyleBoxFlat.border_width_bottom | borderBottom | int | - |
+| StyleBoxFlat.border_width_left | borderLeft | int | - |
+| StyleBoxFlat.border_width_right | borderRight | int | - |
+| StyleBoxFlat.shadow_color | shadowColor | color | - |
+| StyleBoxFlat.shadow_size | shadowSize | int | - |
 | StyleBoxFlat.shadow_offset.x | shadowOffsetX | int | 0 |
 | StyleBoxFlat.shadow_offset.y | shadowOffsetY | int | 0 |
-| — (drawn via BgControl._Draw) | highlightColor | color | — |
-| — (expands to profile properties before build) | elevation | identifier | — |
-| — (inner MarginContainer injected at build time) | padding | padding | 0 |
-| custom_minimum_size.x | minWidth | int | — |
-| custom_minimum_size.y | minHeight | int | — |
+| - (drawn via BgControl._Draw) | highlightColor | color | - |
+| - (expands to profile properties before build) | elevation | identifier | - |
+| - (inner MarginContainer injected at build time) | padding | padding | 0 |
+| custom_minimum_size.x | minWidth | int | - |
+| custom_minimum_size.y | minHeight | int | - |
 
 ## Events
 
@@ -171,15 +171,15 @@ Inherited signals are documented in: [CanvasItem](CanvasItem.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| focus_entered | `on <id>.focusEntered() { ... }` | — |
-| focus_exited | `on <id>.focusExited() { ... }` | — |
+| focus_entered | `on <id>.focusEntered() { ... }` | - |
+| focus_exited | `on <id>.focusExited() { ... }` | - |
 | gui_input | `on <id>.guiInput(event) { ... }` | Object event |
-| minimum_size_changed | `on <id>.minimumSizeChanged() { ... }` | — |
-| mouse_entered | `on <id>.mouseEntered() { ... }` | — |
-| mouse_exited | `on <id>.mouseExited() { ... }` | — |
-| resized | `on <id>.resized() { ... }` | — |
-| size_flags_changed | `on <id>.sizeFlagsChanged() { ... }` | — |
-| theme_changed | `on <id>.themeChanged() { ... }` | — |
+| minimum_size_changed | `on <id>.minimumSizeChanged() { ... }` | - |
+| mouse_entered | `on <id>.mouseEntered() { ... }` | - |
+| mouse_exited | `on <id>.mouseExited() { ... }` | - |
+| resized | `on <id>.resized() { ... }` | - |
+| size_flags_changed | `on <id>.sizeFlagsChanged() { ... }` | - |
+| theme_changed | `on <id>.themeChanged() { ... }` | - |
 
 ## Runtime Actions
 
@@ -188,51 +188,51 @@ Inherited actions are documented in: [CanvasItem](CanvasItem.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| accept_event | `<id>.acceptEvent()` | — | void |
-| accessibility_drag | `<id>.accessibilityDrag()` | — | void |
-| accessibility_drop | `<id>.accessibilityDrop()` | — | void |
-| begin_bulk_theme_override | `<id>.beginBulkThemeOverride()` | — | void |
-| end_bulk_theme_override | `<id>.endBulkThemeOverride()` | — | void |
-| find_next_valid_focus | `<id>.findNextValidFocus()` | — | Object |
-| find_prev_valid_focus | `<id>.findPrevValidFocus()` | — | Object |
+| accept_event | `<id>.acceptEvent()` | - | void |
+| accessibility_drag | `<id>.accessibilityDrag()` | - | void |
+| accessibility_drop | `<id>.accessibilityDrop()` | - | void |
+| begin_bulk_theme_override | `<id>.beginBulkThemeOverride()` | - | void |
+| end_bulk_theme_override | `<id>.endBulkThemeOverride()` | - | void |
+| find_next_valid_focus | `<id>.findNextValidFocus()` | - | Object |
+| find_prev_valid_focus | `<id>.findPrevValidFocus()` | - | Object |
 | find_valid_focus_neighbor | `<id>.findValidFocusNeighbor(side)` | int side | Object |
 | get_anchor | `<id>.getAnchor(side)` | int side | float |
-| get_begin | `<id>.getBegin()` | — | Vector2 |
-| get_combined_minimum_size | `<id>.getCombinedMinimumSize()` | — | Vector2 |
-| get_combined_pivot_offset | `<id>.getCombinedPivotOffset()` | — | Vector2 |
+| get_begin | `<id>.getBegin()` | - | Vector2 |
+| get_combined_minimum_size | `<id>.getCombinedMinimumSize()` | - | Vector2 |
+| get_combined_pivot_offset | `<id>.getCombinedPivotOffset()` | - | Vector2 |
 | get_cursor_shape | `<id>.getCursorShape(position)` | Vector2 position | int |
-| get_default_cursor_shape | `<id>.getDefaultCursorShape()` | — | int |
-| get_end | `<id>.getEnd()` | — | Vector2 |
-| get_focus_mode_with_override | `<id>.getFocusModeWithOverride()` | — | int |
+| get_default_cursor_shape | `<id>.getDefaultCursorShape()` | - | int |
+| get_end | `<id>.getEnd()` | - | Vector2 |
+| get_focus_mode_with_override | `<id>.getFocusModeWithOverride()` | - | int |
 | get_focus_neighbor | `<id>.getFocusNeighbor(side)` | int side | Variant |
-| get_global_rect | `<id>.getGlobalRect()` | — | Variant |
-| get_h_grow_direction | `<id>.getHGrowDirection()` | — | int |
-| get_h_size_flags | `<id>.getHSizeFlags()` | — | int |
-| get_minimum_size | `<id>.getMinimumSize()` | — | Vector2 |
-| get_mouse_filter_with_override | `<id>.getMouseFilterWithOverride()` | — | int |
+| get_global_rect | `<id>.getGlobalRect()` | - | Variant |
+| get_h_grow_direction | `<id>.getHGrowDirection()` | - | int |
+| get_h_size_flags | `<id>.getHSizeFlags()` | - | int |
+| get_minimum_size | `<id>.getMinimumSize()` | - | Vector2 |
+| get_mouse_filter_with_override | `<id>.getMouseFilterWithOverride()` | - | int |
 | get_offset | `<id>.getOffset(offset)` | int offset | float |
-| get_parent_area_size | `<id>.getParentAreaSize()` | — | Vector2 |
-| get_parent_control | `<id>.getParentControl()` | — | Object |
-| get_rect | `<id>.getRect()` | — | Variant |
-| get_screen_position | `<id>.getScreenPosition()` | — | Vector2 |
-| get_stretch_ratio | `<id>.getStretchRatio()` | — | float |
-| get_theme_default_base_scale | `<id>.getThemeDefaultBaseScale()` | — | float |
-| get_theme_default_font | `<id>.getThemeDefaultFont()` | — | Object |
-| get_theme_default_font_size | `<id>.getThemeDefaultFontSize()` | — | int |
+| get_parent_area_size | `<id>.getParentAreaSize()` | - | Vector2 |
+| get_parent_control | `<id>.getParentControl()` | - | Object |
+| get_rect | `<id>.getRect()` | - | Variant |
+| get_screen_position | `<id>.getScreenPosition()` | - | Vector2 |
+| get_stretch_ratio | `<id>.getStretchRatio()` | - | float |
+| get_theme_default_base_scale | `<id>.getThemeDefaultBaseScale()` | - | float |
+| get_theme_default_font | `<id>.getThemeDefaultFont()` | - | Object |
+| get_theme_default_font_size | `<id>.getThemeDefaultFontSize()` | - | int |
 | get_tooltip | `<id>.getTooltip(atPosition)` | Vector2 atPosition | string |
-| get_v_grow_direction | `<id>.getVGrowDirection()` | — | int |
-| get_v_size_flags | `<id>.getVSizeFlags()` | — | int |
-| grab_click_focus | `<id>.grabClickFocus()` | — | void |
+| get_v_grow_direction | `<id>.getVGrowDirection()` | - | int |
+| get_v_size_flags | `<id>.getVSizeFlags()` | - | int |
+| grab_click_focus | `<id>.grabClickFocus()` | - | void |
 | grab_focus | `<id>.grabFocus(hideFocus)` | bool hideFocus | void |
 | has_focus | `<id>.hasFocus(ignoreHiddenFocus)` | bool ignoreHiddenFocus | bool |
-| is_auto_translating | `<id>.isAutoTranslating()` | — | bool |
-| is_clipping_contents | `<id>.isClippingContents()` | — | bool |
-| is_drag_successful | `<id>.isDragSuccessful()` | — | bool |
-| is_force_pass_scroll_events | `<id>.isForcePassScrollEvents()` | — | bool |
-| is_layout_rtl | `<id>.isLayoutRtl()` | — | bool |
-| is_localizing_numeral_system | `<id>.isLocalizingNumeralSystem()` | — | bool |
-| release_focus | `<id>.releaseFocus()` | — | void |
-| reset_size | `<id>.resetSize()` | — | void |
+| is_auto_translating | `<id>.isAutoTranslating()` | - | bool |
+| is_clipping_contents | `<id>.isClippingContents()` | - | bool |
+| is_drag_successful | `<id>.isDragSuccessful()` | - | bool |
+| is_force_pass_scroll_events | `<id>.isForcePassScrollEvents()` | - | bool |
+| is_layout_rtl | `<id>.isLayoutRtl()` | - | bool |
+| is_localizing_numeral_system | `<id>.isLocalizingNumeralSystem()` | - | bool |
+| release_focus | `<id>.releaseFocus()` | - | void |
+| reset_size | `<id>.resetSize()` | - | void |
 | set_anchor | `<id>.setAnchor(side, anchor, keepOffset, pushOppositeAnchor)` | int side, float anchor, bool keepOffset, bool pushOppositeAnchor | void |
 | set_anchor_and_offset | `<id>.setAnchorAndOffset(side, anchor, offset, pushOppositeAnchor)` | int side, float anchor, float offset, bool pushOppositeAnchor | void |
 | set_anchors_and_offsets_preset | `<id>.setAnchorsAndOffsetsPreset(preset, resizeMode, margin)` | int preset, int resizeMode, int margin | void |
@@ -247,7 +247,7 @@ Inherited actions are documented in: [CanvasItem](CanvasItem.md)
 | set_stretch_ratio | `<id>.setStretchRatio(ratio)` | float ratio | void |
 | set_v_grow_direction | `<id>.setVGrowDirection(direction)` | int direction | void |
 | set_v_size_flags | `<id>.setVSizeFlags(flags)` | int flags | void |
-| update_minimum_size | `<id>.updateMinimumSize()` | — | void |
+| update_minimum_size | `<id>.updateMinimumSize()` | - | void |
 | warp_mouse | `<id>.warpMouse(position)` | Vector2 position | void |
 
 ## Attached Properties

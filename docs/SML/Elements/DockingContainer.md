@@ -11,19 +11,19 @@ Inherited properties are documented in: [PanelContainer](PanelContainer.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | dockSide | enum | center |
-| — | fixedWidth | int | 240 |
-| — | minFixedWidth | int | 140 |
-| — | fixedHeight | int | — |
-| — | minHeight | int | — |
-| — | minFixedHeight | int | 80 |
-| — | heightPercent | float | 50 |
-| — | flex | bool | false |
-| — | collapsed | bool | false |
-| — | closeable | bool | true |
-| — | dragToRearrangeEnabled | bool | true |
-| — | tabsRearrangeGroup | int | 1 |
+| - | id | identifier | - |
+| - | dockSide | enum | center |
+| - | fixedWidth | int | 240 |
+| - | minFixedWidth | int | 140 |
+| - | fixedHeight | int | - |
+| - | minHeight | int | - |
+| - | minFixedHeight | int | 80 |
+| - | heightPercent | float | 50 |
+| - | flex | bool | false |
+| - | collapsed | bool | false |
+| - | closeable | bool | true |
+| - | dragToRearrangeEnabled | bool | true |
+| - | tabsRearrangeGroup | int | 1 |
 
 > Automatically creates an internal TabContainer.
 > Direct child controls become tabs. Use the attached property syntax to define tab captions: `<containerId>.title: "Caption"` or `DockingContainer.title: "Caption"`.

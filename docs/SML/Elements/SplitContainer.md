@@ -18,15 +18,15 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| collapsed | collapsed | bool | — |
-| drag_area_highlight_in_editor | dragAreaHighlightInEditor | bool | — |
-| drag_area_margin_begin | dragAreaMarginBegin | int | — |
-| drag_area_margin_end | dragAreaMarginEnd | int | — |
-| drag_area_offset | dragAreaOffset | int | — |
-| dragger_visibility | draggerVisibility | int | — |
-| dragging_enabled | draggingEnabled | bool | — |
-| touch_dragger_enabled | touchDraggerEnabled | bool | — |
-| vertical | vertical | bool | — |
+| collapsed | collapsed | bool | - |
+| drag_area_highlight_in_editor | dragAreaHighlightInEditor | bool | - |
+| drag_area_margin_begin | dragAreaMarginBegin | int | - |
+| drag_area_margin_end | dragAreaMarginEnd | int | - |
+| drag_area_offset | dragAreaOffset | int | - |
+| dragger_visibility | draggerVisibility | int | - |
+| dragging_enabled | draggingEnabled | bool | - |
+| touch_dragger_enabled | touchDraggerEnabled | bool | - |
+| vertical | vertical | bool | - |
 
 ## Events
 
@@ -35,8 +35,8 @@ Inherited signals are documented in: [Container](Container.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| drag_ended | `on <id>.dragEnded() { ... }` | — |
-| drag_started | `on <id>.dragStarted() { ... }` | — |
+| drag_ended | `on <id>.dragEnded() { ... }` | - |
+| drag_started | `on <id>.dragStarted() { ... }` | - |
 | dragged | `on <id>.dragged(offset) { ... }` | int offset |
 
 ## Runtime Actions
@@ -47,9 +47,9 @@ Inherited actions are documented in: [Container](Container.md)
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
 | clamp_split_offset | `<id>.clampSplitOffset(priorityIndex)` | int priorityIndex | void |
-| get_drag_area_control | `<id>.getDragAreaControl()` | — | Object |
-| get_drag_area_controls | `<id>.getDragAreaControls()` | — | Variant |
-| is_drag_area_highlight_in_editor_enabled | `<id>.isDragAreaHighlightInEditorEnabled()` | — | bool |
+| get_drag_area_control | `<id>.getDragAreaControl()` | - | Object |
+| get_drag_area_controls | `<id>.getDragAreaControls()` | - | Variant |
+| is_drag_area_highlight_in_editor_enabled | `<id>.isDragAreaHighlightInEditorEnabled()` | - | bool |
 
 ## Attached Properties
 

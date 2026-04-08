@@ -298,7 +298,7 @@ When generating SML code, observe the following rules:
 5. **Numbers without quotes**: `size: 1920, 1080`.
 6. **IDs** always as unquoted identifiers: `id: myButton`.
 7. **IDs must be unique across the entire document.**
-8. `padding` accepts 1, 2, or 4 values — never 3.
+8. `padding` accepts 1, 2, or 4 values - never 3.
 9. Tuples with more than 3 values are forbidden (except `padding` with 4).
 10. `anchors` can separate multiple values with `|` or `,`.
 11. Comments with `//` or `/* */`.

@@ -7,7 +7,7 @@ Port `ThemeStore.cs` and `LocalizationStore.cs` to C++ so that SML properties
 
 ## Context
 `UiBuilder::load_strings()` already loads `strings.sml` into a map. That is the
-localization half — but it needs to be extended to full spec parity. The theme
+localization half - but it needs to be extended to full spec parity. The theme
 half (`@Colors.*`, `@Layouts.*`) is not implemented at all in C++.
 
 ## Subsystems to Port
@@ -48,7 +48,7 @@ Elevations {
 
 ### Elevation Expansion
 Before a node is built, if it has an `elevation: name` property, look up the
-`Elevations.name` block and inject all its properties into the node — identical
+`Elevations.name` block and inject all its properties into the node - identical
 to the C# pre-build pass in `SmlUiBuilder`.
 
 ### Resource Reference Resolution

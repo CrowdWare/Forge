@@ -11,19 +11,19 @@ Inherited properties are documented in: [Range](Range.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| fill_mode | fillMode | int | — |
-| nine_patch_stretch | ninePatchStretch | bool | — |
-| radial_center_offset | radialCenterOffset | Vector2 | — |
-| radial_fill_degrees | radialFillDegrees | float | — |
-| radial_initial_angle | radialInitialAngle | float | — |
-| stretch_margin_bottom | stretchMarginBottom | int | — |
-| stretch_margin_left | stretchMarginLeft | int | — |
-| stretch_margin_right | stretchMarginRight | int | — |
-| stretch_margin_top | stretchMarginTop | int | — |
-| texture_progress_offset | textureProgressOffset | Vector2 | — |
-| tint_over | tintOver | Color | — |
-| tint_progress | tintProgress | Color | — |
-| tint_under | tintUnder | Color | — |
+| fill_mode | fillMode | int | - |
+| nine_patch_stretch | ninePatchStretch | bool | - |
+| radial_center_offset | radialCenterOffset | Vector2 | - |
+| radial_fill_degrees | radialFillDegrees | float | - |
+| radial_initial_angle | radialInitialAngle | float | - |
+| stretch_margin_bottom | stretchMarginBottom | int | - |
+| stretch_margin_left | stretchMarginLeft | int | - |
+| stretch_margin_right | stretchMarginRight | int | - |
+| stretch_margin_top | stretchMarginTop | int | - |
+| texture_progress_offset | textureProgressOffset | Vector2 | - |
+| tint_over | tintOver | Color | - |
+| tint_progress | tintProgress | Color | - |
+| tint_under | tintUnder | Color | - |
 
 ## Events
 
@@ -40,11 +40,11 @@ Inherited actions are documented in: [Range](Range.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_fill_degrees | `<id>.getFillDegrees()` | — | float |
-| get_over_texture | `<id>.getOverTexture()` | — | Object |
-| get_progress_texture | `<id>.getProgressTexture()` | — | Object |
+| get_fill_degrees | `<id>.getFillDegrees()` | - | float |
+| get_over_texture | `<id>.getOverTexture()` | - | Object |
+| get_progress_texture | `<id>.getProgressTexture()` | - | Object |
 | get_stretch_margin | `<id>.getStretchMargin(margin)` | int margin | int |
-| get_under_texture | `<id>.getUnderTexture()` | — | Object |
+| get_under_texture | `<id>.getUnderTexture()` | - | Object |
 | set_fill_degrees | `<id>.setFillDegrees(mode)` | float mode | void |
 | set_stretch_margin | `<id>.setStretchMargin(margin, value)` | int margin, int value | void |
 

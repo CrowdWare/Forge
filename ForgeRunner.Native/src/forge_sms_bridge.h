@@ -85,10 +85,9 @@ public:
 private:
     struct SessionMeta {
         bool is_local_source = true;
-        bool has_event_handlers = false;
-        bool aot_attempted = false;
-        bool aot_succeeded = false;
-        bool aot_failed = false;
+        bool aot_lib_ready   = false;   // lib compiled and loaded
+        bool aot_lib_failed  = false;   // compilation failed - use interpreter
+        std::int64_t aot_lib_id = -1;  // handle for sms_native_aot_lib_dispatch
         std::string source;
     };
 
@@ -99,8 +98,11 @@ private:
     using LoadFn    = int (*)(std::int64_t, const char*, char*, int);
     using InvokeFn  = int (*)(std::int64_t, const char*, const char*, const char*,
                                std::int64_t*, char*, int);
-    using AotInvokeFn = int (*)(const char*, const char*, const char*, const char*,
-                                 std::int64_t*, char*, int);
+    using AotInvokeFn     = int (*)(const char*, const char*, const char*, const char*,
+                                     std::int64_t*, char*, int);
+    using AotLibOpenFn    = int (*)(const char*, std::int64_t*, char*, int);
+    using AotLibDispatchFn= int (*)(std::int64_t, const char*, const char*, char*, int);
+    using AotLibCloseFn   = void(*)(std::int64_t);
     using DisposeFn = int (*)(std::int64_t, char*, int);
     using SetUiCbFn = int (*)(
         int (*)(const char*, const char*, char*, int, char*, int),
@@ -115,7 +117,10 @@ private:
     CreateFn  create_fn_    = nullptr;
     LoadFn    load_fn_      = nullptr;
     InvokeFn  invoke_fn_    = nullptr;
-    AotInvokeFn aot_invoke_fn_ = nullptr;
+    AotInvokeFn     aot_invoke_fn_      = nullptr;
+    AotLibOpenFn    aot_lib_open_fn_    = nullptr;
+    AotLibDispatchFn aot_lib_dispatch_fn_ = nullptr;
+    AotLibCloseFn   aot_lib_close_fn_   = nullptr;
     DisposeFn dispose_fn_   = nullptr;
     SetUiCbFn set_ui_cb_fn_ = nullptr;
     SetUiStringCbFn set_ui_string_cb_fn_ = nullptr;

@@ -111,6 +111,11 @@ bool starts_with_http_scheme(const std::string& label) {
     return label.rfind("http://", 0) == 0 || label.rfind("https://", 0) == 0;
 }
 
+bool is_dev_mode() {
+    const char* env = std::getenv("FORGE_DEV_MODE");
+    return env != nullptr && env[0] != '\0' && env[0] != '0';
+}
+
 bool runner_started_from_http_url() {
     const char* env = std::getenv("FORGE_RUNNER_URL");
     if (env == nullptr || env[0] == '\0') {
@@ -574,7 +579,9 @@ static void* platform_load_lib(const fs::path& p) {
 #if defined(_WIN32)
     return LoadLibraryW(p.wstring().c_str());
 #else
-    return dlopen(p.c_str(), RTLD_NOW | RTLD_LOCAL);
+    // RTLD_GLOBAL: make sms_native's symbols (sms_native_llvm_*) available
+    // to subsequently loaded compiled SMS shared libraries.
+    return dlopen(p.c_str(), RTLD_NOW | RTLD_GLOBAL);
 #endif
 }
 
@@ -1380,14 +1387,17 @@ bool SmsBridge::load(const std::string& repo_root) {
     if (!lib_handle_) {
         UtilityFunctions::push_warning(String((
             "[ForgeRunner.Native] SMS library not found at " + lib_path.string() +
-            " — SMS execution disabled.").c_str()));
+            " - SMS execution disabled.").c_str()));
         return false;
     }
 
     create_fn_    = reinterpret_cast<CreateFn> (platform_load_sym(lib_handle_, "sms_native_session_create"));
     load_fn_      = reinterpret_cast<LoadFn>   (platform_load_sym(lib_handle_, "sms_native_session_load"));
     invoke_fn_    = reinterpret_cast<InvokeFn> (platform_load_sym(lib_handle_, "sms_native_session_invoke"));
-    aot_invoke_fn_ = reinterpret_cast<AotInvokeFn>(platform_load_sym(lib_handle_, "sms_native_aot_invoke"));
+    aot_invoke_fn_       = reinterpret_cast<AotInvokeFn>    (platform_load_sym(lib_handle_, "sms_native_aot_invoke"));
+    aot_lib_open_fn_     = reinterpret_cast<AotLibOpenFn>   (platform_load_sym(lib_handle_, "sms_native_aot_lib_open"));
+    aot_lib_dispatch_fn_ = reinterpret_cast<AotLibDispatchFn>(platform_load_sym(lib_handle_, "sms_native_aot_lib_dispatch"));
+    aot_lib_close_fn_    = reinterpret_cast<AotLibCloseFn>  (platform_load_sym(lib_handle_, "sms_native_aot_lib_close"));
     dispose_fn_   = reinterpret_cast<DisposeFn>(platform_load_sym(lib_handle_, "sms_native_session_dispose"));
     set_ui_cb_fn_ = reinterpret_cast<SetUiCbFn>(platform_load_sym(lib_handle_, "sms_native_set_ui_callbacks"));
     set_ui_string_cb_fn_ = reinterpret_cast<SetUiStringCbFn>(platform_load_sym(lib_handle_, "sms_native_set_ui_string_callbacks"));
@@ -1427,7 +1437,10 @@ void SmsBridge::unload() {
     create_fn_    = nullptr;
     load_fn_      = nullptr;
     invoke_fn_    = nullptr;
-    aot_invoke_fn_ = nullptr;
+    aot_invoke_fn_       = nullptr;
+    aot_lib_open_fn_     = nullptr;
+    aot_lib_dispatch_fn_ = nullptr;
+    aot_lib_close_fn_    = nullptr;
     dispose_fn_   = nullptr;
     set_ui_cb_fn_ = nullptr;
     set_ui_string_cb_fn_ = nullptr;
@@ -1474,10 +1487,44 @@ std::int64_t SmsBridge::start_session_from_source(const std::string& source, con
     }
     SessionMeta meta;
     meta.is_local_source = is_local_source_label(source_label);
-    meta.has_event_handlers = has_sms_event_handlers(source);
     meta.source = source;
+
+    // Try AOT lib compilation for all local sources (every OS, no interpreter).
+    if (meta.is_local_source && aot_lib_open_fn_ != nullptr) {
+        std::int64_t lib_id = -1;
+        char aot_err[1024] = {};
+        const int aot_rc = aot_lib_open_fn_(source.c_str(), &lib_id,
+                                            aot_err, static_cast<int>(sizeof(aot_err)));
+        if (aot_rc == 0) {
+            meta.aot_lib_ready = true;
+            meta.aot_lib_id    = lib_id;
+            set_sms_runtime_mode(SmsRuntimeMode::Native);
+            UtilityFunctions::print(String((
+                "[ForgeRunner.Native] SMS AOT lib ready" +
+                (source_label.empty() ? std::string() : " for '" + source_label + "'")).c_str()));
+        } else {
+            meta.aot_lib_failed = true;
+            const std::string label_part = source_label.empty() ? std::string() : " for '" + source_label + "'";
+            const std::string reason = std::string(aot_err);
+            if (is_dev_mode()) {
+                // DevMode: warn and fall back to interpreter so iteration stays fast.
+                set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
+                UtilityFunctions::push_warning(String((
+                    "[ForgeRunner.Native] SMS AOT compile failed" + label_part
+                    + " (DevMode → interpreter fallback): " + reason).c_str()));
+            } else {
+                // Production: AOT is mandatory for local scripts - log as error.
+                set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
+                UtilityFunctions::push_error(String((
+                    "[ForgeRunner.Native] SMS AOT compile failed" + label_part
+                    + " (no interpreter in production): " + reason).c_str()));
+            }
+        }
+    } else {
+        set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
+    }
+
     session_meta_[session] = std::move(meta);
-    set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
     return session;
 }
 
@@ -1511,44 +1558,31 @@ void SmsBridge::dispatch_event(std::int64_t session,
 
     const char* args_json = payload_json.empty() ? "[]" : payload_json.c_str();
     auto meta_it = session_meta_.find(session);
-    if (meta_it != session_meta_.end() && meta_it->second.is_local_source &&
-        !meta_it->second.has_event_handlers) {
-        if (meta_it->second.aot_succeeded) {
-            set_sms_runtime_mode(SmsRuntimeMode::Native);
-            return;
-        }
 
-        const bool should_try_aot = aot_invoke_fn_ != nullptr
-            && !meta_it->second.aot_attempted
-            && !meta_it->second.aot_failed;
-        if (should_try_aot) {
-            meta_it->second.aot_attempted = true;
-            std::int64_t aot_result = -1;
-            char aot_err[512] = {};
-            const int aot_rc = aot_invoke_fn_(meta_it->second.source.c_str(),
-                                              object_id.c_str(),
-                                              event_name.c_str(),
-                                              args_json,
-                                              &aot_result,
-                                              aot_err,
-                                              static_cast<int>(sizeof(aot_err)));
-            if (aot_rc == 0) {
-                meta_it->second.aot_succeeded = true;
-                set_sms_runtime_mode(SmsRuntimeMode::Native);
-                UtilityFunctions::print(String((
-                    "[ForgeRunner.Native] SMS AOT active for local session (dispatch: "
-                    + object_id + "." + event_name + ").").c_str()));
-                return;
-            }
-            meta_it->second.aot_failed = true;
-            set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
-            const std::string aot_msg = aot_err[0] != '\0' ? std::string(aot_err) : std::string("unknown aot invoke error");
+    // AOT lib path: compiled handler functions, called directly - no interpreter.
+    if (meta_it != session_meta_.end() && meta_it->second.aot_lib_ready) {
+        set_sms_runtime_mode(SmsRuntimeMode::Native);
+        char aot_err[512] = {};
+        const int aot_rc = aot_lib_dispatch_fn_(
+            meta_it->second.aot_lib_id,
+            object_id.c_str(), event_name.c_str(),
+            aot_err, static_cast<int>(sizeof(aot_err)));
+        if (aot_rc != 0) {
+            const std::string msg = aot_err[0] != '\0' ? std::string(aot_err) : "unknown aot lib dispatch error";
             UtilityFunctions::push_warning(String((
-                "[ForgeRunner.Native] SMS AOT unavailable for local session; switching to interpreter mode: "
-                + aot_msg).c_str()));
+                "[ForgeRunner.Native] SMS AOT dispatch error for '"
+                + object_id + "." + event_name + "': " + msg).c_str()));
         }
+        return;
     }
 
+    // Interpreter fallback: HTTP scripts, or DevMode when AOT compile failed.
+    const bool can_use_interpreter = meta_it == session_meta_.end()
+        || !meta_it->second.is_local_source
+        || (meta_it->second.aot_lib_failed && is_dev_mode());
+    if (!can_use_interpreter) {
+        return; // production local script with AOT failure - already logged as error
+    }
     set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
     std::int64_t result_session = -1;
     char err[512] = {};
@@ -1566,7 +1600,13 @@ void SmsBridge::dispatch_event(std::int64_t session,
 
 void SmsBridge::dispose_session(std::int64_t session) {
     if (!loaded_ || session < 0) return;
-    session_meta_.erase(session);
+    auto it = session_meta_.find(session);
+    if (it != session_meta_.end()) {
+        if (it->second.aot_lib_ready && aot_lib_close_fn_ != nullptr) {
+            aot_lib_close_fn_(it->second.aot_lib_id);
+        }
+        session_meta_.erase(it);
+    }
     if (session_meta_.empty()) {
         set_sms_runtime_mode(SmsRuntimeMode::Interpreter);
     }

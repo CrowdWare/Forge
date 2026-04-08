@@ -26,4 +26,4 @@ Inherited signals are documented in: [Window](Window.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| popup_hide | `on <id>.popupHide() { ... }` | — |
+| popup_hide | `on <id>.popupHide() { ... }` | - |

@@ -28,7 +28,7 @@ func get_spec() -> Dictionary:
         "name": "Timeline",
         "backing": "Control",
         "properties": [
-            {"sml":"id",           "type":"identifier", "default":"—"},
+            {"sml":"id",           "type":"identifier", "default":"-"},
             {"sml":"fps",          "type":"int",        "default":"24"},
             {"sml":"totalFrames",  "type":"int",        "default":"120"},
         ],

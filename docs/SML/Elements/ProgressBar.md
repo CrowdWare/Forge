@@ -11,10 +11,10 @@ Inherited properties are documented in: [Range](Range.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| editor_preview_indeterminate | editorPreviewIndeterminate | bool | — |
-| fill_mode | fillMode | int | — |
-| indeterminate | indeterminate | bool | — |
-| show_percentage | showPercentage | bool | — |
+| editor_preview_indeterminate | editorPreviewIndeterminate | bool | - |
+| fill_mode | fillMode | int | - |
+| indeterminate | indeterminate | bool | - |
+| show_percentage | showPercentage | bool | - |
 
 ## Events
 
@@ -31,8 +31,8 @@ Inherited actions are documented in: [Range](Range.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| is_editor_preview_indeterminate_enabled | `<id>.isEditorPreviewIndeterminateEnabled()` | — | bool |
-| is_percentage_shown | `<id>.isPercentageShown()` | — | bool |
+| is_editor_preview_indeterminate_enabled | `<id>.isEditorPreviewIndeterminateEnabled()` | - | bool |
+| is_percentage_shown | `<id>.isPercentageShown()` | - | bool |
 
 ## Attached Properties
 

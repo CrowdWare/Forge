@@ -115,7 +115,7 @@ ui/navtab.sms   → Event handler for this component
 A component can declare a Godot base type via `inheritance:`. This eliminates the explicit root element wrapper and moves properties + children directly onto the synthesized base node.
 
 ```sml
-// Without inheritance — explicit root required
+// Without inheritance - explicit root required
 NavTab {
     property text: "Tab"
     Control {
@@ -124,7 +124,7 @@ NavTab {
     }
 }
 
-// With inheritance — no wrapper needed
+// With inheritance - no wrapper needed
 NavTab {
     property text:   "Tab"
     property tabId:  id
@@ -144,7 +144,7 @@ NavTab {
 - All non-`property`, non-`inheritance` properties in the component block → become defaults on the synthesized root node
 - Children in the component block → become children of the synthesized root node
 - PropRefs (`{propName}`) work on body-level properties too: `width: {size}`
-- Only Godot built-in types and C# custom Godot nodes — no component-to-component inheritance
+- Only Godot built-in types and C# custom Godot nodes - no component-to-component inheritance
 - Without `inheritance:`, exactly one explicit child element is required (existing behaviour)
 
 ### File-based Component

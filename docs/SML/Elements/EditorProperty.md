@@ -11,18 +11,18 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| checkable | checkable | bool | — |
-| checked | checked | bool | — |
-| deletable | deletable | bool | — |
-| draw_background | drawBackground | bool | — |
-| draw_label | drawLabel | bool | — |
-| draw_warning | drawWarning | bool | — |
-| keying | keying | bool | — |
-| label | label | string | — |
-| name_split_ratio | nameSplitRatio | float | — |
-| read_only | readOnly | bool | — |
-| selectable | selectable | bool | — |
-| use_folding | useFolding | bool | — |
+| checkable | checkable | bool | - |
+| checked | checked | bool | - |
+| deletable | deletable | bool | - |
+| draw_background | drawBackground | bool | - |
+| draw_label | drawLabel | bool | - |
+| draw_warning | drawWarning | bool | - |
+| keying | keying | bool | - |
+| label | label | string | - |
+| name_split_ratio | nameSplitRatio | float | - |
+| read_only | readOnly | bool | - |
+| selectable | selectable | bool | - |
+| use_folding | useFolding | bool | - |
 
 ## Events
 
@@ -40,7 +40,7 @@ Inherited signals are documented in: [Container](Container.md)
 | property_favorited | `on <id>.propertyFavorited(property, favorited) { ... }` | Variant property, bool favorited |
 | property_keyed | `on <id>.propertyKeyed(property) { ... }` | Variant property |
 | property_keyed_with_value | `on <id>.propertyKeyedWithValue(property, value) { ... }` | Variant property, Variant value |
-| property_overridden | `on <id>.propertyOverridden() { ... }` | — |
+| property_overridden | `on <id>.propertyOverridden() { ... }` | - |
 | property_pinned | `on <id>.propertyPinned(property, pinned) { ... }` | Variant property, bool pinned |
 | resource_selected | `on <id>.resourceSelected(path, resource) { ... }` | string path, Object resource |
 | selected | `on <id>.selected(path, focusableIdx) { ... }` | string path, int focusableIdx |
@@ -52,10 +52,10 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| deselect | `<id>.deselect()` | — | void |
-| get_edited_object | `<id>.getEditedObject()` | — | Object |
-| get_edited_property | `<id>.getEditedProperty()` | — | Variant |
-| is_selected | `<id>.isSelected()` | — | bool |
-| is_using_folding | `<id>.isUsingFolding()` | — | bool |
+| deselect | `<id>.deselect()` | - | void |
+| get_edited_object | `<id>.getEditedObject()` | - | Object |
+| get_edited_property | `<id>.getEditedProperty()` | - | Variant |
+| is_selected | `<id>.isSelected()` | - | bool |
+| is_using_folding | `<id>.isUsingFolding()` | - | bool |
 | select | `<id>.select(focusable)` | int focusable | void |
-| update_property | `<id>.updateProperty()` | — | void |
+| update_property | `<id>.updateProperty()` | - | void |

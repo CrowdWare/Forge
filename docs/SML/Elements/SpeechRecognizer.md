@@ -11,11 +11,11 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | language | string | de-DE |
-| — | mode | enum: raw, clean, markdown | clean |
-| — | filters | string | zdf,wdr,applaus,musik |
-| — | suffix | string | "" |
+| - | id | identifier | - |
+| - | language | string | de-DE |
+| - | mode | enum: raw, clean, markdown | clean |
+| - | filters | string | zdf,wdr,applaus,musik |
+| - | suffix | string | "" |
 
 > Current vertical-slice behavior focuses on processing pipeline and emits result/rawResult signals.
 > On Android, listen() currently emits an error hint until native capture wiring is added.
@@ -47,7 +47,7 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Action | SMS Call | Params | Returns |
 |-|-|-|-|
-| listen | `<id>.listen()` | — | void |
-| stop | `<id>.stop()` | — | void |
+| listen | `<id>.listen()` | - | void |
+| stop | `<id>.stop()` | - | void |
 | submitText | `<id>.submitText(text)` | string text | void |
 | setMode | `<id>.setMode(value)` | string value | void |

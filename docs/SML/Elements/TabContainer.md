@@ -23,18 +23,18 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| all_tabs_in_front | allTabsInFront | bool | — |
-| clip_tabs | clipTabs | bool | — |
-| current_tab | currentTab | int | — |
-| deselect_enabled | deselectEnabled | bool | — |
-| drag_to_rearrange_enabled | dragToRearrangeEnabled | bool | — |
-| switch_on_drag_hover | switchOnDragHover | bool | — |
-| tab_alignment | tabAlignment | int | — |
-| tab_focus_mode | tabFocusMode | int | — |
-| tabs_position | tabsPosition | int | — |
-| tabs_rearrange_group | tabsRearrangeGroup | int | — |
-| tabs_visible | tabsVisible | bool | — |
-| use_hidden_tabs_for_min_size | useHiddenTabsForMinSize | bool | — |
+| all_tabs_in_front | allTabsInFront | bool | - |
+| clip_tabs | clipTabs | bool | - |
+| current_tab | currentTab | int | - |
+| deselect_enabled | deselectEnabled | bool | - |
+| drag_to_rearrange_enabled | dragToRearrangeEnabled | bool | - |
+| switch_on_drag_hover | switchOnDragHover | bool | - |
+| tab_alignment | tabAlignment | int | - |
+| tab_focus_mode | tabFocusMode | int | - |
+| tabs_position | tabsPosition | int | - |
+| tabs_rearrange_group | tabsRearrangeGroup | int | - |
+| tabs_visible | tabsVisible | bool | - |
+| use_hidden_tabs_for_min_size | useHiddenTabsForMinSize | bool | - |
 
 ## Events
 
@@ -44,7 +44,7 @@ Inherited signals are documented in: [Container](Container.md)
 | Godot Signal | SMS Event | Params |
 |-|-|-|
 | active_tab_rearranged | `on <id>.activeTabRearranged(idxTo) { ... }` | int idxTo |
-| pre_popup_pressed | `on <id>.prePopupPressed() { ... }` | — |
+| pre_popup_pressed | `on <id>.prePopupPressed() { ... }` | - |
 | tab_button_pressed | `on <id>.tabButtonPressed(tab) { ... }` | int tab |
 | tab_changed | `on <id>.tabChanged(tab) { ... }` | int tab |
 | tab_clicked | `on <id>.tabClicked(tab) { ... }` | int tab |
@@ -58,14 +58,14 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| are_tabs_visible | `<id>.areTabsVisible()` | — | bool |
-| get_current_tab_control | `<id>.getCurrentTabControl()` | — | Object |
-| get_popup | `<id>.getPopup()` | — | Object |
-| get_previous_tab | `<id>.getPreviousTab()` | — | int |
-| get_tab_bar | `<id>.getTabBar()` | — | Object |
+| are_tabs_visible | `<id>.areTabsVisible()` | - | bool |
+| get_current_tab_control | `<id>.getCurrentTabControl()` | - | Object |
+| get_popup | `<id>.getPopup()` | - | Object |
+| get_previous_tab | `<id>.getPreviousTab()` | - | int |
+| get_tab_bar | `<id>.getTabBar()` | - | Object |
 | get_tab_button_icon | `<id>.getTabButtonIcon(tabIdx)` | int tabIdx | Object |
 | get_tab_control | `<id>.getTabControl(tabIdx)` | int tabIdx | Object |
-| get_tab_count | `<id>.getTabCount()` | — | int |
+| get_tab_count | `<id>.getTabCount()` | - | int |
 | get_tab_icon | `<id>.getTabIcon(tabIdx)` | int tabIdx | Object |
 | get_tab_icon_max_width | `<id>.getTabIconMaxWidth(tabIdx)` | int tabIdx | int |
 | get_tab_idx_at_point | `<id>.getTabIdxAtPoint(point)` | Vector2 point | int |
@@ -74,8 +74,8 @@ Inherited actions are documented in: [Container](Container.md)
 | get_tab_tooltip | `<id>.getTabTooltip(tabIdx)` | int tabIdx | string |
 | is_tab_disabled | `<id>.isTabDisabled(tabIdx)` | int tabIdx | bool |
 | is_tab_hidden | `<id>.isTabHidden(tabIdx)` | int tabIdx | bool |
-| select_next_available | `<id>.selectNextAvailable()` | — | bool |
-| select_previous_available | `<id>.selectPreviousAvailable()` | — | bool |
+| select_next_available | `<id>.selectNextAvailable()` | - | bool |
+| select_previous_available | `<id>.selectPreviousAvailable()` | - | bool |
 | set_tab_disabled | `<id>.setTabDisabled(tabIdx, disabled)` | int tabIdx, bool disabled | void |
 | set_tab_hidden | `<id>.setTabHidden(tabIdx, hidden)` | int tabIdx, bool hidden | void |
 | set_tab_icon_max_width | `<id>.setTabIconMaxWidth(tabIdx, width)` | int tabIdx, int width | void |

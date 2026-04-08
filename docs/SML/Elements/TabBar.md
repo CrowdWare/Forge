@@ -17,20 +17,20 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| clip_tabs | clipTabs | bool | — |
-| close_with_middle_mouse | closeWithMiddleMouse | bool | — |
-| current_tab | currentTab | int | — |
-| deselect_enabled | deselectEnabled | bool | — |
-| drag_to_rearrange_enabled | dragToRearrangeEnabled | bool | — |
-| max_tab_width | maxTabWidth | int | — |
-| scroll_to_selected | scrollToSelected | bool | — |
-| scrolling_enabled | scrollingEnabled | bool | — |
-| select_with_rmb | selectWithRmb | bool | — |
-| switch_on_drag_hover | switchOnDragHover | bool | — |
-| tab_alignment | tabAlignment | int | — |
-| tab_close_display_policy | tabCloseDisplayPolicy | int | — |
-| tab_count | tabCount | int | — |
-| tabs_rearrange_group | tabsRearrangeGroup | int | — |
+| clip_tabs | clipTabs | bool | - |
+| close_with_middle_mouse | closeWithMiddleMouse | bool | - |
+| current_tab | currentTab | int | - |
+| deselect_enabled | deselectEnabled | bool | - |
+| drag_to_rearrange_enabled | dragToRearrangeEnabled | bool | - |
+| max_tab_width | maxTabWidth | int | - |
+| scroll_to_selected | scrollToSelected | bool | - |
+| scrolling_enabled | scrollingEnabled | bool | - |
+| select_with_rmb | selectWithRmb | bool | - |
+| switch_on_drag_hover | switchOnDragHover | bool | - |
+| tab_alignment | tabAlignment | int | - |
+| tab_close_display_policy | tabCloseDisplayPolicy | int | - |
+| tab_count | tabCount | int | - |
+| tabs_rearrange_group | tabsRearrangeGroup | int | - |
 
 ## Events
 
@@ -55,17 +55,17 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| clear_tabs | `<id>.clearTabs()` | — | void |
+| clear_tabs | `<id>.clearTabs()` | - | void |
 | ensure_tab_visible | `<id>.ensureTabVisible(idx)` | int idx | void |
-| get_offset_buttons_visible | `<id>.getOffsetButtonsVisible()` | — | bool |
-| get_previous_tab | `<id>.getPreviousTab()` | — | int |
+| get_offset_buttons_visible | `<id>.getOffsetButtonsVisible()` | - | bool |
+| get_previous_tab | `<id>.getPreviousTab()` | - | int |
 | get_tab_button_icon | `<id>.getTabButtonIcon(tabIdx)` | int tabIdx | Object |
 | get_tab_icon | `<id>.getTabIcon(tabIdx)` | int tabIdx | Object |
 | get_tab_icon_max_width | `<id>.getTabIconMaxWidth(tabIdx)` | int tabIdx | int |
 | get_tab_idx_at_point | `<id>.getTabIdxAtPoint(point)` | Vector2 point | int |
 | get_tab_language | `<id>.getTabLanguage(tabIdx)` | int tabIdx | string |
 | get_tab_metadata | `<id>.getTabMetadata(tabIdx)` | int tabIdx | void |
-| get_tab_offset | `<id>.getTabOffset()` | — | int |
+| get_tab_offset | `<id>.getTabOffset()` | - | int |
 | get_tab_rect | `<id>.getTabRect(tabIdx)` | int tabIdx | Variant |
 | get_tab_text_direction | `<id>.getTabTextDirection(tabIdx)` | int tabIdx | int |
 | get_tab_title | `<id>.getTabTitle(tabIdx)` | int tabIdx | string |
@@ -74,8 +74,8 @@ Inherited actions are documented in: [Control](Control.md)
 | is_tab_hidden | `<id>.isTabHidden(tabIdx)` | int tabIdx | bool |
 | move_tab | `<id>.moveTab(from, to)` | int from, int to | void |
 | remove_tab | `<id>.removeTab(tabIdx)` | int tabIdx | void |
-| select_next_available | `<id>.selectNextAvailable()` | — | bool |
-| select_previous_available | `<id>.selectPreviousAvailable()` | — | bool |
+| select_next_available | `<id>.selectNextAvailable()` | - | bool |
+| select_previous_available | `<id>.selectPreviousAvailable()` | - | bool |
 | set_tab_disabled | `<id>.setTabDisabled(tabIdx, disabled)` | int tabIdx, bool disabled | void |
 | set_tab_hidden | `<id>.setTabHidden(tabIdx, hidden)` | int tabIdx, bool hidden | void |
 | set_tab_icon_max_width | `<id>.setTabIconMaxWidth(tabIdx, width)` | int tabIdx, int width | void |
@@ -97,7 +97,7 @@ The runtime converts them to Godot TabBar tabs internally.
 
 | Property | Type | Default | Notes |
 |-|-|-|-|
-| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.tabSelected() { ... }`). |
+| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.tabSelected() { ... }`). |
 | title | string | "" | Tab title. |
 | icon | string | "" | Optional icon resource/path. |
 | disabled | bool | false | Disables selecting the tab. |

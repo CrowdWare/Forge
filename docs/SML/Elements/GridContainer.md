@@ -11,7 +11,7 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| columns | columns | int | — |
+| columns | columns | int | - |
 
 ## Events
 

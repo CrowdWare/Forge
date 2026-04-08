@@ -20,11 +20,11 @@ Inherited properties are documented in: [Range](Range.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| editable | editable | bool | — |
-| scrollable | scrollable | bool | — |
-| tick_count | tickCount | int | — |
-| ticks_on_borders | ticksOnBorders | bool | — |
-| ticks_position | ticksPosition | int | — |
+| editable | editable | bool | - |
+| scrollable | scrollable | bool | - |
+| tick_count | tickCount | int | - |
+| ticks_on_borders | ticksOnBorders | bool | - |
+| ticks_position | ticksPosition | int | - |
 
 ## Events
 
@@ -34,7 +34,7 @@ Inherited signals are documented in: [Range](Range.md)
 | Godot Signal | SMS Event | Params |
 |-|-|-|
 | drag_ended | `on <id>.dragEnded(valueChanged) { ... }` | bool valueChanged |
-| drag_started | `on <id>.dragStarted() { ... }` | — |
+| drag_started | `on <id>.dragStarted() { ... }` | - |
 
 ## Runtime Actions
 
@@ -43,7 +43,7 @@ Inherited actions are documented in: [Range](Range.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_ticks | `<id>.getTicks()` | — | int |
+| get_ticks | `<id>.getTicks()` | - | int |
 | set_ticks | `<id>.setTicks(count)` | int count | void |
 
 ## Attached Properties

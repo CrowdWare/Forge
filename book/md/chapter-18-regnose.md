@@ -304,6 +304,6 @@ I am because we are.
 *The book is open.*
 *The pen is yours.*
 
-*— Adam Art Ananda, in conversation with Claude*
+*- Adam Art Ananda, in conversation with Claude*
 *Lutherstadt Wittenberg / Berlin, March 13, 2026*
 Aho

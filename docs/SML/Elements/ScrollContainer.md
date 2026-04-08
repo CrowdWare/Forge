@@ -17,17 +17,17 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| draw_focus_border | drawFocusBorder | bool | — |
-| follow_focus | followFocus | bool | — |
-| horizontal_scroll_mode | horizontalScrollMode | int | — |
-| scroll_deadzone | scrollDeadzone | int | — |
-| scroll_hint_mode | scrollHintMode | int | — |
-| scroll_horizontal | scrollHorizontal | int | — |
-| scroll_horizontal_custom_step | scrollHorizontalCustomStep | float | — |
-| scroll_vertical | scrollVertical | int | — |
-| scroll_vertical_custom_step | scrollVerticalCustomStep | float | — |
-| tile_scroll_hint | tileScrollHint | bool | — |
-| vertical_scroll_mode | verticalScrollMode | int | — |
+| draw_focus_border | drawFocusBorder | bool | - |
+| follow_focus | followFocus | bool | - |
+| horizontal_scroll_mode | horizontalScrollMode | int | - |
+| scroll_deadzone | scrollDeadzone | int | - |
+| scroll_hint_mode | scrollHintMode | int | - |
+| scroll_horizontal | scrollHorizontal | int | - |
+| scroll_horizontal_custom_step | scrollHorizontalCustomStep | float | - |
+| scroll_vertical | scrollVertical | int | - |
+| scroll_vertical_custom_step | scrollVerticalCustomStep | float | - |
+| tile_scroll_hint | tileScrollHint | bool | - |
+| vertical_scroll_mode | verticalScrollMode | int | - |
 
 ## Events
 
@@ -36,8 +36,8 @@ Inherited signals are documented in: [Container](Container.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| scroll_ended | `on <id>.scrollEnded() { ... }` | — |
-| scroll_started | `on <id>.scrollStarted() { ... }` | — |
+| scroll_ended | `on <id>.scrollEnded() { ... }` | - |
+| scroll_started | `on <id>.scrollStarted() { ... }` | - |
 
 ## Runtime Actions
 
@@ -46,15 +46,15 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_deadzone | `<id>.getDeadzone()` | — | int |
-| get_h_scroll | `<id>.getHScroll()` | — | int |
-| get_h_scroll_bar | `<id>.getHScrollBar()` | — | Object |
-| get_horizontal_custom_step | `<id>.getHorizontalCustomStep()` | — | float |
-| get_v_scroll | `<id>.getVScroll()` | — | int |
-| get_v_scroll_bar | `<id>.getVScrollBar()` | — | Object |
-| get_vertical_custom_step | `<id>.getVerticalCustomStep()` | — | float |
-| is_following_focus | `<id>.isFollowingFocus()` | — | bool |
-| is_scroll_hint_tiled | `<id>.isScrollHintTiled()` | — | bool |
+| get_deadzone | `<id>.getDeadzone()` | - | int |
+| get_h_scroll | `<id>.getHScroll()` | - | int |
+| get_h_scroll_bar | `<id>.getHScrollBar()` | - | Object |
+| get_horizontal_custom_step | `<id>.getHorizontalCustomStep()` | - | float |
+| get_v_scroll | `<id>.getVScroll()` | - | int |
+| get_v_scroll_bar | `<id>.getVScrollBar()` | - | Object |
+| get_vertical_custom_step | `<id>.getVerticalCustomStep()` | - | float |
+| is_following_focus | `<id>.isFollowingFocus()` | - | bool |
+| is_scroll_hint_tiled | `<id>.isScrollHintTiled()` | - | bool |
 | set_deadzone | `<id>.setDeadzone(deadzone)` | int deadzone | void |
 | set_h_scroll | `<id>.setHScroll(value)` | int value | void |
 | set_horizontal_custom_step | `<id>.setHorizontalCustomStep(value)` | float value | void |

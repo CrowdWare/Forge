@@ -12,7 +12,7 @@ The ForgeRunner theme is defined entirely in SML and generated into a Godot them
 
 ### Changing design tokens
 
-1. Edit `ForgeRunner/theme.sml` — all colors and layout values are defined here as named tokens.
+1. Edit `ForgeRunner/theme.sml` - all colors and layout values are defined here as named tokens.
 2. Regenerate `theme.tres`:
 
    ```bash
@@ -21,7 +21,7 @@ The ForgeRunner theme is defined entirely in SML and generated into a Godot them
 
 3. Run the app and compare visually.
 
-Do **not** edit `theme.tres` directly — it is generated and will be overwritten.
+Do **not** edit `theme.tres` directly - it is generated and will be overwritten.
 
 ---
 
@@ -91,7 +91,7 @@ Colors {
 }
 ```
 
-Only listed tokens are overridden — everything else falls back to the ForgeRunner default.
+Only listed tokens are overridden - everything else falls back to the ForgeRunner default.
 
 **Resolution order (highest priority first):**
 1. Inline `Colors {}` / `Layouts {}` block inside the SML document

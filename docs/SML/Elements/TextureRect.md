@@ -17,13 +17,13 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | src | string(url) | "" |
-| — | alt | string | "" |
-| — | width | int | — |
-| — | height | int | — |
-| — | shrinkH | bool | false |
-| — | shrinkV | bool | false |
+| - | id | identifier | - |
+| - | src | string(url) | "" |
+| - | alt | string | "" |
+| - | width | int | - |
+| - | height | int | - |
+| - | shrinkH | bool | false |
+| - | shrinkV | bool | false |
 
 > Displays an image or SVG. Use width/height to set a fixed size, combined with shrinkH/shrinkV to prevent the control from expanding beyond that size inside a container.
 
@@ -54,8 +54,8 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| is_flipped_h | `<id>.isFlippedH()` | — | bool |
-| is_flipped_v | `<id>.isFlippedV()` | — | bool |
+| is_flipped_h | `<id>.isFlippedH()` | - | bool |
+| is_flipped_v | `<id>.isFlippedV()` | - | bool |
 
 ## Attached Properties
 

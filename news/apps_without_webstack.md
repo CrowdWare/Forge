@@ -15,7 +15,7 @@ An application running directly on the desktop.
 
 At the time, this felt like a small revelation to me.
 
-Not because HTA was perfect — but because it raised an important question:
+Not because HTA was perfect - but because it raised an important question:
 
 **Why do applications need a browser at all?**
 
@@ -137,7 +137,7 @@ This means:
 - video and animation
 - sandboxed scripting
 
-An application can even be projected onto a **3D surface** — for example onto a wall inside a scene.
+An application can even be projected onto a **3D surface** - for example onto a wall inside a scene.
 
 ---
 

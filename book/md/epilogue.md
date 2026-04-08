@@ -89,7 +89,7 @@ They belong here, at the end, as the beginning of what comes next:
 
 *"Be the light that shines so bright that others can find the way out of the darkness."*
 
-**— Adam Art Ananda**
+**- Adam Art Ananda**
 
 ---
 

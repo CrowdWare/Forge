@@ -19,16 +19,16 @@ Inherited signals are documented in: [EditorDock](EditorDock.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| display_mode_changed | `on <id>.displayModeChanged() { ... }` | — |
+| display_mode_changed | `on <id>.displayModeChanged() { ... }` | - |
 | file_removed | `on <id>.fileRemoved(file) { ... }` | string file |
 | files_moved | `on <id>.filesMoved(oldFile, newFile) { ... }` | string oldFile, string newFile |
-| folder_color_changed | `on <id>.folderColorChanged() { ... }` | — |
+| folder_color_changed | `on <id>.folderColorChanged() { ... }` | - |
 | folder_moved | `on <id>.folderMoved(oldFolder, newFolder) { ... }` | string oldFolder, string newFolder |
 | folder_removed | `on <id>.folderRemoved(folder) { ... }` | string folder |
 | inherit | `on <id>.inherit(file) { ... }` | string file |
 | instantiate | `on <id>.instantiate(files) { ... }` | Variant files |
 | resource_removed | `on <id>.resourceRemoved(resource) { ... }` | Object resource |
-| selection_changed | `on <id>.selectionChanged() { ... }` | — |
+| selection_changed | `on <id>.selectionChanged() { ... }` | - |
 
 ## Runtime Actions
 

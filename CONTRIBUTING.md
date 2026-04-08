@@ -51,6 +51,6 @@ To keep Forge maintainable under its dual-licensing model, contributions to this
 
 If this does not work for you, please do not submit a pull request and open an issue instead to discuss alternatives.
 
-Thank you in advance for your time, ideas, and pull requests — every solid contribution makes Forge more powerful and enjoyable for everyone.
+Thank you in advance for your time, ideas, and pull requests - every solid contribution makes Forge more powerful and enjoyable for everyone.
 
 Happy forging! 🔨

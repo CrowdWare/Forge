@@ -17,15 +17,15 @@ Inherited properties are documented in: [MarginContainer](MarginContainer.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| available_layouts | availableLayouts | int | — |
-| closable | closable | bool | — |
-| default_slot | defaultSlot | int | — |
-| force_show_icon | forceShowIcon | bool | — |
-| global | global | bool | — |
-| layout_key | layoutKey | string | — |
-| title | title | string | — |
-| title_color | titleColor | Color | — |
-| transient | transient | bool | — |
+| available_layouts | availableLayouts | int | - |
+| closable | closable | bool | - |
+| default_slot | defaultSlot | int | - |
+| force_show_icon | forceShowIcon | bool | - |
+| global | global | bool | - |
+| layout_key | layoutKey | string | - |
+| title | title | string | - |
+| title_color | titleColor | Color | - |
+| transient | transient | bool | - |
 
 ## Events
 
@@ -34,8 +34,8 @@ Inherited signals are documented in: [MarginContainer](MarginContainer.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| _tab_style_changed | `on <id>.TabStyleChanged() { ... }` | — |
-| closed | `on <id>.closed() { ... }` | — |
+| _tab_style_changed | `on <id>.TabStyleChanged() { ... }` | - |
+| closed | `on <id>.closed() { ... }` | - |
 
 ## Runtime Actions
 
@@ -44,9 +44,9 @@ Inherited actions are documented in: [MarginContainer](MarginContainer.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| close | `<id>.close()` | — | void |
-| make_visible | `<id>.makeVisible()` | — | void |
-| open | `<id>.open()` | — | void |
+| close | `<id>.close()` | - | void |
+| make_visible | `<id>.makeVisible()` | - | void |
+| open | `<id>.open()` | - | void |
 
 ## Attached Properties
 

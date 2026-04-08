@@ -39,6 +39,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -3593,6 +3594,10 @@ struct LlvmCtx {
     struct ProgramState {
         int global_string_counter = 0;
         std::vector<std::string> global_defs;
+        std::unordered_set<std::string> global_var_names;
+        std::unordered_map<std::string, LlvmValueKind> global_var_kinds;
+        std::unordered_map<std::string, LlvmValueKind> array_elem_kinds; // array var name -> element kind
+        std::unordered_set<std::string> fs_list_vars; // vars holding fs.list() results (object arrays)
     };
 
     ProgramState* program = nullptr;
@@ -3600,7 +3605,7 @@ struct LlvmCtx {
     int label_cnt = 0;
     bool terminated = false;
     std::string code;
-    std::vector<std::pair<std::string, std::string>> loops; // {cond_label, end_label}
+    std::vector<std::pair<std::string, std::string>> loops; // {inc_label, end_label} for break/continue
     std::unordered_map<std::string, LlvmValueKind> var_kinds;
 };
 
@@ -3786,6 +3791,95 @@ static std::string llvm_cond(LlvmCtx& c, const Expr* e);
 static void llvm_stmt(LlvmCtx& c, const Stmt* s);
 static void llvm_stmts(LlvmCtx& c, const std::vector<std::unique_ptr<Stmt>>& ss);
 
+// Scan a function/handler body and infer the kind (String vs Integer) of named
+// local variables/parameters based on usage context.  Only String hints are
+// propagated - we won't promote Unknown to Integer to avoid false positives.
+// The results are merged into |var_kinds| (only updating Unknown entries).
+static void infer_var_kinds_from_body(
+    const std::vector<std::unique_ptr<Stmt>>& stmts,
+    const std::unordered_map<std::string, LlvmValueKind>& global_var_kinds,
+    std::unordered_map<std::string, LlvmValueKind>& var_kinds);
+
+static void infer_kind_from_expr(
+    const Expr* e,
+    const std::unordered_map<std::string, LlvmValueKind>& global_var_kinds,
+    std::unordered_map<std::string, LlvmValueKind>& var_kinds)
+{
+    // SMS allows integer + string concatenation at runtime (integers are coerced).
+    // We cannot safely infer that a variable is a String just because it appears
+    // in a BinaryExpr with a string operand - it may be an integer being converted.
+    // Safe inference happens only via assignment-to-known-string-global in
+    // infer_var_kinds_from_body.
+    (void)e; (void)global_var_kinds; (void)var_kinds;
+}
+
+static void infer_var_kinds_from_body(
+    const std::vector<std::unique_ptr<Stmt>>& stmts,
+    const std::unordered_map<std::string, LlvmValueKind>& global_var_kinds,
+    std::unordered_map<std::string, LlvmValueKind>& var_kinds)
+{
+    for (const auto& s : stmts) {
+        // Assignment to a known-string global: the RHS var is a string.
+        if (const auto* a = dynamic_cast<const AssignStmt*>(s.get())) {
+            if (const auto* tv = dynamic_cast<const VarExpr*>(a->target_expr.get())) {
+                const auto git = global_var_kinds.find(tv->name);
+                if (git != global_var_kinds.end() && git->second == LlvmValueKind::String) {
+                    if (const auto* sv = dynamic_cast<const VarExpr*>(a->value_expr.get())) {
+                        if (var_kinds.count(sv->name) && var_kinds[sv->name] == LlvmValueKind::Unknown)
+                            var_kinds[sv->name] = LlvmValueKind::String;
+                    }
+                }
+            }
+            infer_kind_from_expr(a->value_expr.get(), global_var_kinds, var_kinds);
+        }
+        // VarDecl: scan init expression for string context hints.
+        if (const auto* v = dynamic_cast<const VarDeclStmt*>(s.get())) {
+            infer_kind_from_expr(v->value.get(), global_var_kinds, var_kinds);
+        }
+        // Recurse into branches/loops.
+        if (const auto* i = dynamic_cast<const IfStmt*>(s.get())) {
+            infer_kind_from_expr(i->condition.get(), global_var_kinds, var_kinds);
+            infer_var_kinds_from_body(i->then_body, global_var_kinds, var_kinds);
+            infer_var_kinds_from_body(i->else_body, global_var_kinds, var_kinds);
+        }
+        if (const auto* w = dynamic_cast<const WhileStmt*>(s.get())) {
+            infer_kind_from_expr(w->condition.get(), global_var_kinds, var_kinds);
+            infer_var_kinds_from_body(w->body, global_var_kinds, var_kinds);
+        }
+        if (const auto* fi = dynamic_cast<const ForInStmt*>(s.get())) {
+            infer_var_kinds_from_body(fi->body, global_var_kinds, var_kinds);
+        }
+        if (const auto* rs = dynamic_cast<const ReturnStmt*>(s.get())) {
+            infer_kind_from_expr(rs->value.get(), global_var_kinds, var_kinds);
+        }
+        if (const auto* es = dynamic_cast<const ExprStmt*>(s.get())) {
+            infer_kind_from_expr(es->value.get(), global_var_kinds, var_kinds);
+        }
+    }
+}
+
+// Collect all local variable names declared anywhere in a function body.
+// Used to hoist allocas to the entry block so branches can't create orphaned uses.
+static void collect_local_var_names(
+    const std::vector<std::unique_ptr<Stmt>>& stmts,
+    const std::unordered_set<std::string>& global_names,
+    std::unordered_set<std::string>& out)
+{
+    for (const auto& s : stmts) {
+        if (const auto* v = dynamic_cast<const VarDeclStmt*>(s.get())) {
+            if (!global_names.count(v->name)) out.insert(v->name);
+        } else if (const auto* i = dynamic_cast<const IfStmt*>(s.get())) {
+            collect_local_var_names(i->then_body, global_names, out);
+            collect_local_var_names(i->else_body, global_names, out);
+        } else if (const auto* w = dynamic_cast<const WhileStmt*>(s.get())) {
+            collect_local_var_names(w->body, global_names, out);
+        } else if (const auto* fi = dynamic_cast<const ForInStmt*>(s.get())) {
+            if (!global_names.count(fi->variable)) out.insert(fi->variable);
+            collect_local_var_names(fi->body, global_names, out);
+        }
+    }
+}
+
 static std::optional<std::string> llvm_try_const_string_expr(const Expr* e) {
     if (const auto* s = dynamic_cast<const StringExpr*>(e)) {
         return s->value;
@@ -3832,7 +3926,17 @@ static LlvmValueKind llvm_expr_kind(const LlvmCtx& c, const Expr* e) {
     }
     if (const auto* v = dynamic_cast<const VarExpr*>(e)) {
         const auto it = c.var_kinds.find(v->name);
-        return it != c.var_kinds.end() ? it->second : LlvmValueKind::Unknown;
+        if (it != c.var_kinds.end())
+            return it->second; // Local or parameter - return as-is (may be Unknown or inferred).
+        // Not a local - must be a global reference.  Only propagate String from global_var_kinds;
+        // Integer globals are often null-initialised object refs so we leave them as Unknown to
+        // keep them eligible as UI object receivers.
+        if (c.program) {
+            const auto git = c.program->global_var_kinds.find(v->name);
+            if (git != c.program->global_var_kinds.end() && git->second == LlvmValueKind::String)
+                return LlvmValueKind::String;
+        }
+        return LlvmValueKind::Unknown;
     }
     if (const auto* b = dynamic_cast<const BinaryExpr*>(e)) {
         const auto lk = llvm_expr_kind(c, b->left_.get());
@@ -3847,6 +3951,33 @@ static LlvmValueKind llvm_expr_kind(const LlvmCtx& c, const Expr* e) {
         if (receiver != nullptr && receiver->name == "ui" && m->method_ == "getObject") {
             return LlvmValueKind::String;
         }
+        if (receiver != nullptr && receiver->name == "fs" && m->method_ == "readText") {
+            return LlvmValueKind::String;
+        }
+        if (receiver != nullptr && receiver->name == "os") {
+            if (m->method_ == "readFile" || m->method_ == "toResPath") return LlvmValueKind::String;
+        }
+        if (receiver != nullptr && receiver->name == "ai") {
+            if (m->method_ == "createVideoFromFrames") return LlvmValueKind::String;
+        }
+        if (m->method_ == "GetSelectedPath") return LlvmValueKind::String;
+    }
+    if (const auto* ma = dynamic_cast<const MemberAccessExpr*>(e)) {
+        if (ma->member_ == "size" || ma->member_ == "IsDirectory" || ma->member_ == "visible")
+            return LlvmValueKind::Integer;
+        if (ma->member_ == "Name" || ma->member_ == "text" || ma->member_ == "value")
+            return LlvmValueKind::String;
+        return LlvmValueKind::Unknown;
+    }
+    if (dynamic_cast<const ArrayLiteralExpr*>(e)) return LlvmValueKind::Unknown; // array handle
+    if (const auto* aa = dynamic_cast<const ArrayAccessExpr*>(e)) {
+        if (const auto* rv = dynamic_cast<const VarExpr*>(aa->receiver_.get())) {
+            if (c.program) {
+                const auto it = c.program->array_elem_kinds.find(rv->name);
+                if (it != c.program->array_elem_kinds.end()) return it->second;
+            }
+        }
+        return LlvmValueKind::Unknown;
     }
     return LlvmValueKind::Unknown;
 }
@@ -3865,18 +3996,55 @@ static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
         return raw;
     }
     if (const auto* is = dynamic_cast<const InterpolatedStringExpr*>(e)) {
-        const auto value = llvm_try_const_string_expr(is);
-        if (!value.has_value()) {
-            throw std::runtime_error("llvm codegen: interpolated string with expressions is not supported yet");
+        const auto const_val = llvm_try_const_string_expr(is);
+        if (const_val.has_value()) {
+            const auto ptr = llvm_emit_const_string_ptr(c, const_val.value());
+            const auto raw = llvm_t(c);
+            llvm_i(c, raw + " = ptrtoint i8* " + ptr + " to i64");
+            return raw;
         }
-        const auto ptr = llvm_emit_const_string_ptr(c, value.value());
+        // Build string by concatenating parts at runtime
+        std::string acc_ptr = "";
+        for (const auto& part : is->parts_) {
+            std::string part_ptr;
+            if (part.expr) {
+                const auto part_val = llvm_expr(c, part.expr.get());
+                const auto part_kind = llvm_expr_kind(c, part.expr.get());
+                if (part_kind == LlvmValueKind::String) {
+                    part_ptr = llvm_t(c);
+                    llvm_i(c, part_ptr + " = inttoptr i64 " + part_val + " to i8*");
+                } else {
+                    // Convert int to decimal string via runtime helper
+                    part_ptr = llvm_t(c);
+                    llvm_i(c, part_ptr + " = call i8* @sms_native_llvm_int_to_str(i64 " + part_val + ")");
+                }
+            } else {
+                part_ptr = llvm_emit_const_string_ptr(c, part.literal);
+            }
+            if (acc_ptr.empty()) {
+                acc_ptr = part_ptr;
+            } else {
+                const auto concat_ptr = llvm_t(c);
+                llvm_i(c, concat_ptr + " = call i8* @sms_native_llvm_string_concat(i8* " + acc_ptr + ", i8* " + part_ptr + ")");
+                acc_ptr = concat_ptr;
+            }
+        }
+        if (acc_ptr.empty()) {
+            const auto ptr = llvm_emit_const_string_ptr(c, "");
+            acc_ptr = ptr;
+        }
         const auto raw = llvm_t(c);
-        llvm_i(c, raw + " = ptrtoint i8* " + ptr + " to i64");
+        llvm_i(c, raw + " = ptrtoint i8* " + acc_ptr + " to i64");
         return raw;
     }
     if (const auto* v = dynamic_cast<const VarExpr*>(e)) {
         const auto t = llvm_t(c);
-        llvm_i(c, t + " = load i64, i64* %" + v->name);
+        const bool is_global = c.program && c.program->global_var_names.count(v->name);
+        if (is_global) {
+            llvm_i(c, t + " = load i64, i64* @sms_g_" + v->name);
+        } else {
+            llvm_i(c, t + " = load i64, i64* %" + v->name);
+        }
         return t;
     }
     if (const auto* b = dynamic_cast<const BinaryExpr*>(e)) {
@@ -3992,18 +4160,89 @@ static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
                 llvm_i(c, ui_ref_i64 + " = ptrtoint i8* " + ui_ref_ptr + " to i64");
                 return ui_ref_i64;
             }
-            throw std::runtime_error("llvm codegen: unsupported ui method '" + m->method_ + "'");
+            // All other ui.* calls route through the generic UI invoke bridge.
+            // ForgeRunner handles "ui" as object_id for direct ui.* methods.
+            {
+                const auto builder = llvm_t(c);
+                llvm_i(c, builder + " = call i64 @sms_native_llvm_args_builder_new()");
+                for (const auto& arg : m->args_) {
+                    const auto kind = llvm_expr_kind(c, arg.value.get());
+                    if (kind == LlvmValueKind::String) {
+                        const auto ap = llvm_expr_as_string_ptr(c, arg.value.get());
+                        llvm_i(c, "call void @sms_native_llvm_args_builder_add_str(i64 " + builder + ", i8* " + ap + ")");
+                    } else {
+                        const auto av = llvm_expr(c, arg.value.get());
+                        llvm_i(c, "call void @sms_native_llvm_args_builder_add_int(i64 " + builder + ", i64 " + av + ")");
+                    }
+                }
+                const auto args_ptr = llvm_t(c);
+                llvm_i(c, args_ptr + " = call i8* @sms_native_llvm_args_builder_finish(i64 " + builder + ")");
+                const auto ui_ptr    = llvm_emit_const_string_ptr(c, "ui");
+                const auto method_ptr = llvm_emit_const_string_ptr(c, m->method_);
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = call i64 @sms_native_llvm_ui_invoke(i8* " + ui_ptr + ", i8* " + method_ptr + ", i8* " + args_ptr + ")");
+                return t;
+            }
         }
         if (receiver != nullptr && receiver->name == "os") {
             if (m->method_ == "now") {
-                if (!m->args_.empty()) {
-                    throw std::runtime_error("llvm codegen: os.now expects no arguments");
+                if (!m->args_.empty()) throw std::runtime_error("llvm codegen: os.now expects no arguments");
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = call i64 @sms_native_llvm_os_now_ms()");
+                return t;
+            }
+            if (m->method_ == "readFile") {
+                if (m->args_.size() != 1) throw std::runtime_error("llvm codegen: os.readFile expects 1 argument");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto t = llvm_t(c);
+                const auto t2 = llvm_t(c);
+                llvm_i(c, t + " = call i8* @sms_native_llvm_os_read_file(i8* " + path_ptr + ")");
+                llvm_i(c, t2 + " = ptrtoint i8* " + t + " to i64");
+                return t2;
+            }
+            if (m->method_ == "writeFile") {
+                if (m->args_.size() != 2) throw std::runtime_error("llvm codegen: os.writeFile expects 2 arguments");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto text_ptr = llvm_expr_as_string_ptr(c, m->args_[1].value.get());
+                llvm_i(c, "call void @sms_native_llvm_os_write_file(i8* " + path_ptr + ", i8* " + text_ptr + ")");
+                return std::string("0");
+            }
+            if (m->method_ == "toResPath") {
+                if (m->args_.size() != 1) throw std::runtime_error("llvm codegen: os.toResPath expects 1 argument");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto t = llvm_t(c);
+                const auto t2 = llvm_t(c);
+                llvm_i(c, t + " = call i8* @sms_native_llvm_os_to_res_path(i8* " + path_ptr + ")");
+                llvm_i(c, t2 + " = ptrtoint i8* " + t + " to i64");
+                return t2;
+            }
+            if (m->method_ == "loadPromptConfig") {
+                if (m->args_.size() != 7) throw std::runtime_error("llvm codegen: os.loadPromptConfig expects 7 arguments");
+                std::string params;
+                for (const auto& arg : m->args_) {
+                    if (!params.empty()) params += ", ";
+                    params += "i8* " + llvm_expr_as_string_ptr(c, arg.value.get());
                 }
-                const auto now_ms = llvm_t(c);
-                llvm_i(c, now_ms + " = call i64 @sms_native_llvm_os_now_ms()");
-                return now_ms;
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = call i64 @sms_native_llvm_os_load_prompt_config(" + params + ")");
+                return t;
             }
             throw std::runtime_error("llvm codegen: unsupported os method '" + m->method_ + "'");
+        }
+        if (receiver != nullptr && receiver->name == "ai") {
+            if (m->method_ == "createVideoFromFrames") {
+                if (m->args_.size() != 4) throw std::runtime_error("llvm codegen: ai.createVideoFromFrames expects 4 arguments");
+                const auto dir_ptr    = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto fps        = llvm_expr(c, m->args_[1].value.get());
+                const auto out_ptr    = llvm_expr_as_string_ptr(c, m->args_[2].value.get());
+                const auto pat_ptr    = llvm_expr_as_string_ptr(c, m->args_[3].value.get());
+                const auto t  = llvm_t(c);
+                const auto t2 = llvm_t(c);
+                llvm_i(c, t + " = call i8* @sms_native_llvm_ai_create_video_from_frames(i8* " + dir_ptr + ", i64 " + fps + ", i8* " + out_ptr + ", i8* " + pat_ptr + ")");
+                llvm_i(c, t2 + " = ptrtoint i8* " + t + " to i64");
+                return t2;
+            }
+            throw std::runtime_error("llvm codegen: unsupported ai method '" + m->method_ + "'");
         }
         if (receiver != nullptr && receiver->name == "log") {
             if (!llvm_is_log_method(m->method_)) {
@@ -4041,6 +4280,191 @@ static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
             llvm_emit_printf(c, color_prefix + std::string("%lld") + color_suffix + "\n", {value});
             return "0";
         }
+        // fs.* method calls
+        if (receiver != nullptr && receiver->name == "fs") {
+            if (m->method_ == "list") {
+                if (m->args_.size() != 1)
+                    throw std::runtime_error("llvm codegen: fs.list expects exactly one argument");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = call i64 @sms_native_llvm_fs_list(i8* " + path_ptr + ")");
+                // Track that the receiving var is an fs_list result (object array)
+                return t;
+            }
+            if (m->method_ == "readText") {
+                if (m->args_.size() != 1)
+                    throw std::runtime_error("llvm codegen: fs.readText expects exactly one argument");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto str_ptr = llvm_t(c);
+                llvm_i(c, str_ptr + " = call i8* @sms_native_llvm_fs_read_text(i8* " + path_ptr + ")");
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = ptrtoint i8* " + str_ptr + " to i64");
+                return t;
+            }
+            if (m->method_ == "writeText") {
+                if (m->args_.size() != 2)
+                    throw std::runtime_error("llvm codegen: fs.writeText expects exactly two arguments");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto text_ptr = llvm_expr_as_string_ptr(c, m->args_[1].value.get());
+                llvm_i(c, "call void @sms_native_llvm_fs_write_text(i8* " + path_ptr + ", i8* " + text_ptr + ")");
+                return "0";
+            }
+            if (m->method_ == "exists") {
+                if (m->args_.size() != 1)
+                    throw std::runtime_error("llvm codegen: fs.exists expects exactly one argument");
+                const auto path_ptr = llvm_expr_as_string_ptr(c, m->args_[0].value.get());
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = call i64 @sms_native_llvm_fs_exists(i8* " + path_ptr + ")");
+                return t;
+            }
+            throw std::runtime_error("llvm codegen: unsupported fs method '" + m->method_ + "'");
+        }
+        // Array method calls (receiver is a variable holding an array handle)
+        if (m->method_ == "add" && m->args_.size() == 1) {
+            const auto arr = llvm_expr(c, m->receiver_.get());
+            const auto arg_kind = llvm_expr_kind(c, m->args_[0].value.get());
+            const auto val = llvm_expr(c, m->args_[0].value.get());
+            // Track element kind in program-level map for type inference
+            if (c.program) {
+                if (const auto* rv = dynamic_cast<const VarExpr*>(m->receiver_.get())) {
+                    if (arg_kind != LlvmValueKind::Unknown)
+                        c.program->array_elem_kinds[rv->name] = arg_kind;
+                    // Also propagate to global if it's a global var
+                    if (c.program->global_var_names.count(rv->name) && arg_kind != LlvmValueKind::Unknown)
+                        c.program->array_elem_kinds["__g__" + rv->name] = arg_kind;
+                }
+            }
+            if (arg_kind == LlvmValueKind::String) {
+                const auto sptr = llvm_t(c);
+                llvm_i(c, sptr + " = inttoptr i64 " + val + " to i8*");
+                llvm_i(c, "call void @sms_native_llvm_array_add_str(i64 " + arr + ", i8* " + sptr + ")");
+            } else {
+                llvm_i(c, "call void @sms_native_llvm_array_add_int(i64 " + arr + ", i64 " + val + ")");
+            }
+            return "0";
+        }
+        if (m->method_ == "remove" && m->args_.size() == 1) {
+            const auto arr = llvm_expr(c, m->receiver_.get());
+            const auto arg_kind = llvm_expr_kind(c, m->args_[0].value.get());
+            const auto val = llvm_expr(c, m->args_[0].value.get());
+            if (arg_kind == LlvmValueKind::String) {
+                const auto sptr = llvm_t(c);
+                llvm_i(c, sptr + " = inttoptr i64 " + val + " to i8*");
+                llvm_i(c, "call void @sms_native_llvm_array_remove_str(i64 " + arr + ", i8* " + sptr + ")");
+            } else {
+                llvm_i(c, "call void @sms_native_llvm_array_remove_int(i64 " + arr + ", i64 " + val + ")");
+            }
+            return "0";
+        }
+        if (m->method_ == "removeAt" && m->args_.size() == 1) {
+            const auto arr = llvm_expr(c, m->receiver_.get());
+            const auto idx = llvm_expr(c, m->args_[0].value.get());
+            llvm_i(c, "call void @sms_native_llvm_array_remove_at(i64 " + arr + ", i64 " + idx + ")");
+            return "0";
+        }
+        if (m->method_ == "contains" && m->args_.size() == 1) {
+            const auto arr = llvm_expr(c, m->receiver_.get());
+            const auto arg_kind = llvm_expr_kind(c, m->args_[0].value.get());
+            const auto val = llvm_expr(c, m->args_[0].value.get());
+            const auto t = llvm_t(c);
+            if (arg_kind == LlvmValueKind::String) {
+                const auto sptr = llvm_t(c);
+                llvm_i(c, sptr + " = inttoptr i64 " + val + " to i8*");
+                llvm_i(c, t + " = call i64 @sms_native_llvm_array_contains_str(i64 " + arr + ", i8* " + sptr + ")");
+            } else {
+                llvm_i(c, t + " = call i64 @sms_native_llvm_array_contains_int(i64 " + arr + ", i64 " + val + ")");
+            }
+            return t;
+        }
+        // Arbitrary UI object method calls (receiver is string = object ID)
+        {
+            const auto recv_kind = llvm_expr_kind(c, m->receiver_.get());
+            const bool recv_is_string = (recv_kind == LlvmValueKind::String || recv_kind == LlvmValueKind::Unknown);
+            if (recv_is_string) {
+                const auto obj_ptr = llvm_expr_as_string_ptr(c, m->receiver_.get());
+                const auto method_ptr = llvm_emit_const_string_ptr(c, m->method_);
+                // Build JSON args using runtime builder
+                const auto builder = llvm_t(c);
+                llvm_i(c, builder + " = call i64 @sms_native_llvm_args_builder_new()");
+                for (const auto& arg : m->args_) {
+                    const auto arg_kind = llvm_expr_kind(c, arg.value.get());
+                    const auto arg_val = llvm_expr(c, arg.value.get());
+                    if (arg_kind == LlvmValueKind::String) {
+                        const auto sptr = llvm_t(c);
+                        llvm_i(c, sptr + " = inttoptr i64 " + arg_val + " to i8*");
+                        llvm_i(c, "call void @sms_native_llvm_args_builder_add_str(i64 " + builder + ", i8* " + sptr + ")");
+                    } else {
+                        llvm_i(c, "call void @sms_native_llvm_args_builder_add_int(i64 " + builder + ", i64 " + arg_val + ")");
+                    }
+                }
+                const auto args_ptr = llvm_t(c);
+                llvm_i(c, args_ptr + " = call i8* @sms_native_llvm_args_builder_finish(i64 " + builder + ")");
+                const auto t = llvm_t(c);
+                llvm_i(c, t + " = call i64 @sms_native_llvm_ui_invoke(i8* " + obj_ptr + ", i8* " + method_ptr + ", i8* " + args_ptr + ")");
+                return t;
+            }
+        }
+    }
+    // MemberAccessExpr as rvalue (entry.Name, entry.IsDirectory, arr.size)
+    if (const auto* ma = dynamic_cast<const MemberAccessExpr*>(e)) {
+        const auto recv_val = llvm_expr(c, ma->receiver_.get());
+        if (ma->member_ == "size") {
+            const auto t = llvm_t(c);
+            llvm_i(c, t + " = call i64 @sms_native_llvm_array_size(i64 " + recv_val + ")");
+            return t;
+        }
+        const auto key_ptr = llvm_emit_const_string_ptr(c, ma->member_);
+        const auto member_kind = llvm_expr_kind(c, ma);
+        if (member_kind == LlvmValueKind::String) {
+            const auto str_ptr = llvm_t(c);
+            llvm_i(c, str_ptr + " = call i8* @sms_native_llvm_obj_get_str_prop(i64 " + recv_val + ", i8* " + key_ptr + ")");
+            const auto t = llvm_t(c);
+            llvm_i(c, t + " = ptrtoint i8* " + str_ptr + " to i64");
+            return t;
+        }
+        const auto t = llvm_t(c);
+        llvm_i(c, t + " = call i64 @sms_native_llvm_obj_get_int_prop(i64 " + recv_val + ", i8* " + key_ptr + ")");
+        return t;
+    }
+    // ArrayLiteralExpr: create a new empty/filled array
+    if (const auto* al = dynamic_cast<const ArrayLiteralExpr*>(e)) {
+        const auto handle = llvm_t(c);
+        llvm_i(c, handle + " = call i64 @sms_native_llvm_array_new()");
+        for (const auto& elem : al->elements_) {
+            const auto elem_kind = llvm_expr_kind(c, elem.get());
+            const auto elem_val = llvm_expr(c, elem.get());
+            if (elem_kind == LlvmValueKind::String) {
+                const auto sptr = llvm_t(c);
+                llvm_i(c, sptr + " = inttoptr i64 " + elem_val + " to i8*");
+                llvm_i(c, "call void @sms_native_llvm_array_add_str(i64 " + handle + ", i8* " + sptr + ")");
+            } else {
+                llvm_i(c, "call void @sms_native_llvm_array_add_int(i64 " + handle + ", i64 " + elem_val + ")");
+            }
+        }
+        return handle;
+    }
+    // ArrayAccessExpr: arr[idx]
+    if (const auto* aa = dynamic_cast<const ArrayAccessExpr*>(e)) {
+        const auto arr = llvm_expr(c, aa->receiver_.get());
+        const auto idx = llvm_expr(c, aa->index_.get());
+        const auto elem_kind = llvm_expr_kind(c, aa);
+        const auto t = llvm_t(c);
+        if (elem_kind == LlvmValueKind::String) {
+            const auto str_ptr = llvm_t(c);
+            llvm_i(c, str_ptr + " = call i8* @sms_native_llvm_array_get_str(i64 " + arr + ", i64 " + idx + ")");
+            llvm_i(c, t + " = ptrtoint i8* " + str_ptr + " to i64");
+        } else {
+            llvm_i(c, t + " = call i64 @sms_native_llvm_array_get_int(i64 " + arr + ", i64 " + idx + ")");
+        }
+        return t;
+    }
+    if (const auto* tup = dynamic_cast<const TupleLiteralExpr*>(e)) {
+        // Tuple: LLVM functions return a single i64. Return the first element.
+        // Callers that ignore the return value (the common case) are unaffected.
+        if (!tup->elements_.empty()) {
+            return llvm_expr(c, tup->elements_[0].get());
+        }
+        return std::string("0");
     }
     throw std::runtime_error("llvm codegen: unsupported expression type");
 }
@@ -4077,10 +4501,27 @@ static void llvm_stmts(LlvmCtx& c, const std::vector<std::unique_ptr<Stmt>>& ss)
 
 static void llvm_stmt(LlvmCtx& c, const Stmt* s) {
     if (const auto* v = dynamic_cast<const VarDeclStmt*>(s)) {
-        llvm_i(c, "%" + v->name + " = alloca i64");
+        // Local variable: alloca is already hoisted to entry block by codegen_program_llvm_ir.
+        // Globals are handled separately in sms_global_init().
+        const bool is_global = c.program && c.program->global_var_names.count(v->name);
+        if (is_global) {
+            const auto init = llvm_expr(c, v->value.get());
+            llvm_i(c, "store i64 " + init + ", i64* @sms_g_" + v->name);
+            return;
+        }
         const auto init = llvm_expr(c, v->value.get());
         llvm_i(c, "store i64 " + init + ", i64* %" + v->name);
-        c.var_kinds[v->name] = llvm_expr_kind(c, v->value.get());
+        const auto kind = llvm_expr_kind(c, v->value.get());
+        c.var_kinds[v->name] = kind;
+        // Track if this var is assigned from fs.list (object array) for ForInStmt type inference
+        if (c.program) {
+            if (const auto* mc = dynamic_cast<const MethodCallExpr*>(v->value.get())) {
+                const auto* recv = dynamic_cast<const VarExpr*>(mc->receiver_.get());
+                if (recv && recv->name == "fs" && mc->method_ == "list") {
+                    c.program->fs_list_vars.insert(v->name);
+                }
+            }
+        }
         return;
     }
     if (const auto* a = dynamic_cast<const AssignStmt*>(s)) {
@@ -4106,11 +4547,40 @@ static void llvm_stmt(LlvmCtx& c, const Stmt* s) {
             }
             throw std::runtime_error("llvm codegen: unsupported member assignment target '" + member->member_ + "'");
         }
+        if (const auto* acc = dynamic_cast<const ArrayAccessExpr*>(a->target_expr.get())) {
+            const auto arr = llvm_expr(c, acc->receiver_.get());
+            const auto idx = llvm_expr(c, acc->index_.get());
+            const auto value_kind = llvm_expr_kind(c, a->value_expr.get());
+            if (value_kind == LlvmValueKind::String) {
+                const auto sptr = llvm_expr_as_string_ptr(c, a->value_expr.get());
+                llvm_i(c, "call void @sms_native_llvm_array_set_str(i64 " + arr + ", i64 " + idx + ", i8* " + sptr + ")");
+            } else {
+                const auto val = llvm_expr(c, a->value_expr.get());
+                llvm_i(c, "call void @sms_native_llvm_array_set_int(i64 " + arr + ", i64 " + idx + ", i64 " + val + ")");
+            }
+            return;
+        }
         const auto* var = dynamic_cast<const VarExpr*>(a->target_expr.get());
-        if (!var) throw std::runtime_error("llvm codegen: non-variable assignment not supported in Phase 1");
+        if (!var) throw std::runtime_error("llvm codegen: non-variable assignment not supported");
         const auto val = llvm_expr(c, a->value_expr.get());
-        llvm_i(c, "store i64 " + val + ", i64* %" + var->name);
-        c.var_kinds[var->name] = llvm_expr_kind(c, a->value_expr.get());
+        const auto new_kind = llvm_expr_kind(c, a->value_expr.get());
+        const bool is_global = c.program && c.program->global_var_names.count(var->name);
+        if (is_global) {
+            llvm_i(c, "store i64 " + val + ", i64* @sms_g_" + var->name);
+            c.program->global_var_kinds[var->name] = new_kind;
+            // Track fs.list assignment to global
+            if (c.program) {
+                if (const auto* mc = dynamic_cast<const MethodCallExpr*>(a->value_expr.get())) {
+                    const auto* recv = dynamic_cast<const VarExpr*>(mc->receiver_.get());
+                    if (recv && recv->name == "fs" && mc->method_ == "list") {
+                        c.program->fs_list_vars.insert(var->name);
+                    }
+                }
+            }
+        } else {
+            llvm_i(c, "store i64 " + val + ", i64* %" + var->name);
+            c.var_kinds[var->name] = new_kind;
+        }
         return;
     }
     if (const auto* r = dynamic_cast<const ReturnStmt*>(s)) {
@@ -4166,20 +4636,123 @@ static void llvm_stmt(LlvmCtx& c, const Stmt* s) {
         llvm_l(c, end_l);
         return;
     }
+    if (const auto* fi = dynamic_cast<const ForInStmt*>(s)) {
+        // Check if iterable is an object array (fs.list result) or a value array
+        bool is_obj_array = false;
+        if (c.program) {
+            if (const auto* rv = dynamic_cast<const VarExpr*>(fi->iterable.get())) {
+                is_obj_array = c.program->fs_list_vars.count(rv->name) > 0;
+            }
+            // Also detect direct fs.list() call as iterable
+            if (const auto* mc = dynamic_cast<const MethodCallExpr*>(fi->iterable.get())) {
+                const auto* recv = dynamic_cast<const VarExpr*>(mc->receiver_.get());
+                if (recv && recv->name == "fs" && mc->method_ == "list") is_obj_array = true;
+            }
+        }
+
+        const auto arr_l   = llvm_lbl_name(c, "forin_arr");
+        const auto cond_l  = llvm_lbl_name(c, "forin_cond");
+        const auto body_l  = llvm_lbl_name(c, "forin_body");
+        const auto inc_l   = llvm_lbl_name(c, "forin_inc");
+        const auto end_l   = llvm_lbl_name(c, "forin_end");
+
+        // Evaluate iterable once and store array handle and size
+        const auto arr_tmp  = llvm_t(c);
+        const auto arr_val  = llvm_expr(c, fi->iterable.get());
+        llvm_i(c, arr_tmp + " = alloca i64");
+        llvm_i(c, "store i64 " + arr_val + ", i64* " + arr_tmp);
+        const auto size_tmp = llvm_t(c);
+        llvm_i(c, size_tmp + " = alloca i64");
+        const auto arr_for_size = llvm_t(c);
+        llvm_i(c, arr_for_size + " = load i64, i64* " + arr_tmp);
+        const auto size_val = llvm_t(c);
+        llvm_i(c, size_val + " = call i64 @sms_native_llvm_array_size(i64 " + arr_for_size + ")");
+        llvm_i(c, "store i64 " + size_val + ", i64* " + size_tmp);
+
+        // Index counter
+        const auto idx_tmp = llvm_t(c);
+        llvm_i(c, idx_tmp + " = alloca i64");
+        llvm_i(c, "store i64 0, i64* " + idx_tmp);
+
+        // Loop variable (the iteration element)
+        llvm_i(c, "%" + fi->variable + " = alloca i64");
+        llvm_i(c, "store i64 0, i64* %" + fi->variable);
+
+        llvm_term(c, "br label %" + cond_l);
+        llvm_l(c, cond_l);
+        const auto cur_idx = llvm_t(c);
+        llvm_i(c, cur_idx + " = load i64, i64* " + idx_tmp);
+        const auto cur_size = llvm_t(c);
+        llvm_i(c, cur_size + " = load i64, i64* " + size_tmp);
+        const auto cmp = llvm_t(c);
+        llvm_i(c, cmp + " = icmp slt i64 " + cur_idx + ", " + cur_size);
+        llvm_term(c, "br i1 " + cmp + ", label %" + body_l + ", label %" + end_l);
+
+        llvm_l(c, body_l);
+        // Get element and store in loop variable
+        const auto arr_h = llvm_t(c);
+        llvm_i(c, arr_h + " = load i64, i64* " + arr_tmp);
+        const auto elem_i = llvm_t(c);
+        llvm_i(c, elem_i + " = load i64, i64* " + idx_tmp);
+        const auto elem_val = llvm_t(c);
+        if (is_obj_array) {
+            // Elements are Value* pointers (objects)
+            llvm_i(c, elem_val + " = call i64 @sms_native_llvm_array_get_obj(i64 " + arr_h + ", i64 " + elem_i + ")");
+            c.var_kinds[fi->variable] = LlvmValueKind::Unknown; // Object ptr treated as Unknown
+        } else {
+            // Determine element kind from program state
+            LlvmValueKind elem_kind = LlvmValueKind::Unknown;
+            if (c.program) {
+                if (const auto* rv = dynamic_cast<const VarExpr*>(fi->iterable.get())) {
+                    const auto it = c.program->array_elem_kinds.find(rv->name);
+                    if (it != c.program->array_elem_kinds.end()) elem_kind = it->second;
+                }
+            }
+            if (elem_kind == LlvmValueKind::String) {
+                const auto str_ptr = llvm_t(c);
+                llvm_i(c, str_ptr + " = call i8* @sms_native_llvm_array_get_str(i64 " + arr_h + ", i64 " + elem_i + ")");
+                llvm_i(c, elem_val + " = ptrtoint i8* " + str_ptr + " to i64");
+            } else {
+                llvm_i(c, elem_val + " = call i64 @sms_native_llvm_array_get_int(i64 " + arr_h + ", i64 " + elem_i + ")");
+            }
+            c.var_kinds[fi->variable] = elem_kind;
+        }
+        llvm_i(c, "store i64 " + elem_val + ", i64* %" + fi->variable);
+
+        c.loops.push_back({inc_l, end_l});
+        llvm_stmts(c, fi->body);
+        c.loops.pop_back();
+
+        llvm_term(c, "br label %" + inc_l);
+        llvm_l(c, inc_l);
+        const auto next_idx = llvm_t(c);
+        const auto loaded_idx = llvm_t(c);
+        llvm_i(c, loaded_idx + " = load i64, i64* " + idx_tmp);
+        llvm_i(c, next_idx + " = add i64 " + loaded_idx + ", 1");
+        llvm_i(c, "store i64 " + next_idx + ", i64* " + idx_tmp);
+        llvm_term(c, "br label %" + cond_l);
+        llvm_l(c, end_l);
+        return;
+    }
     // FunctionDeclStmt, ImportDeclStmt, DataClassDeclStmt, EventHandlerDeclStmt: handled at top level
 }
 
 static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stmt>>& program, bool emit_exe_entry) {
     std::vector<const FunctionDeclStmt*> fns;
+    std::vector<const EventHandlerDeclStmt*> handlers;
+    std::vector<const VarDeclStmt*> global_vars;
     std::string entry_fn;
     bool has_log_calls = false;
 
+    // --- Pass 1: collect declarations and top-level vars ---
     for (const auto& stmt : program) {
-        if (llvm_stmt_has_log_call(stmt.get())) {
-            has_log_calls = true;
-        }
+        if (llvm_stmt_has_log_call(stmt.get())) has_log_calls = true;
         if (const auto* fn = dynamic_cast<const FunctionDeclStmt*>(stmt.get())) {
             fns.push_back(fn);
+        } else if (const auto* hdl = dynamic_cast<const EventHandlerDeclStmt*>(stmt.get())) {
+            handlers.push_back(hdl);
+        } else if (const auto* gv = dynamic_cast<const VarDeclStmt*>(stmt.get())) {
+            global_vars.push_back(gv);
         } else if (const auto* es = dynamic_cast<const ExprStmt*>(stmt.get())) {
             if (const auto* call = dynamic_cast<const CallExpr*>(es->value.get())) {
                 entry_fn = call->name;
@@ -4189,10 +4762,7 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
 
     if (entry_fn.empty()) {
         for (const auto* fn : fns) {
-            if (fn->name == "main") {
-                entry_fn = "main";
-                break;
-            }
+            if (fn->name == "main") { entry_fn = "main"; break; }
         }
     }
     if (emit_exe_entry && entry_fn.empty()) {
@@ -4200,8 +4770,26 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
     }
 
     LlvmCtx::ProgramState program_state;
+
+    // Populate global var names for cross-function access
+    for (const auto* gv : global_vars) {
+        program_state.global_var_names.insert(gv->name);
+        // Pre-compute kind from the initializer
+        LlvmCtx probe;  // no program pointer yet
+        const LlvmValueKind k = llvm_expr_kind(probe, gv->value.get());
+        program_state.global_var_kinds[gv->name] = k;
+    }
+
+    // --- Helper: build an LlvmCtx with program state and global var context ---
+    auto make_ctx = [&]() {
+        LlvmCtx ctx;
+        ctx.program = &program_state;
+        return ctx;
+    };
+
     std::string function_defs;
 
+    // --- Compile fun declarations ---
     for (const auto* fn : fns) {
         std::string params_str;
         for (std::size_t i = 0; i < fn->params.size(); ++i) {
@@ -4209,47 +4797,158 @@ static std::string codegen_program_llvm_ir(const std::vector<std::unique_ptr<Stm
             params_str += "i64 %" + fn->params[i].name + "_arg";
         }
 
-        LlvmCtx ctx;
-        ctx.program = &program_state;
+        auto ctx = make_ctx();
+        // Hoist all allocas to entry block so branches can't create orphaned uses.
+        std::unordered_set<std::string> local_vars;
+        collect_local_var_names(fn->body, program_state.global_var_names, local_vars);
         for (const auto& param : fn->params) {
             ctx.code += "    %" + param.name + " = alloca i64\n";
             ctx.code += "    store i64 %" + param.name + "_arg, i64* %" + param.name + "\n";
+            ctx.var_kinds[param.name] = LlvmValueKind::Unknown;
+            local_vars.erase(param.name);
         }
+        for (const auto& lv : local_vars) {
+            ctx.code += "    %" + lv + " = alloca i64\n";
+            ctx.var_kinds[lv] = LlvmValueKind::Unknown; // mark as allocated
+        }
+        // Infer kinds for parameters and locals from usage context before codegen.
+        infer_var_kinds_from_body(fn->body, program_state.global_var_kinds, ctx.var_kinds);
         llvm_stmts(ctx, fn->body);
         if (!ctx.terminated) ctx.code += "    ret i64 0\n";
 
         function_defs += "define i64 @sms_" + fn->name + "(" + params_str + ") {\n";
-        function_defs += "entry:\n";
+        function_defs += "sms_entry:\n";
         function_defs += ctx.code;
         function_defs += "}\n\n";
     }
 
+    // --- Compile on handlers as individual LLVM functions ---
+    for (const auto* hdl : handlers) {
+        // Build function name: sms_on__widget__event
+        // Replace '.' with '__' in the key
+        std::string safe_key;
+        for (char ch : hdl->key()) {
+            safe_key += (ch == '.') ? '_' : ch;
+        }
+        const std::string fn_name = "sms_on_" + safe_key;
+
+        // Build parameter list from handler params
+        std::string params_str;
+        for (std::size_t i = 0; i < hdl->params.size(); ++i) {
+            if (i > 0) params_str += ", ";
+            params_str += "i64 %" + hdl->params[i] + "_arg";
+        }
+
+        auto ctx = make_ctx();
+        std::unordered_set<std::string> local_vars;
+        collect_local_var_names(hdl->body, program_state.global_var_names, local_vars);
+        for (const auto& param : hdl->params) {
+            ctx.code += "    %" + param + " = alloca i64\n";
+            ctx.code += "    store i64 %" + param + "_arg, i64* %" + param + "\n";
+            ctx.var_kinds[param] = LlvmValueKind::Unknown;
+            local_vars.erase(param);
+        }
+        for (const auto& lv : local_vars) {
+            ctx.code += "    %" + lv + " = alloca i64\n";
+            ctx.var_kinds[lv] = LlvmValueKind::Unknown;
+        }
+        // Infer kinds for parameters and locals from usage context before codegen.
+        infer_var_kinds_from_body(hdl->body, program_state.global_var_kinds, ctx.var_kinds);
+        llvm_stmts(ctx, hdl->body);
+        if (!ctx.terminated) ctx.code += "    ret i64 0\n";
+
+        function_defs += "define i64 @" + fn_name + "(" + params_str + ") {\n";
+        function_defs += "sms_entry:\n";
+        function_defs += ctx.code;
+        function_defs += "}\n\n";
+    }
+
+    // --- Generate sms_global_init() for lib mode ---
+    std::string global_init_def;
+    if (!global_vars.empty()) {
+        auto ctx = make_ctx();
+        for (const auto* gv : global_vars) {
+            const auto init_val = llvm_expr(ctx, gv->value.get());
+            ctx.code += "    store i64 " + init_val + ", i64* @sms_g_" + gv->name + "\n";
+        }
+        ctx.code += "    ret void\n";
+        global_init_def += "define void @sms_global_init() {\n";
+        global_init_def += "sms_entry:\n";
+        global_init_def += ctx.code;
+        global_init_def += "}\n\n";
+    }
+
+    // --- Assemble output ---
     std::string out;
-    out += "; SMS -> LLVM IR  |  Phase 1  |  CrowdWare Forge 2026\n\n";
+    out += "; SMS -> LLVM IR  |  Phase 2  |  CrowdWare Forge 2026\n\n";
+    // Standard declares
     out += "declare i64 @clock()\n";
     out += "declare i32 @printf(i8*, ...)\n";
     out += "declare i8* @sms_native_llvm_ui_get_object(i8*)\n";
-    out += "declare i64 @sms_native_llvm_set_ui_text(i8*, i8*)\n\n";
+    out += "declare i64 @sms_native_llvm_set_ui_text(i8*, i8*)\n";
     out += "declare i64 @sms_native_llvm_set_ui_string_prop(i8*, i8*, i8*)\n";
     out += "declare i64 @sms_native_llvm_set_ui_int_prop(i8*, i8*, i64)\n";
     out += "declare i64 @sms_native_llvm_os_now_ms()\n";
     out += "declare i8* @sms_native_llvm_string_concat(i8*, i8*)\n";
-    out += "declare i64 @sms_native_llvm_string_eq(i8*, i8*)\n\n";
+    out += "declare i64 @sms_native_llvm_string_eq(i8*, i8*)\n";
+    out += "declare i8* @sms_native_llvm_int_to_str(i64)\n";
+    // Array helpers
+    out += "declare i64 @sms_native_llvm_array_new()\n";
+    out += "declare i64 @sms_native_llvm_array_size(i64)\n";
+    out += "declare void @sms_native_llvm_array_add_str(i64, i8*)\n";
+    out += "declare void @sms_native_llvm_array_add_int(i64, i64)\n";
+    out += "declare void @sms_native_llvm_array_remove_str(i64, i8*)\n";
+    out += "declare void @sms_native_llvm_array_remove_int(i64, i64)\n";
+    out += "declare void @sms_native_llvm_array_remove_at(i64, i64)\n";
+    out += "declare i64 @sms_native_llvm_array_contains_str(i64, i8*)\n";
+    out += "declare i64 @sms_native_llvm_array_contains_int(i64, i64)\n";
+    out += "declare i8* @sms_native_llvm_array_get_str(i64, i64)\n";
+    out += "declare i64 @sms_native_llvm_array_get_int(i64, i64)\n";
+    out += "declare i64 @sms_native_llvm_array_get_obj(i64, i64)\n";
+    out += "declare void @sms_native_llvm_array_set_int(i64, i64, i64)\n";
+    out += "declare void @sms_native_llvm_array_set_str(i64, i64, i8*)\n";
+    // Object property access
+    out += "declare i8* @sms_native_llvm_obj_get_str_prop(i64, i8*)\n";
+    out += "declare i64 @sms_native_llvm_obj_get_int_prop(i64, i8*)\n";
+    // FS helpers
+    out += "declare i64 @sms_native_llvm_fs_list(i8*)\n";
+    out += "declare i8* @sms_native_llvm_fs_read_text(i8*)\n";
+    out += "declare void @sms_native_llvm_fs_write_text(i8*, i8*)\n";
+    out += "declare i64 @sms_native_llvm_fs_exists(i8*)\n";
+    // OS helpers
+    out += "declare i8* @sms_native_llvm_os_read_file(i8*)\n";
+    out += "declare void @sms_native_llvm_os_write_file(i8*, i8*)\n";
+    out += "declare i8* @sms_native_llvm_os_to_res_path(i8*)\n";
+    out += "declare i64 @sms_native_llvm_os_load_prompt_config(i8*, i8*, i8*, i8*, i8*, i8*, i8*)\n";
+    out += "declare i8* @sms_native_llvm_ai_create_video_from_frames(i8*, i64, i8*, i8*)\n";
+    // UI invoke and args builder
+    out += "declare i64 @sms_native_llvm_ui_invoke(i8*, i8*, i8*)\n";
+    out += "declare i64 @sms_native_llvm_args_builder_new()\n";
+    out += "declare void @sms_native_llvm_args_builder_add_str(i64, i8*)\n";
+    out += "declare void @sms_native_llvm_args_builder_add_int(i64, i64)\n";
+    out += "declare i8* @sms_native_llvm_args_builder_finish(i64)\n";
+    out += "\n";
     if (!has_log_calls) {
-        // "RESULT:%lld\n\0" = 13 bytes,  "TIME_US:%.1f\n\0" = 14 bytes
         out += "@.rfmt = private unnamed_addr constant [13 x i8] c\"RESULT:%lld\\0A\\00\"\n";
         out += "@.tfmt = private unnamed_addr constant [14 x i8] c\"TIME_US:%.1f\\0A\\00\"\n";
+    }
+    // Global variable declarations
+    for (const auto* gv : global_vars) {
+        out += "@sms_g_" + gv->name + " = global i64 0\n";
     }
     for (const auto& global_def : program_state.global_defs) {
         out += global_def + "\n";
     }
     out += "\n";
+    out += global_init_def;
     out += function_defs;
 
     if (emit_exe_entry) {
-        // main() — uses clock() for timing (CLOCKS_PER_SEC=1000000 on macOS → µs directly)
         out += "define i32 @main() {\n";
-        out += "entry:\n";
+        out += "sms_entry:\n";
+        if (!global_vars.empty()) {
+            out += "    call void @sms_global_init()\n";
+        }
         out += "    %t_start = call i64 @clock()\n";
         out += "    %result = call i64 @sms_" + entry_fn + "()\n";
         out += "    %t_end = call i64 @clock()\n";
@@ -4851,6 +5550,379 @@ extern "C" SMS_EXPORT int sms_native_llvm_set_ui_int_prop(
     return 2;
 }
 
+// ─── LLVM Phase 2 runtime helpers ────────────────────────────────────────────
+//
+// Arrays use std::vector<Value> for correct semantics (string vs int storage).
+// Stored in a global arena that persists for the lifetime of the loaded module.
+//
+
+static std::list<std::vector<Value>> g_llvm_array_arena;
+
+extern "C" SMS_EXPORT const char* sms_native_llvm_int_to_str(std::int64_t v) {
+    g_llvm_string_arena.push_back(std::to_string(v));
+    return g_llvm_string_arena.back().c_str();
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_array_new() {
+    g_llvm_array_arena.emplace_back();
+    return reinterpret_cast<std::int64_t>(&g_llvm_array_arena.back());
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_array_size(std::int64_t arr_handle) {
+    if (!arr_handle) return 0;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    return static_cast<std::int64_t>(arr->size());
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_add_str(std::int64_t arr_handle, const char* str) {
+    if (!arr_handle) return;
+    reinterpret_cast<std::vector<Value>*>(arr_handle)->push_back(
+        Value::String(str != nullptr ? str : ""));
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_add_int(std::int64_t arr_handle, std::int64_t val) {
+    if (!arr_handle) return;
+    reinterpret_cast<std::vector<Value>*>(arr_handle)->push_back(Value::Int(val));
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_remove_str(std::int64_t arr_handle, const char* str) {
+    if (!arr_handle || !str) return;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    const std::string target(str);
+    auto it = std::find_if(arr->begin(), arr->end(), [&](const Value& v) {
+        return v.kind == Value::Kind::String && v.string_value == target;
+    });
+    if (it != arr->end()) arr->erase(it);
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_remove_int(std::int64_t arr_handle, std::int64_t val) {
+    if (!arr_handle) return;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    auto it = std::find_if(arr->begin(), arr->end(), [&](const Value& v) {
+        return (v.kind == Value::Kind::Int && v.int_value == val)
+            || (v.kind == Value::Kind::Bool && (v.bool_value ? 1 : 0) == val);
+    });
+    if (it != arr->end()) arr->erase(it);
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_remove_at(std::int64_t arr_handle, std::int64_t idx) {
+    if (!arr_handle) return;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    if (idx < 0 || static_cast<std::size_t>(idx) >= arr->size()) return;
+    arr->erase(arr->begin() + static_cast<std::ptrdiff_t>(idx));
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_array_contains_str(std::int64_t arr_handle, const char* str) {
+    if (!arr_handle) return 0;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    const std::string target(str != nullptr ? str : "");
+    for (const auto& v : *arr) {
+        if (v.kind == Value::Kind::String && v.string_value == target) return 1;
+    }
+    return 0;
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_array_contains_int(std::int64_t arr_handle, std::int64_t val) {
+    if (!arr_handle) return 0;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    for (const auto& v : *arr) {
+        if ((v.kind == Value::Kind::Int && v.int_value == val)
+            || (v.kind == Value::Kind::Bool && (v.bool_value ? 1 : 0) == val)) return 1;
+    }
+    return 0;
+}
+
+extern "C" SMS_EXPORT const char* sms_native_llvm_array_get_str(std::int64_t arr_handle, std::int64_t idx) {
+    if (!arr_handle) return "";
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    if (idx < 0 || static_cast<std::size_t>(idx) >= arr->size()) return "";
+    const auto& v = (*arr)[static_cast<std::size_t>(idx)];
+    if (v.kind == Value::Kind::String) {
+        g_llvm_string_arena.push_back(v.string_value);
+        return g_llvm_string_arena.back().c_str();
+    }
+    g_llvm_string_arena.push_back(value_to_string(v));
+    return g_llvm_string_arena.back().c_str();
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_array_get_int(std::int64_t arr_handle, std::int64_t idx) {
+    if (!arr_handle) return 0;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    if (idx < 0 || static_cast<std::size_t>(idx) >= arr->size()) return 0;
+    const auto& v = (*arr)[static_cast<std::size_t>(idx)];
+    if (v.kind == Value::Kind::Int) return v.int_value;
+    if (v.kind == Value::Kind::Bool) return v.bool_value ? 1 : 0;
+    return 0;
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_array_get_obj(std::int64_t arr_handle, std::int64_t idx) {
+    if (!arr_handle) return 0;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    if (idx < 0 || static_cast<std::size_t>(idx) >= arr->size()) return 0;
+    // Return pointer to the Value itself (stable since vector is in arena list)
+    return reinterpret_cast<std::int64_t>(&(*arr)[static_cast<std::size_t>(idx)]);
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_set_int(std::int64_t arr_handle, std::int64_t idx, std::int64_t value) {
+    if (!arr_handle) return;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    if (idx < 0 || static_cast<std::size_t>(idx) >= arr->size()) return;
+    (*arr)[static_cast<std::size_t>(idx)] = Value::Int(value);
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_array_set_str(std::int64_t arr_handle, std::int64_t idx, const char* value) {
+    if (!arr_handle) return;
+    auto* arr = reinterpret_cast<std::vector<Value>*>(arr_handle);
+    if (idx < 0 || static_cast<std::size_t>(idx) >= arr->size()) return;
+    g_llvm_string_arena.push_back(value ? value : "");
+    (*arr)[static_cast<std::size_t>(idx)] = Value::String(g_llvm_string_arena.back());
+}
+
+// Object property access (receives Value* as i64)
+extern "C" SMS_EXPORT const char* sms_native_llvm_obj_get_str_prop(std::int64_t obj_handle, const char* key) {
+    if (!obj_handle || !key) return "";
+    const auto* val = reinterpret_cast<const Value*>(obj_handle);
+    if (val->kind == Value::Kind::Object && val->object_fields) {
+        const auto it = val->object_fields->find(key);
+        if (it != val->object_fields->end()) {
+            if (it->second.kind == Value::Kind::String) {
+                g_llvm_string_arena.push_back(it->second.string_value);
+                return g_llvm_string_arena.back().c_str();
+            }
+            g_llvm_string_arena.push_back(value_to_string(it->second));
+            return g_llvm_string_arena.back().c_str();
+        }
+    }
+    return "";
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_obj_get_int_prop(std::int64_t obj_handle, const char* key) {
+    if (!obj_handle || !key) return 0;
+    const auto* val = reinterpret_cast<const Value*>(obj_handle);
+    if (val->kind == Value::Kind::Object && val->object_fields) {
+        const auto it = val->object_fields->find(key);
+        if (it != val->object_fields->end()) {
+            if (it->second.kind == Value::Kind::Int) return it->second.int_value;
+            if (it->second.kind == Value::Kind::Bool) return it->second.bool_value ? 1 : 0;
+        }
+    }
+    return 0;
+}
+
+// FS helpers - delegate to g_ui_invoke("__fs__", method, args_json)
+static std::string llvm_call_fs_invoke(const char* method, const std::string& args_json) {
+    if (!g_ui_invoke) return "null";
+    char out[kBridgeJsonBufferSize] = {};
+    char err[1024] = {};
+    g_ui_invoke("__fs__", method, args_json.c_str(), out, sizeof(out), err, sizeof(err));
+    return std::string(out);
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_fs_list(const char* path) {
+    if (!path) return 0;
+    const std::string args = "[" + value_to_json(Value::String(path)) + "]";
+    const std::string result_json = llvm_call_fs_invoke("list", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind != Value::Kind::Array || !result_val.array) return 0;
+    // Create a new array in our arena and copy the values
+    g_llvm_array_arena.emplace_back(*result_val.array);
+    return reinterpret_cast<std::int64_t>(&g_llvm_array_arena.back());
+}
+
+extern "C" SMS_EXPORT const char* sms_native_llvm_fs_read_text(const char* path) {
+    if (!path) return "";
+    const std::string args = "[" + value_to_json(Value::String(path)) + "]";
+    const std::string result_json = llvm_call_fs_invoke("readText", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind == Value::Kind::String) {
+        g_llvm_string_arena.push_back(result_val.string_value);
+        return g_llvm_string_arena.back().c_str();
+    }
+    return "";
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_fs_write_text(const char* path, const char* text) {
+    if (!path || !text) return;
+    std::string args = "[" + value_to_json(Value::String(path)) + "," + value_to_json(Value::String(text)) + "]";
+    llvm_call_fs_invoke("writeText", args);
+}
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_fs_exists(const char* path) {
+    if (!path) return 0;
+    const std::string args = "[" + value_to_json(Value::String(path)) + "]";
+    const std::string result_json = llvm_call_fs_invoke("exists", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind == Value::Kind::Bool) return result_val.bool_value ? 1 : 0;
+    if (result_val.kind == Value::Kind::Int) return result_val.int_value ? 1 : 0;
+    return 0;
+}
+
+// OS helpers - delegate to g_ui_invoke("__os__", method, args_json)
+static std::string llvm_call_os_invoke(const char* method, const std::string& args_json) {
+    if (!g_ui_invoke) return "null";
+    char out[kBridgeJsonBufferSize] = {};
+    char err[1024] = {};
+    g_ui_invoke("__os__", method, args_json.c_str(), out, sizeof(out), err, sizeof(err));
+    return std::string(out);
+}
+
+extern "C" SMS_EXPORT const char* sms_native_llvm_os_read_file(const char* path) {
+    if (!path) return "";
+    const std::string args = "[" + value_to_json(Value::String(path)) + "]";
+    const std::string result_json = llvm_call_os_invoke("readFile", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind == Value::Kind::String) {
+        g_llvm_string_arena.push_back(result_val.string_value);
+        return g_llvm_string_arena.back().c_str();
+    }
+    return "";
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_os_write_file(const char* path, const char* text) {
+    if (!path || !text) return;
+    const std::string args = "[" + value_to_json(Value::String(path)) + ","
+                           + value_to_json(Value::String(text)) + "]";
+    llvm_call_os_invoke("writeFile", args);
+}
+
+extern "C" SMS_EXPORT const char* sms_native_llvm_os_to_res_path(const char* path) {
+    if (!path) return "";
+    const std::string args = "[" + value_to_json(Value::String(path)) + "]";
+    const std::string result_json = llvm_call_os_invoke("toResPath", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind == Value::Kind::String) {
+        g_llvm_string_arena.push_back(result_val.string_value);
+        return g_llvm_string_arena.back().c_str();
+    }
+    return "";
+}
+
+// Returns an opaque object handle (i64) with named string/int properties,
+// exactly like an element from fs.list(). Returns 0 on failure (== null).
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_os_load_prompt_config(
+    const char* project_path,
+    const char* prompt,
+    const char* negative_prompt,
+    const char* style_image_path,
+    const char* extra_image_path,
+    const char* image_model,
+    const char* video_model)
+{
+    auto s = [](const char* p) { return value_to_json(Value::String(p ? p : "")); };
+    const std::string args = "[" + s(project_path) + "," + s(prompt) + ","
+        + s(negative_prompt) + "," + s(style_image_path) + ","
+        + s(extra_image_path) + "," + s(image_model) + "," + s(video_model) + "]";
+    const std::string result_json = llvm_call_os_invoke("loadPromptConfig", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind == Value::Kind::Null) return 0;
+    // Store the object in the arena so property accessors can reach it.
+    // Wrap it in a single-element array; return pointer to that element.
+    std::vector<Value> wrapper;
+    wrapper.push_back(std::move(result_val));
+    g_llvm_array_arena.emplace_back(std::move(wrapper));
+    return reinterpret_cast<std::int64_t>(&g_llvm_array_arena.back().front());
+}
+
+// AI helpers - delegate to g_ui_invoke("__ai__", method, args_json)
+static std::string llvm_call_ai_invoke(const char* method, const std::string& args_json) {
+    if (!g_ui_invoke) return "null";
+    char out[kBridgeJsonBufferSize] = {};
+    char err[1024] = {};
+    g_ui_invoke("__ai__", method, args_json.c_str(), out, sizeof(out), err, sizeof(err));
+    return std::string(out);
+}
+
+// Returns the encoded file path as a C string (arena-owned), or "" on failure.
+extern "C" SMS_EXPORT const char* sms_native_llvm_ai_create_video_from_frames(
+    const char* output_dir, std::int64_t fps, const char* video_path, const char* frame_pattern)
+{
+    auto s = [](const char* p) { return value_to_json(Value::String(p ? p : "")); };
+    const std::string args = "[" + s(output_dir) + "," + value_to_json(Value::Int(fps))
+        + "," + s(video_path) + "," + s(frame_pattern) + "]";
+    const std::string result_json = llvm_call_ai_invoke("createVideoFromFrames", args);
+    auto result_val = parse_json_value(result_json);
+    if (result_val.kind != Value::Kind::String) return "";
+    // Store in arena so the pointer outlives this call.
+    g_llvm_string_arena.emplace_back(std::move(result_val.string_value));
+    return g_llvm_string_arena.back().c_str();
+}
+
+// Generic UI invoke - delegates to g_ui_invoke(object_id, method, args_json)
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_ui_invoke(
+    const char* object_id, const char* method, const char* args_json)
+{
+    if (!g_ui_invoke || !object_id || !method) return 0;
+    const char* aj = args_json != nullptr ? args_json : "[]";
+    char out[kBridgeJsonBufferSize] = {};
+    char err[1024] = {};
+    const int rc = g_ui_invoke(object_id, method, aj, out, sizeof(out), err, sizeof(err));
+    if (rc != 0) return 0;
+    auto result_val = parse_json_value(out);
+    if (result_val.kind == Value::Kind::Int) return result_val.int_value;
+    if (result_val.kind == Value::Kind::Bool) return result_val.bool_value ? 1 : 0;
+    if (result_val.kind == Value::Kind::String) {
+        g_llvm_string_arena.push_back(result_val.string_value);
+        return reinterpret_cast<std::int64_t>(g_llvm_string_arena.back().c_str());
+    }
+    if (result_val.kind == Value::Kind::Null) return 0;
+    // For objects (like __ui_ref), extract the "id" field if present
+    if (result_val.kind == Value::Kind::Object && result_val.object_fields) {
+        const auto id_it = result_val.object_fields->find("id");
+        if (id_it != result_val.object_fields->end() && id_it->second.kind == Value::Kind::String) {
+            g_llvm_string_arena.push_back(id_it->second.string_value);
+            return reinterpret_cast<std::int64_t>(g_llvm_string_arena.back().c_str());
+        }
+        const auto val_it = result_val.object_fields->find("value");
+        if (val_it != result_val.object_fields->end() && val_it->second.kind == Value::Kind::Int) {
+            return val_it->second.int_value;
+        }
+    }
+    return 0;
+}
+
+// JSON args builder - builds a JSON array incrementally
+struct LlvmArgsBuilder {
+    std::string json = "[";
+    bool first = true;
+    void add_raw(const std::string& raw) {
+        if (!first) json += ",";
+        json += raw;
+        first = false;
+    }
+    std::string finish() { return json + "]"; }
+};
+
+static std::list<LlvmArgsBuilder> g_llvm_builder_arena;
+
+extern "C" SMS_EXPORT std::int64_t sms_native_llvm_args_builder_new() {
+    g_llvm_builder_arena.emplace_back();
+    return reinterpret_cast<std::int64_t>(&g_llvm_builder_arena.back());
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_args_builder_add_str(std::int64_t handle, const char* str) {
+    if (!handle) return;
+    auto* b = reinterpret_cast<LlvmArgsBuilder*>(handle);
+    b->add_raw(value_to_json(Value::String(str != nullptr ? str : "")));
+}
+
+extern "C" SMS_EXPORT void sms_native_llvm_args_builder_add_int(std::int64_t handle, std::int64_t val) {
+    if (!handle) return;
+    auto* b = reinterpret_cast<LlvmArgsBuilder*>(handle);
+    b->add_raw(std::to_string(val));
+}
+
+extern "C" SMS_EXPORT const char* sms_native_llvm_args_builder_finish(std::int64_t handle) {
+    if (!handle) {
+        g_llvm_string_arena.push_back("[]");
+        return g_llvm_string_arena.back().c_str();
+    }
+    auto* b = reinterpret_cast<LlvmArgsBuilder*>(handle);
+    g_llvm_string_arena.push_back(b->finish());
+    return g_llvm_string_arena.back().c_str();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 extern "C" int sms_native_codegen_llvm_ir(
     const char* source,
     char* out_ir,
@@ -5020,6 +6092,151 @@ extern "C" int sms_native_aot_invoke(
         write_error(error, error_capacity, "unknown aot invoke exception");
         return 1;
     }
+}
+
+// ---------------------------------------------------------------------------
+// AOT lib API: compile a SMS script to a persistent shared library whose
+// sms_on_<target>_<event>() functions are called directly at dispatch time.
+// ---------------------------------------------------------------------------
+
+static std::mutex g_aot_lib_mutex;
+static std::int64_t g_aot_lib_next_id = 1;
+static std::unordered_map<std::int64_t, void*> g_aot_lib_handles;
+
+extern "C" SMS_EXPORT int sms_native_aot_lib_open(
+    const char* source,
+    std::int64_t* out_lib_id,
+    char* error,
+    int error_capacity) {
+    if (source == nullptr || out_lib_id == nullptr) {
+        write_error(error, error_capacity, "source/out_lib_id must not be null");
+        return 2;
+    }
+    *out_lib_id = -1;
+    try {
+        Lexer lexer(source);
+        auto tokens = lexer.tokenize();
+        Parser parser(std::move(tokens));
+        auto program = parser.parse_program();
+        const auto ir = codegen_program_llvm_ir(program, false); // lib mode
+
+        const fs::path cache_dir = resolve_sms_aot_cache_dir();
+        std::error_code ec;
+        fs::create_directories(cache_dir, ec);
+        if (ec) {
+            write_error(error, error_capacity, "failed to create aot lib cache dir: " + cache_dir.string());
+            return 1;
+        }
+
+        const std::string key = sha256_hex(std::string(source)) + "_lib";
+        const fs::path ir_path  = cache_dir / (key + ".ll");
+        const fs::path lib_path = cache_dir / (key + shared_lib_extension());
+
+        if (!fs::exists(lib_path)) {
+            {
+                std::ofstream out_f(ir_path, std::ios::binary);
+                if (!out_f.is_open()) {
+                    write_error(error, error_capacity, "failed to write IR file: " + ir_path.string());
+                    return 1;
+                }
+                out_f << ir;
+            }
+
+            const std::string clang = detect_clang_command();
+#if defined(_WIN32)
+            const std::string compile_cmd =
+                clang + " -O2 -shared -o " + shell_quote_arg(lib_path.string()) + " "
+                + shell_quote_arg(ir_path.string()) + " 2>&1";
+#elif defined(__APPLE__)
+            const std::string compile_cmd =
+                clang + " -O2 -shared -fPIC -undefined dynamic_lookup -o "
+                + shell_quote_arg(lib_path.string()) + " "
+                + shell_quote_arg(ir_path.string()) + " 2>&1";
+#else
+            const std::string compile_cmd =
+                clang + " -O2 -shared -fPIC -o " + shell_quote_arg(lib_path.string()) + " "
+                + shell_quote_arg(ir_path.string()) + " 2>&1";
+#endif
+            int compile_rc = -1;
+            const std::string compile_out = capture_command_output(compile_cmd, &compile_rc);
+            if (compile_rc != 0) {
+                write_error(error, error_capacity,
+                    "aot lib clang build failed (" + std::to_string(compile_rc) + "): " + compile_out);
+                return 1;
+            }
+        }
+
+        void* handle = load_shared_lib(lib_path.string());
+        if (handle == nullptr) {
+            write_error(error, error_capacity, "aot lib failed to load: " + lib_path.string());
+            return 1;
+        }
+
+        // Call sms_global_init() if the script has top-level vars.
+        using GlobalInitFn = void (*)();
+        auto global_init = reinterpret_cast<GlobalInitFn>(load_shared_symbol(handle, "sms_global_init"));
+        if (global_init != nullptr) {
+            global_init();
+        }
+
+        std::lock_guard<std::mutex> lk(g_aot_lib_mutex);
+        const std::int64_t id = g_aot_lib_next_id++;
+        g_aot_lib_handles[id] = handle;
+        *out_lib_id = id;
+        return 0;
+    } catch (const std::exception& ex) {
+        write_error(error, error_capacity, ex.what());
+        return 1;
+    } catch (...) {
+        write_error(error, error_capacity, "unknown aot lib open exception");
+        return 1;
+    }
+}
+
+extern "C" SMS_EXPORT int sms_native_aot_lib_dispatch(
+    std::int64_t lib_id,
+    const char* target,
+    const char* event,
+    char* error,
+    int error_capacity) {
+    if (target == nullptr || event == nullptr) {
+        write_error(error, error_capacity, "target/event must not be null");
+        return 2;
+    }
+
+    void* handle = nullptr;
+    {
+        std::lock_guard<std::mutex> lk(g_aot_lib_mutex);
+        auto it = g_aot_lib_handles.find(lib_id);
+        if (it == g_aot_lib_handles.end()) {
+            write_error(error, error_capacity, "aot lib handle not found");
+            return 1;
+        }
+        handle = it->second;
+    }
+
+    // Build symbol: sms_on_<target>_<event>  (dots → underscores)
+    std::string sym = "sms_on_";
+    for (char ch : std::string(target)) sym += (ch == '.') ? '_' : ch;
+    sym += '_';
+    for (char ch : std::string(event))  sym += (ch == '.') ? '_' : ch;
+
+    using SmsHandlerFn = std::int64_t (*)();
+    auto fn = reinterpret_cast<SmsHandlerFn>(load_shared_symbol(handle, sym.c_str()));
+    if (fn == nullptr) {
+        // No handler for this event - normal, not an error.
+        return 0;
+    }
+    fn();
+    return 0;
+}
+
+extern "C" SMS_EXPORT void sms_native_aot_lib_close(std::int64_t lib_id) {
+    std::lock_guard<std::mutex> lk(g_aot_lib_mutex);
+    auto it = g_aot_lib_handles.find(lib_id);
+    if (it == g_aot_lib_handles.end()) return;
+    close_shared_lib(it->second);
+    g_aot_lib_handles.erase(it);
 }
 
 extern "C" int sms_native_codegen_cpp(

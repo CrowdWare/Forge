@@ -17,10 +17,10 @@ Inherited properties are documented in: [Button](Button.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| allow_reselect | allowReselect | bool | — |
-| fit_to_longest_item | fitToLongestItem | bool | — |
-| item_count | itemCount | int | — |
-| selected | selected | int | — |
+| allow_reselect | allowReselect | bool | - |
+| fit_to_longest_item | fitToLongestItem | bool | - |
+| item_count | itemCount | int | - |
+| selected | selected | int | - |
 
 ## Events
 
@@ -41,7 +41,7 @@ Inherited actions are documented in: [Button](Button.md)
 |-|-|-|-|
 | add_item | `<id>.addItem(label, id)` | string label, int id | void |
 | add_separator | `<id>.addSeparator(text)` | string text | void |
-| clear | `<id>.clear()` | — | void |
+| clear | `<id>.clear()` | - | void |
 | get_item_auto_translate_mode | `<id>.getItemAutoTranslateMode(idx)` | int idx | int |
 | get_item_icon | `<id>.getItemIcon(idx)` | int idx | Object |
 | get_item_id | `<id>.getItemId(idx)` | int idx | int |
@@ -49,11 +49,11 @@ Inherited actions are documented in: [Button](Button.md)
 | get_item_metadata | `<id>.getItemMetadata(idx)` | int idx | void |
 | get_item_text | `<id>.getItemText(idx)` | int idx | string |
 | get_item_tooltip | `<id>.getItemTooltip(idx)` | int idx | string |
-| get_popup | `<id>.getPopup()` | — | Object |
+| get_popup | `<id>.getPopup()` | - | Object |
 | get_selectable_item | `<id>.getSelectableItem(fromLast)` | bool fromLast | int |
-| get_selected_id | `<id>.getSelectedId()` | — | int |
-| get_selected_metadata | `<id>.getSelectedMetadata()` | — | void |
-| has_selectable_items | `<id>.hasSelectableItems()` | — | bool |
+| get_selected_id | `<id>.getSelectedId()` | - | int |
+| get_selected_metadata | `<id>.getSelectedMetadata()` | - | void |
+| has_selectable_items | `<id>.hasSelectableItems()` | - | bool |
 | is_item_disabled | `<id>.isItemDisabled(idx)` | int idx | bool |
 | is_item_separator | `<id>.isItemSeparator(idx)` | int idx | bool |
 | remove_item | `<id>.removeItem(idx)` | int idx | void |
@@ -64,7 +64,7 @@ Inherited actions are documented in: [Button](Button.md)
 | set_item_id | `<id>.setItemId(idx, id)` | int idx, int id | void |
 | set_item_text | `<id>.setItemText(idx, text)` | int idx, string text | void |
 | set_item_tooltip | `<id>.setItemTooltip(idx, tooltip)` | int idx, string tooltip | void |
-| show_popup | `<id>.showPopup()` | — | void |
+| show_popup | `<id>.showPopup()` | - | void |
 
 ## SML Items
 
@@ -79,7 +79,7 @@ The runtime converts them to Godot OptionButton items internally.
 
 | Property | Type | Default | Notes |
 |-|-|-|-|
-| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.selected() { ... }`). |
+| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.selected() { ... }`). |
 | text | string | "" | Display text. |
 | icon | string | "" | Optional icon resource/path. |
 | disabled | bool | false | Disables the option. |

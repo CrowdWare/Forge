@@ -177,10 +177,11 @@ void test_codegen_llvm_ir_reports_buffer_too_small() {
 }
 
 void test_codegen_llvm_ir_reports_unsupported_expression() {
+    // WhenExpr (when/switch) is not yet supported in LLVM codegen.
     const auto result = codegen_llvm_ir(
-        "fun main() { var xs = [1,2,3] return 42 }\n");
-    assert_true(result.rc != 0, "llvm codegen unexpectedly succeeded for unsupported expression");
-    assert_true(result.text.find("unsupported expression type") != std::string::npos, "unexpected error: " + result.text);
+        "fun main() { var x = 1\n var y = when (x) { 1 -> 1 else -> 0 }\n return y }\n");
+    assert_true(result.rc != 0, "llvm codegen unexpectedly succeeded for unsupported expression (WhenExpr)");
+    assert_true(result.text.find("unsupported") != std::string::npos, "unexpected error: " + result.text);
 }
 
 void test_aot_invoke_validates_required_arguments() {

@@ -18,10 +18,10 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| alignment | alignment | int | — |
-| last_wrap_alignment | lastWrapAlignment | int | — |
-| reverse_fill | reverseFill | bool | — |
-| vertical | vertical | bool | — |
+| alignment | alignment | int | - |
+| last_wrap_alignment | lastWrapAlignment | int | - |
+| reverse_fill | reverseFill | bool | - |
+| vertical | vertical | bool | - |
 
 ## Events
 
@@ -38,7 +38,7 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_line_count | `<id>.getLineCount()` | — | int |
+| get_line_count | `<id>.getLineCount()` | - | int |
 
 ## Attached Properties
 

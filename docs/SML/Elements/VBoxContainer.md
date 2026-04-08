@@ -22,20 +22,20 @@ Inherited properties are documented in: [BoxContainer](BoxContainer.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | alignment | enum: begin, center, end | begin |
-| — | spacing | int | — |
-| separation (theme override) | spacing | int | — |
-| — (drawn via BgVBoxContainer._Draw) | bgColor | color | — |
-| — (drawn via BgVBoxContainer._Draw) | borderColor | color | — |
-| — (drawn via BgVBoxContainer._Draw) | borderWidth | int | — |
-| — (drawn via BgVBoxContainer._Draw) | borderRadius | int | — |
-| StyleBoxFlat.shadow_color | shadowColor | color | — |
-| StyleBoxFlat.shadow_size | shadowSize | int | — |
+| - | id | identifier | - |
+| - | alignment | enum: begin, center, end | begin |
+| - | spacing | int | - |
+| separation (theme override) | spacing | int | - |
+| - (drawn via BgVBoxContainer._Draw) | bgColor | color | - |
+| - (drawn via BgVBoxContainer._Draw) | borderColor | color | - |
+| - (drawn via BgVBoxContainer._Draw) | borderWidth | int | - |
+| - (drawn via BgVBoxContainer._Draw) | borderRadius | int | - |
+| StyleBoxFlat.shadow_color | shadowColor | color | - |
+| StyleBoxFlat.shadow_size | shadowSize | int | - |
 | StyleBoxFlat.shadow_offset.x | shadowOffsetX | int | 0 |
 | StyleBoxFlat.shadow_offset.y | shadowOffsetY | int | 0 |
-| — (drawn via BgVBoxContainer._Draw) | highlightColor | color | — |
-| — (expands to profile properties before build) | elevation | identifier | — |
+| - (drawn via BgVBoxContainer._Draw) | highlightColor | color | - |
+| - (expands to profile properties before build) | elevation | identifier | - |
 ### Examples
 
 ```sml

@@ -11,8 +11,8 @@ Inherited properties are documented in: [SubViewportContainer](SubViewportContai
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| showBoneTree | showBoneTree | bool | — |
-| src | src | string | — |
+| showBoneTree | showBoneTree | bool | - |
+| src | src | string | - |
 
 ## Events
 
@@ -27,7 +27,7 @@ Inherited signals are documented in: [SubViewportContainer](SubViewportContainer
 | objectMoved | `on <id>.objectMoved(propIdx, pos) { ... }` | int propIdx, string pos |
 | objectSelected | `on <id>.objectSelected(propIdx) { ... }` | int propIdx |
 | poseChanged | `on <id>.poseChanged(boneName) { ... }` | string boneName |
-| poseReset | `on <id>.poseReset() { ... }` | — |
+| poseReset | `on <id>.poseReset() { ... }` | - |
 | scenePropAdded | `on <id>.scenePropAdded(index, path) { ... }` | int index, string path |
 | scenePropRemoved | `on <id>.scenePropRemoved(index) { ... }` | int index |
 
@@ -43,12 +43,12 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 | applyProjectText | `<id>.applyProjectText(path, text, sync)` | string path, string text, bool sync | bool |
 | exportCurrentFramePng | `<id>.exportCurrentFramePng(path)` | string path | bool |
 | exportFrameRangePng | `<id>.exportFrameRangePng(frameFrom, frameTo, outputDirectory)` | int frameFrom, int frameTo, string outputDirectory | int |
-| getActiveCharacterId | `<id>.getActiveCharacterId()` | — | string |
-| getPoseDataForActiveCharacter | `<id>.getPoseDataForActiveCharacter()` | — | Variant |
+| getActiveCharacterId | `<id>.getActiveCharacterId()` | - | string |
+| getPoseDataForActiveCharacter | `<id>.getPoseDataForActiveCharacter()` | - | Variant |
 | getPoseDataForBone | `<id>.getPoseDataForBone(boneName)` | string boneName | Variant |
-| getPoseDataForSelectedBone | `<id>.getPoseDataForSelectedBone()` | — | Variant |
+| getPoseDataForSelectedBone | `<id>.getPoseDataForSelectedBone()` | - | Variant |
 | getProjectText | `<id>.getProjectText(path)` | string path | string |
-| getSceneCharacterCount | `<id>.getSceneCharacterCount()` | — | int |
+| getSceneCharacterCount | `<id>.getSceneCharacterCount()` | - | int |
 | getSceneCharacterId | `<id>.getSceneCharacterId(index)` | int index | string |
 | getSceneCharacterName | `<id>.getSceneCharacterName(index)` | int index | string |
 | getSceneCharacterPosX | `<id>.getSceneCharacterPosX(index)` | int index | float |
@@ -60,7 +60,7 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 | getSceneCharacterScaleX | `<id>.getSceneCharacterScaleX(index)` | int index | float |
 | getSceneCharacterScaleY | `<id>.getSceneCharacterScaleY(index)` | int index | float |
 | getSceneCharacterScaleZ | `<id>.getSceneCharacterScaleZ(index)` | int index | float |
-| getScenePropCount | `<id>.getScenePropCount()` | — | int |
+| getScenePropCount | `<id>.getScenePropCount()` | - | int |
 | getScenePropName | `<id>.getScenePropName(index)` | int index | string |
 | getScenePropPosX | `<id>.getScenePropPosX(index)` | int index | float |
 | getScenePropPosY | `<id>.getScenePropPosY(index)` | int index | float |
@@ -71,22 +71,22 @@ Inherited actions are documented in: [SubViewportContainer](SubViewportContainer
 | getScenePropScaleX | `<id>.getScenePropScaleX(index)` | int index | float |
 | getScenePropScaleY | `<id>.getScenePropScaleY(index)` | int index | float |
 | getScenePropScaleZ | `<id>.getScenePropScaleZ(index)` | int index | float |
-| getSelectedBoneMaxX | `<id>.getSelectedBoneMaxX()` | — | float |
-| getSelectedBoneMaxY | `<id>.getSelectedBoneMaxY()` | — | float |
-| getSelectedBoneMaxZ | `<id>.getSelectedBoneMaxZ()` | — | float |
-| getSelectedBoneMinX | `<id>.getSelectedBoneMinX()` | — | float |
-| getSelectedBoneMinY | `<id>.getSelectedBoneMinY()` | — | float |
-| getSelectedBoneMinZ | `<id>.getSelectedBoneMinZ()` | — | float |
-| getSelectedBoneName | `<id>.getSelectedBoneName()` | — | string |
-| getSelectedBoneRotX | `<id>.getSelectedBoneRotX()` | — | float |
-| getSelectedBoneRotY | `<id>.getSelectedBoneRotY()` | — | float |
-| getSelectedBoneRotZ | `<id>.getSelectedBoneRotZ()` | — | float |
-| get_show_bone_tree | `<id>.getShowBoneTree()` | — | bool |
+| getSelectedBoneMaxX | `<id>.getSelectedBoneMaxX()` | - | float |
+| getSelectedBoneMaxY | `<id>.getSelectedBoneMaxY()` | - | float |
+| getSelectedBoneMaxZ | `<id>.getSelectedBoneMaxZ()` | - | float |
+| getSelectedBoneMinX | `<id>.getSelectedBoneMinX()` | - | float |
+| getSelectedBoneMinY | `<id>.getSelectedBoneMinY()` | - | float |
+| getSelectedBoneMinZ | `<id>.getSelectedBoneMinZ()` | - | float |
+| getSelectedBoneName | `<id>.getSelectedBoneName()` | - | string |
+| getSelectedBoneRotX | `<id>.getSelectedBoneRotX()` | - | float |
+| getSelectedBoneRotY | `<id>.getSelectedBoneRotY()` | - | float |
+| getSelectedBoneRotZ | `<id>.getSelectedBoneRotZ()` | - | float |
+| get_show_bone_tree | `<id>.getShowBoneTree()` | - | bool |
 | loadProject | `<id>.loadProject(path)` | string path | bool |
 | placeSelectedOnGround | `<id>.placeSelectedOnGround(groundY)` | float groundY | bool |
 | removeSceneCharacter | `<id>.removeSceneCharacter(index)` | int index | void |
 | removeSceneProp | `<id>.removeSceneProp(index)` | int index | void |
-| resetPose | `<id>.resetPose()` | — | void |
+| resetPose | `<id>.resetPose()` | - | void |
 | saveProject | `<id>.saveProject(path)` | string path | bool |
 | selectSceneCharacter | `<id>.selectSceneCharacter(index)` | int index | void |
 | selectSceneProp | `<id>.selectSceneProp(index)` | int index | void |

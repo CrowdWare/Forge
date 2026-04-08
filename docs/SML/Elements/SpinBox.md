@@ -11,14 +11,14 @@ Inherited properties are documented in: [Range](Range.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| alignment | alignment | int | — |
-| custom_arrow_round | customArrowRound | bool | — |
-| custom_arrow_step | customArrowStep | float | — |
-| editable | editable | bool | — |
-| prefix | prefix | string | — |
-| select_all_on_focus | selectAllOnFocus | bool | — |
-| suffix | suffix | string | — |
-| update_on_text_changed | updateOnTextChanged | bool | — |
+| alignment | alignment | int | - |
+| custom_arrow_round | customArrowRound | bool | - |
+| custom_arrow_step | customArrowStep | float | - |
+| editable | editable | bool | - |
+| prefix | prefix | string | - |
+| select_all_on_focus | selectAllOnFocus | bool | - |
+| suffix | suffix | string | - |
+| update_on_text_changed | updateOnTextChanged | bool | - |
 
 ## Events
 
@@ -35,10 +35,10 @@ Inherited actions are documented in: [Range](Range.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| apply | `<id>.apply()` | — | void |
-| get_horizontal_alignment | `<id>.getHorizontalAlignment()` | — | int |
-| get_line_edit | `<id>.getLineEdit()` | — | Object |
-| is_custom_arrow_rounding | `<id>.isCustomArrowRounding()` | — | bool |
+| apply | `<id>.apply()` | - | void |
+| get_horizontal_alignment | `<id>.getHorizontalAlignment()` | - | int |
+| get_line_edit | `<id>.getLineEdit()` | - | Object |
+| is_custom_arrow_rounding | `<id>.isCustomArrowRounding()` | - | bool |
 | set_horizontal_alignment | `<id>.setHorizontalAlignment(alignment)` | int alignment | void |
 
 ## Attached Properties

@@ -20,7 +20,7 @@ Inherited properties are documented in: [Range](Range.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| custom_step | customStep | float | — |
+| custom_step | customStep | float | - |
 
 ## Events
 
@@ -29,7 +29,7 @@ Inherited signals are documented in: [Range](Range.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| scrolling | `on <id>.scrolling() { ... }` | — |
+| scrolling | `on <id>.scrolling() { ... }` | - |
 
 ## Attached Properties
 

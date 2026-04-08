@@ -15,7 +15,7 @@ Greyboxing is fast and extremely useful for exploring structure and interaction.
 
 But greyboxes have a problem.
 
-They are great for developers — but often difficult for others to understand.
+They are great for developers - but often difficult for others to understand.
 
 A client, designer, or stakeholder usually cannot easily imagine the final visual result from a greybox alone.
 
@@ -115,7 +115,7 @@ GreyBox → AI styled video is one of those experiments.
 
 Forge is being built in public and is still evolving.
 
-If you are curious about the idea of building applications without the web stack — or about pipelines like this — you can explore the project here:
+If you are curious about the idea of building applications without the web stack - or about pipelines like this - you can explore the project here:
 
 https://codeberg.org/CrowdWare
 

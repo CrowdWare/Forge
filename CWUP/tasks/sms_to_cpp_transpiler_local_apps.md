@@ -2,7 +2,7 @@
 
 ## Goal
 Add an optional transpiler that converts SMS scripts directly to C++ for apps
-that run locally and are not deployed over HTTP — eliminating interpreter overhead
+that run locally and are not deployed over HTTP - eliminating interpreter overhead
 in production-local builds while keeping the authoring model unchanged.
 
 ## Why
@@ -14,21 +14,21 @@ in production-local builds while keeping the authoring model unchanged.
 
 The SMS AST produced by the existing `SMSCore.Native` parser is the natural
 intermediate representation. A second backend consuming the same AST is all
-that is needed — a separate IL format would add spec maintenance, versioning
+that is needed - a separate IL format would add spec maintenance, versioning
 overhead, and a second transformation pass with no immediate benefit.
 
 ```
 SMS source
-    ↓  (existing SMSCore.Native lexer + parser — unchanged)
+    ↓  (existing SMSCore.Native lexer + parser - unchanged)
 SMS AST
     ↓  (new: SmsCodegenCpp)
 Generated .cpp + .h
     ↓  (CMake / ninja)
-Native binary — no interpreter in hot path
+Native binary - no interpreter in hot path
 ```
 
 If a future additional backend is ever needed, it adds a second consumer of
-the same SMS AST — not a consumer of a custom IL.
+the same SMS AST - not a consumer of a custom IL.
 
 ## Why Not IL
 
@@ -66,7 +66,7 @@ The first version targets the constructs actually used in practice:
 | `fun` (top-level functions) | ✅ |
 | `on` (event handler registration) | ✅ |
 | Native function calls (`ui.*`, `os.*`, `log.*`) | ✅ via generated glue |
-| Closures / first-class functions | — (not in SMS language) |
+| Closures / first-class functions | - (not in SMS language) |
 | Dynamic `ui.getObject()` with runtime id | ⚠️ supported with warning |
 | `Array`, `Dictionary` literals | ✅ |
 | Recursive functions | ✅ with depth guard |
@@ -92,7 +92,7 @@ Before any code is written, profile ForgePoser on a representative workload:
 
 ## Phase 1: Design Decisions (Pre-Implementation)
 
-### 1.1  Codegen API — AST stays internal
+### 1.1  Codegen API - AST stays internal
 
 The SMS AST types (`MemberAccessExpr`, `AssignStmt`, etc.) are currently
 internal to `sms_native.cpp`. **Do not expose them in a header.**
@@ -109,7 +109,7 @@ SMS_EXPORT int sms_native_codegen_cpp(
 ```
 
 `SmsCodegenCpp` is implemented inside `SMSCore.Native/src/sms_codegen_cpp.cpp`
-and `#include`d or linked into `sms_native.cpp` — the AST types remain in scope
+and `#include`d or linked into `sms_native.cpp` - the AST types remain in scope
 without header exposure.
 
 ### 1.2  Value type in generated code: reuse `SmsValue`
@@ -330,7 +330,7 @@ SmsValue msg = SmsValue::String("Frame: ") + frame;
 
 ### 2.8  Unsupported construct → build error
 ```sms
-var f = fun() { 42 }   // first-class function — not supported
+var f = fun() { 42 }   // first-class function - not supported
 ```
 ```
 SMS codegen error: first-class function literals are not supported
@@ -372,16 +372,16 @@ Each test calls `sms_native_codegen_cpp(source, ...)` and checks that:
 
 With Phases 1–3 complete, the implementation work for Codex is:
 
-1. **`SMSCore.Native/src/sms_codegen_cpp.cpp`** — AST visitor that emits C++
+1. **`SMSCore.Native/src/sms_codegen_cpp.cpp`** - AST visitor that emits C++
    according to the golden examples in Phase 2. Each AST node type has one
    `emit_*` method. Unsupported nodes call `emit_error()`.
 
-2. **`SMSCore.Native/include/sms_native_glue.h`** — hand-written runtime glue
+2. **`SMSCore.Native/include/sms_native_glue.h`** - hand-written runtime glue
    per the spec in section 1.2–1.5. No generated code; ships with the library.
 
-3. **`sms_native.h`** — add `sms_native_codegen_cpp` to the public API.
+3. **`sms_native.h`** - add `sms_native_codegen_cpp` to the public API.
 
-4. **`run.sh`** — add `--sms-transpile=true` flag; when set, invoke codegen
+4. **`run.sh`** - add `--sms-transpile=true` flag; when set, invoke codegen
    before the cmake build step and place generated files in `build/sms_generated/`.
 
 5. **Tests pass**: `ctest -R codegen` green before PR.
@@ -390,9 +390,9 @@ With Phases 1–3 complete, the implementation work for Codex is:
 
 ## Deliverables
 - `SMSCore.Native/src/sms_codegen_cpp.cpp` + integration in `sms_native.cpp`
-- `SMSCore.Native/include/sms_native_glue.h` — runtime glue header
-- `SMSCore.Native/tests/sms_codegen_cpp_tests.cpp` — golden-example tests
-- `sms_native.h` — `sms_native_codegen_cpp` export added
+- `SMSCore.Native/include/sms_native_glue.h` - runtime glue header
+- `SMSCore.Native/tests/sms_codegen_cpp_tests.cpp` - golden-example tests
+- `sms_native.h` - `sms_native_codegen_cpp` export added
 - `run.sh` flag `--sms-transpile=true`
 - Documentation: supported subset, limits, how to add a new construct
 

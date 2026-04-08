@@ -29,7 +29,7 @@ func get_spec() -> Dictionary:
         "backing": "Control",
         "backing_native": "ForgeSpeechRecognizerControl",
         "properties": [
-            {"sml":"id", "type":"identifier", "default":"—"},
+            {"sml":"id", "type":"identifier", "default":"-"},
             {"sml":"language", "type":"string", "default":"de-DE"},
             {"sml":"mode", "type":"enum: raw, clean, markdown", "default":"clean"},
             {"sml":"filters", "type":"string", "default":"zdf,wdr,applaus,musik",

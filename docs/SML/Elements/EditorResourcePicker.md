@@ -17,9 +17,9 @@ Inherited properties are documented in: [HBoxContainer](HBoxContainer.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| base_type | baseType | string | — |
-| editable | editable | bool | — |
-| toggle_mode | toggleMode | bool | — |
+| base_type | baseType | string | - |
+| editable | editable | bool | - |
+| toggle_mode | toggleMode | bool | - |
 
 ## Events
 
@@ -38,5 +38,5 @@ Inherited actions are documented in: [HBoxContainer](HBoxContainer.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_allowed_types | `<id>.getAllowedTypes()` | — | Variant |
+| get_allowed_types | `<id>.getAllowedTypes()` | - | Variant |
 | set_toggle_pressed | `<id>.setTogglePressed(pressed)` | bool pressed | void |

@@ -1,4 +1,4 @@
-# Forge Markdown Editor — Spec v1
+# Forge Markdown Editor - Spec v1
 
 *Ziel: Bücher schreiben auf Android Tablet, mit Git-Anbindung zu Codeberg*
 
@@ -39,16 +39,16 @@ Landscape (quer):
   ┌─────────────┬─────────────┐
   │  EDITOR     │  PREVIEW    │
   └─────────────┴─────────────┘
-  — Split-View, beide sichtbar —
+  - Split-View, beide sichtbar -
 
-Portrait (hoch) — Fokus bestimmt was angezeigt wird:
+Portrait (hoch) - Fokus bestimmt was angezeigt wird:
   Fokus auf Editor  → Editor fullscreen, Preview versteckt
   Fokus auf Preview → Preview fullscreen, Editor versteckt
 
 Wechsel zwischen Editor und Preview im Portrait:
   → Swipe nach links   = Preview einblenden
   → Swipe nach rechts  = Editor einblenden
-  — wie Buchseiten blättern —
+  - wie Buchseiten blättern -
 ```
 
 Kein Button. Keine Einstellung. Einfach drehen und swipen.
@@ -58,7 +58,7 @@ Kein Button. Keine Einstellung. Einfach drehen und swipen.
 ### Ausblick: Forge Reader (separater Use Case)
 
 Portrait + nur Preview = Lesemodus.
-Könnte dieselbe App sein — einfach ohne Editor-Komponente gestartet.
+Könnte dieselbe App sein - einfach ohne Editor-Komponente gestartet.
 
 ```
 forge-writer --mode editor   ← schreiben
@@ -66,7 +66,7 @@ forge-writer --mode reader   ← lesen (nur Preview, kein Editor)
 ```
 
 Oder als eigene App `Forge Reader` die denselben Renderer nutzt.
-Entscheidung später — Architektur erlaubt beides.
+Entscheidung später - Architektur erlaubt beides.
 
 ### Themes (zur Laufzeit umschaltbar)
 
@@ -84,7 +84,7 @@ Theme {
 
 ### Theme-Konsistenz über Forge-Apps
 
-Godot nutzt RichTextLabel — andere Technologie als CrowdBooks (Web/CSS).
+Godot nutzt RichTextLabel - andere Technologie als CrowdBooks (Web/CSS).
 Direkte Kompatibilität nicht möglich, aber:
 
 ```
@@ -110,7 +110,7 @@ forge-theme.sml:
   }
 ```
 
-CrowdBooks (Web) und Forge Writer (Godot) nutzen dieselben Farbwerte —
+CrowdBooks (Web) und Forge Writer (Godot) nutzen dieselben Farbwerte -
 unterschiedliche Implementierung, aber gleiches visuelles Erlebnis.
 
 User-Tracking: welche Themes werden genutzt? → Daten fließen in CrowdBooks-Design zurück.
@@ -159,7 +159,7 @@ Kein git binary auf dem Gerät. Alles via REST.
 
 ---
 
-## Sidebar — Tree View (3 Ebenen)
+## Sidebar - Tree View (3 Ebenen)
 
 ```
 📚 Meine Bücher
@@ -192,17 +192,17 @@ Ebene 3 (Kapitel):
 
 ---
 
-## Editor — Speichern & Push Logik
+## Editor - Speichern & Push Logik
 
 ### Auto-Save
 
 ```
 Jeder Tastendruck → sofort lokal gespeichert
-— kein "Speichern"-Button nötig —
-— Undo/Redo funktioniert (Standard Arrow-Buffer) —
+- kein "Speichern"-Button nötig -
+- Undo/Redo funktioniert (Standard Arrow-Buffer) -
 ```
 
-### Geänderte Dateien — Statusanzeige
+### Geänderte Dateien - Statusanzeige
 
 ```
 kapitel-01.md   ●  ← geändert, Push möglich
@@ -280,7 +280,7 @@ App {
 
 ---
 
-## Forge CLI — APK Build
+## Forge CLI - APK Build
 
 ### Ziel
 
@@ -329,14 +329,14 @@ forge new MyApp                ← neues Projekt anlegen
 
 ## Offene Fragen / Entscheidungen
 
-- [x] **Scroll-Sync:** nach Chapter — Markdown-Anker (`#`, `##`, `###`)
+- [x] **Scroll-Sync:** nach Chapter - Markdown-Anker (`#`, `##`, `###`)
       Editor und Preview scrollen zum selben Heading-Anker.
       Einfach zu implementieren, stabil, kein Zeilen-Tracking nötig.
 
-- [x] **APK:** Sideload — kein Play Store erstmal.
+- [x] **APK:** Sideload - kein Play Store erstmal.
 
 - [ ] **Git: lokal oder API?**
-      Zwei Optionen — muss entschieden werden:
+      Zwei Optionen - muss entschieden werden:
 
       ```
       Option A: Lokales Repo (git clone auf Tablet)
@@ -352,10 +352,10 @@ forge new MyApp                ← neues Projekt anlegen
         - kein echter Git-History-Zugriff
       ```
 
-      Empfehlung: Option B für v1 — simpel, kein Git-Binary-Problem.
+      Empfehlung: Option B für v1 - simpel, kein Git-Binary-Problem.
       Option A als v2 wenn Offline-Bedarf entsteht.
 
-- [x] **Mehrere Repos:** Ja — explizit wechseln, nicht automatisch.
+- [x] **Mehrere Repos:** Ja - explizit wechseln, nicht automatisch.
       Beispiele:
       ```
       Repo A: Open Books    ← Pull Requests willkommen, Community schreibt mit
@@ -363,13 +363,13 @@ forge new MyApp                ← neues Projekt anlegen
       Repo C: OFC Books     ← kollaborativ aber kuratiert
       ```
       User wählt aktives Repo → lädt Struktur → editiert → pusht.
-      Expliziter Wechsel — kein versehentliches Pushen ins falsche Repo.
+      Expliziter Wechsel - kein versehentliches Pushen ins falsche Repo.
 
 - [ ] **Bildunterstützung (v2):** Page Image pro Kapitel
-      — oberstes Bild im Kapitel, wie Blog-Header
-      — genutzt für SEO, OG-Tags, Social Sharing (Telegram, X etc.)
-      — in CrowdBooks bereits so implementiert
-      — erstmal kein Muss, aber einplanen in der Datenstruktur
+      - oberstes Bild im Kapitel, wie Blog-Header
+      - genutzt für SEO, OG-Tags, Social Sharing (Telegram, X etc.)
+      - in CrowdBooks bereits so implementiert
+      - erstmal kein Muss, aber einplanen in der Datenstruktur
 
 ---
 
@@ -385,7 +385,7 @@ M5   forge publish --target apk aus CLI
 
 ---
 
-*libera — Forge 4D, 2026*
+*libera - Forge 4D, 2026*
 
 ---
 
@@ -402,11 +402,11 @@ M5   forge publish --target apk aus CLI
 └───────────────────────────────────┘
 ```
 
-Preview per Swipe erreichbar — kein Split-View wenn Soft Keyboard aktiv.
+Preview per Swipe erreichbar - kein Split-View wenn Soft Keyboard aktiv.
 
-### Markdown Toolbar — Buttons
+### Markdown Toolbar - Buttons
 
-**v1 — direkt einfügen:**
+**v1 - direkt einfügen:**
 
 | Button | Einfügt | Anmerkung |
 |--------|---------|-----------|
@@ -417,7 +417,7 @@ Preview per Swipe erreichbar — kein Split-View wenn Soft Keyboard aktiv.
 | `---` | `---` | Divider |
 | `\|` | Basis-Tabelle | |
 
-**v2 — mit Dialog:**
+**v2 - mit Dialog:**
 
 | Button | Dialog | Einfügt |
 |--------|--------|---------|
@@ -454,7 +454,7 @@ Preview per Swipe erreichbar — kein Split-View wenn Soft Keyboard aktiv.
 
 ---
 
-## Tastatur-Erkennung — Adaptive Toolbar
+## Tastatur-Erkennung - Adaptive Toolbar
 
 Die App erkennt automatisch ob eine externe Tastatur angeschlossen ist
 und platziert die Markdown-Toolbar entsprechend:
@@ -471,5 +471,5 @@ OHNE externe Tastatur:
   → Sidebar zugeklappt
 ```
 
-Dieselben Buttons — zwei verschiedene Orte.
+Dieselben Buttons - zwei verschiedene Orte.
 Automatisch. Kein manuelles Umschalten.

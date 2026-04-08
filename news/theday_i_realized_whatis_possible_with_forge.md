@@ -145,9 +145,9 @@ And that changes how fast ideas can be communicated.
 ## Why Forge Is Open
 
 When I realized what was possible, one thought immediately followed: This should not remain a private experiment.
-That's why Forge is being developed in the open — with open technology, open experimentation, and open discussion.
+That's why Forge is being developed in the open - with open technology, open experimentation, and open discussion.
 Forge itself is and will remain fully open source. The licensing model reflects this spirit: open source projects built with Forge are completely free. If Forge is used inside a commercial closed-source product, a commercial license is required.
-The goal is an ecosystem where knowledge stays shared — and where **commercial use helps fund the people building and maintaining the technology**.
+The goal is an ecosystem where knowledge stays shared - and where **commercial use helps fund the people building and maintaining the technology**.
 
 ---
 
@@ -155,7 +155,7 @@ The goal is an ecosystem where knowledge stays shared — and where **commercial
 
 Forge is still evolving.
 
-But that moment of realization — seeing how these pieces fit together — made one thing clear to me.
+But that moment of realization - seeing how these pieces fit together - made one thing clear to me.
 
 We are only beginning to explore what is possible when:
 

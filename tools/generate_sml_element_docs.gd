@@ -228,14 +228,14 @@ func _generate_doc(c_name: String) -> void:
     if merged_spec_props.size() > 0:  # CHANGED
         # Spec-defined properties (SML-level, not necessarily Godot properties)
         for sp in merged_spec_props:
-            var godot_p := String(sp.get("godot", "—"))  # CHANGED (optional)
+            var godot_p := String(sp.get("godot", "-"))  # CHANGED (optional)
             var sml_p := String(sp.get("sml", ""))  # CHANGED
             var typ := String(sp.get("type", "Variant"))  # CHANGED
-            var defv := String(sp.get("default", "—"))  # CHANGED
+            var defv := String(sp.get("default", "-"))  # CHANGED
             md += "| %s | %s | %s | %s |\n" % [godot_p, sml_p, typ, defv]  # CHANGED
     else:
         for p in props:
-            md += "| %s | %s | %s | — |\n" % [String(p["name"]), _normalize_property(String(p["name"])), String(p["type"])]  # CHANGED
+            md += "| %s | %s | %s | - |\n" % [String(p["name"]), _normalize_property(String(p["name"])), String(p["type"])]  # CHANGED
 
 
     if SPECS.has(c_name):  # CHANGED
@@ -307,7 +307,7 @@ func _generate_doc(c_name: String) -> void:
             var params := Array(a.get("params", []))  # CHANGED
             var ret := String(a.get("returns", "void"))  # CHANGED
 
-            var param_sig := "—"  # CHANGED
+            var param_sig := "-"  # CHANGED
             var arg_names: Array[String] = []  # CHANGED
             if params.size() > 0:  # CHANGED
                 var parts: Array[String] = []  # CHANGED
@@ -337,7 +337,7 @@ func _generate_doc(c_name: String) -> void:
 
         md += "### Item properties (SML)\n\n"
         md += "| Property | Type | Default | Notes |\n|-|-|-|-|\n"
-        md += "| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.clicked() { ... }`). |\n"
+        md += "| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.clicked() { ... }`). |\n"
         md += "| text | string | \"\" | Display text. |\n"
         md += "| checked | bool | false | Only for `CheckItem`. |\n"
         md += "| disabled | bool | false | Optional. |\n"
@@ -372,7 +372,7 @@ func _generate_doc(c_name: String) -> void:
 
         md += "### Item properties (SML)\n\n"
         md += "| Property | Type | Default | Notes |\n|-|-|-|-|\n"
-        md += "| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.selected() { ... }`). |\n"
+        md += "| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.selected() { ... }`). |\n"
         md += "| text | string | \"\" | Display text. |\n"
         md += "| icon | string | \"\" | Optional icon resource/path. |\n"
         md += "| selected | bool | false | Initial selection state (single-select). |\n"
@@ -407,7 +407,7 @@ func _generate_doc(c_name: String) -> void:
 
         md += "### Item properties (SML)\n\n"
         md += "| Property | Type | Default | Notes |\n|-|-|-|-|\n"
-        md += "| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.selected() { ... }`). |\n"
+        md += "| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.selected() { ... }`). |\n"
         md += "| text | string | \"\" | Display text. |\n"
         md += "| icon | string | \"\" | Optional icon resource/path. |\n"
         md += "| disabled | bool | false | Disables the option. |\n"
@@ -441,7 +441,7 @@ func _generate_doc(c_name: String) -> void:
 
         md += "### Tab properties (SML)\n\n"
         md += "| Property | Type | Default | Notes |\n|-|-|-|-|\n"
-        md += "| id | identifier | — | Optional. Enables id-based event sugar (`on <id>.tabSelected() { ... }`). |\n"
+        md += "| id | identifier | - | Optional. Enables id-based event sugar (`on <id>.tabSelected() { ... }`). |\n"
         md += "| title | string | \"\" | Tab title. |\n"
         md += "| icon | string | \"\" | Optional icon resource/path. |\n"
         md += "| disabled | bool | false | Disables selecting the tab. |\n"
@@ -612,7 +612,7 @@ func _collect_signals(c_name: String) -> Array:
 
         collected[name] = {
             "name": name,
-            "params": (", ".join(parts) if parts.size() > 0 else "—"),
+            "params": (", ".join(parts) if parts.size() > 0 else "-"),
             "params_names": (", ".join(names_only) if names_only.size() > 0 else "")
         }
 
@@ -685,7 +685,7 @@ func _collect_actions(c_name: String) -> Array:  # CHANGED
         collected[name] = {
             "name": name,
             "sms": _normalize_event(name),
-            "params": (", ".join(parts) if parts.size() > 0 else "—"),
+            "params": (", ".join(parts) if parts.size() > 0 else "-"),
             "params_names": (", ".join(names_only) if names_only.size() > 0 else ""),
             "returns": returns
         }
@@ -1381,7 +1381,7 @@ func _generate_schema_events_cs(names: Array) -> void:
 func _split_param_names(raw: String) -> Array[String]:
     var out: Array[String] = []
     var trimmed := raw.strip_edges()
-    if trimmed == "" or trimmed == "—":
+    if trimmed == "" or trimmed == "-":
         return out
 
     var parts := trimmed.split(",", false)
@@ -1396,7 +1396,7 @@ func _split_param_names(raw: String) -> Array[String]:
 func _split_param_types(raw: String) -> Array[String]:
     var out: Array[String] = []
     var trimmed := raw.strip_edges()
-    if trimmed == "" or trimmed == "—":
+    if trimmed == "" or trimmed == "-":
         return out
 
     var parts := trimmed.split(",", false)
@@ -1444,7 +1444,7 @@ func _cpp_string(raw: String) -> String:
 
 
 func _emit_cpp_header(struct_decls: String, array_name: String, entries: String, struct_name: String) -> String:
-    var h := "// <auto-generated — do not edit>\n"
+    var h := "// <auto-generated - do not edit>\n"
     h += "#pragma once\n"
     h += "#include <string_view>\n\n"
     h += struct_decls + "\n"
@@ -1612,7 +1612,7 @@ func _emit_cpp_schema_layout_defaults() -> void:
     var menu_min_height := int(menu_bar_defaults.get("minHeight", 28))
     var menu_z_index := int(menu_bar_defaults.get("zIndex", 1000))
 
-    var h := "// <auto-generated — do not edit>\n"
+    var h := "// <auto-generated - do not edit>\n"
     h += "#pragma once\n\n"
     h += "struct SchemaMenuBarDefaultsDef {\n"
     h += "    int x, y, height, min_height, z_index;\n"

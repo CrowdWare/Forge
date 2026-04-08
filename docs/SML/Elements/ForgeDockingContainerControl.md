@@ -27,13 +27,13 @@ Inherited actions are documented in: [TabContainer](TabContainer.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_base_fixed_width | `<id>.getBaseFixedWidth()` | — | float |
-| get_dock_side | `<id>.getDockSide()` | — | string |
-| get_fixed_height | `<id>.getFixedHeight()` | — | float |
-| get_fixed_width | `<id>.getFixedWidth()` | — | float |
-| get_height_percent | `<id>.getHeightPercent()` | — | float |
-| is_collapsed | `<id>.isCollapsed()` | — | bool |
-| is_flex | `<id>.isFlex()` | — | bool |
+| get_base_fixed_width | `<id>.getBaseFixedWidth()` | - | float |
+| get_dock_side | `<id>.getDockSide()` | - | string |
+| get_fixed_height | `<id>.getFixedHeight()` | - | float |
+| get_fixed_width | `<id>.getFixedWidth()` | - | float |
+| get_height_percent | `<id>.getHeightPercent()` | - | float |
+| is_collapsed | `<id>.isCollapsed()` | - | bool |
+| is_flex | `<id>.isFlex()` | - | bool |
 | set_collapsed | `<id>.setCollapsed(value)` | bool value | void |
 | set_dock_side | `<id>.setDockSide(side)` | string side | void |
 | set_fixed_height | `<id>.setFixedHeight(value)` | float value | void |

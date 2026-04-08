@@ -13,7 +13,7 @@ backgrounds. In C++ these must be registered GDExtension classes.
 In `forge_ui_builder.cpp` `apply_props()` currently sets some of these via
 `add_theme_stylebox_override("panel", ...)` on the existing node type, which only
 works for `Panel` and `PanelContainer`. For `VBoxContainer` and `HBoxContainer`
-there is no built-in panel slot — a custom _draw is required.
+there is no built-in panel slot - a custom _draw is required.
 
 ## Classes to Add
 

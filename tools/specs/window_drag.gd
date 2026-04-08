@@ -28,7 +28,7 @@ func get_spec() -> Dictionary:
         "name": "WindowDrag",
         "backing": "Panel",
         "properties": [
-            {"sml":"id", "type":"identifier", "default":"—"},
+            {"sml":"id", "type":"identifier", "default":"-"},
             {"sml":"anchors", "type":"string", "default":"\"\""},
             {"sml":"x", "type":"int", "default":"0"},
             {"sml":"y", "type":"int", "default":"0"},

@@ -138,7 +138,7 @@ static std::string extract_url_ext(const std::string& url) {
 }
 
 // ---------------------------------------------------------------------------
-// AssetCache — construction
+// AssetCache - construction
 // ---------------------------------------------------------------------------
 
 AssetCache::AssetCache() : root_(forge_cache_dir()) {

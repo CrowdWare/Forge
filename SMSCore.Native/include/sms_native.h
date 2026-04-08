@@ -135,4 +135,16 @@ SMS_EXPORT int sms_native_aot_invoke(
     std::int64_t* out_result,
     char* error,
     int error_capacity);
+SMS_EXPORT int sms_native_aot_lib_open(
+    const char* source,
+    std::int64_t* out_lib_id,
+    char* error,
+    int error_capacity);
+SMS_EXPORT int sms_native_aot_lib_dispatch(
+    std::int64_t lib_id,
+    const char* target,
+    const char* event,
+    char* error,
+    int error_capacity);
+SMS_EXPORT void sms_native_aot_lib_close(std::int64_t lib_id);
 }

@@ -29,12 +29,12 @@ func get_spec() -> Dictionary:
         "backing": "PanelContainer",
         "backing_native": "ForgeDockingContainerControl",  # C++ GDExtension class (TabContainer subclass)
         "properties": [
-            {"sml":"id", "type":"identifier", "default":"—"},
+            {"sml":"id", "type":"identifier", "default":"-"},
             {"sml":"dockSide", "type":"enum", "default":"center"},
             {"sml":"fixedWidth", "type":"int", "default":"240"},
             {"sml":"minFixedWidth", "type":"int", "default":"140"},
-            {"sml":"fixedHeight", "type":"int", "default":"—"},
-            {"sml":"minHeight", "type":"int", "default":"—"},
+            {"sml":"fixedHeight", "type":"int", "default":"-"},
+            {"sml":"minHeight", "type":"int", "default":"-"},
             {"sml":"minFixedHeight", "type":"int", "default":"80"},
             {"sml":"heightPercent", "type":"float", "default":"50"},
             {"sml":"flex", "type":"bool", "default":"false"},

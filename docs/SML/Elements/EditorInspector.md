@@ -19,7 +19,7 @@ Inherited signals are documented in: [ScrollContainer](ScrollContainer.md)
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| edited_object_changed | `on <id>.editedObjectChanged() { ... }` | — |
+| edited_object_changed | `on <id>.editedObjectChanged() { ... }` | - |
 | object_id_selected | `on <id>.objectIdSelected(id) { ... }` | int id |
 | property_deleted | `on <id>.propertyDeleted(property) { ... }` | string property |
 | property_edited | `on <id>.propertyEdited(property) { ... }` | string property |
@@ -27,7 +27,7 @@ Inherited signals are documented in: [ScrollContainer](ScrollContainer.md)
 | property_selected | `on <id>.propertySelected(property) { ... }` | string property |
 | property_toggled | `on <id>.propertyToggled(property, checked) { ... }` | string property, bool checked |
 | resource_selected | `on <id>.resourceSelected(resource, path) { ... }` | Object resource, string path |
-| restart_requested | `on <id>.restartRequested() { ... }` | — |
+| restart_requested | `on <id>.restartRequested() { ... }` | - |
 
 ## Runtime Actions
 
@@ -36,5 +36,5 @@ Inherited actions are documented in: [ScrollContainer](ScrollContainer.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_edited_object | `<id>.getEditedObject()` | — | Object |
-| get_selected_path | `<id>.getSelectedPath()` | — | string |
+| get_edited_object | `<id>.getEditedObject()` | - | Object |
+| get_selected_path | `<id>.getSelectedPath()` | - | string |

@@ -134,7 +134,7 @@ class ForgeDockingContainerControl : public TabContainer {
         {"right",    "rightbottom"},
         {"farright", "farrightbottom"},
     };
-    // All 8 side positions + center — always shown, disabled when no target
+    // All 8 side positions + center - always shown, disabled when no target
     static constexpr const char* ALL_POSITIONS[9] = {
         "farleft", "farleftbottom", "left", "leftbottom",
         "center",
@@ -258,7 +258,7 @@ public:
         target->set_visible(true);
 
         remove_child(content);
-        // TabContainer hides non-current tabs on remove — restore before re-adding
+        // TabContainer hides non-current tabs on remove - restore before re-adding
         content->set_visible(true);
         target->add_child(content);
         target->set_tab_title(target->get_tab_count() - 1, title);
@@ -273,7 +273,7 @@ public:
     }
 
     // -----------------------------------------------------------------------
-    // Make Floating — pops current tab into a native OS window
+    // Make Floating - pops current tab into a native OS window
     // -----------------------------------------------------------------------
     void _make_floating() {
         int idx = get_current_tab();
@@ -306,7 +306,7 @@ public:
         if (root->is_embedding_subwindows())
             root->set_embedding_subwindows(false);
 
-        // get_window() returns the Window node this control lives in — that is
+        // get_window() returns the Window node this control lives in - that is
         // _mainAppWindow, the real visible app window.  Making our float window
         // transient to it establishes the correct macOS parent/child relationship.
         Window* owner = get_window();
@@ -647,13 +647,13 @@ public:
         Ref<InputEventMouseButton> mb = event;
         if (mb.is_valid() && mb->get_button_index() == MouseButton::MOUSE_BUTTON_LEFT
                           && !mb->is_pressed() && overlay_h_idx_ == idx) {
-            // Godot sends release to the control that received the press — end drag here.
+            // Godot sends release to the control that received the press - end drag here.
             _end_drag();
             return;
         }
         if (mb.is_valid() && mb->get_button_index() == MouseButton::MOUSE_BUTTON_LEFT
                           && mb->is_pressed()) {
-            drag_target_dock_ = h_left_[idx];  // save reference — h_left_ is cleared each layout
+            drag_target_dock_ = h_left_[idx];  // save reference - h_left_ is cleared each layout
             float init_w = 0.f;
             if (drag_target_dock_) {
                 double fw = drag_target_dock_->get_fixed_width();
@@ -673,13 +673,13 @@ public:
         Ref<InputEventMouseButton> mb = event;
         if (mb.is_valid() && mb->get_button_index() == MouseButton::MOUSE_BUTTON_LEFT
                           && !mb->is_pressed() && overlay_v_idx_ == idx) {
-            // Godot sends release to the control that received the press — end drag here.
+            // Godot sends release to the control that received the press - end drag here.
             _end_drag();
             return;
         }
         if (mb.is_valid() && mb->get_button_index() == MouseButton::MOUSE_BUTTON_LEFT
                           && mb->is_pressed()) {
-            drag_target_dock_ = v_bot_[idx];  // save reference — v_bot_ is cleared each layout
+            drag_target_dock_ = v_bot_[idx];  // save reference - v_bot_ is cleared each layout
             float init_pct = 50.f;
             if (drag_target_dock_) {
                 float hp = (float)drag_target_dock_->get_height_percent();
@@ -693,7 +693,7 @@ public:
         }
     }
 
-    // Hover colours (not constexpr — Color has no constexpr constructor in godot-cpp)
+    // Hover colours (not constexpr - Color has no constexpr constructor in godot-cpp)
     static Color COL_NORMAL() { return Color(0.45f, 0.45f, 0.55f, 0.40f); }
     static Color COL_HOVER()  { return Color(0.30f, 0.55f, 0.90f, 0.35f); }
     static Color COL_DRAG()   { return Color(0.30f, 0.55f, 0.90f, 0.55f); }
@@ -1049,7 +1049,7 @@ private:
         for (int ci = 0; ci < 5; ++ci) {
             if (!has[ci]) continue;
 
-            // Horizontal handle between columns — always placed, min 4px, overlaid if no gap
+            // Horizontal handle between columns - always placed, min 4px, overlaid if no gap
             if (prev_vis >= 0) {
                 const float hw  = maxf(gap_px, 4.f);
                 const float hx  = (gap_px > 0.f) ? x : (x - hw * 0.5f);
@@ -1089,7 +1089,7 @@ private:
                 }
             } else {
                 float gap_y = layout_column(col_top[ci], col_bot[ci], col_rect, gap_px);
-                // Vertical handle for split columns — always placed, min 4px, overlaid if no gap
+                // Vertical handle for split columns - always placed, min 4px, overlaid if no gap
                 if (col_top[ci] && col_bot[ci] && gap_y >= 0.f) {
                     int vi = V_IDX[ci];
                     if (vi >= 0) {
@@ -1165,7 +1165,7 @@ private:
     DragState                     v_drag_[MAX_V]    = {};
     Vector2i                      window_base_min_size_ = Vector2i(0, 0);
     bool                          window_base_min_captured_ = false;
-    // Drag capture overlay — shown during resize drag to capture all mouse events.
+    // Drag capture overlay - shown during resize drag to capture all mouse events.
     ColorRect*                    drag_overlay_     = nullptr;
     int                           overlay_h_idx_    = -1;  // active h-drag index, -1 if none
     int                           overlay_v_idx_    = -1;  // active v-drag index, -1 if none
@@ -1173,7 +1173,7 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// ForgeWindowDragControl — transparent drag area that moves the OS window
+// ForgeWindowDragControl - transparent drag area that moves the OS window
 // ---------------------------------------------------------------------------
 
 class ForgeWindowDragControl : public Control {
@@ -1610,7 +1610,7 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// ForgeMarkdownContainer — VBoxContainer that renders a markdown string
+// ForgeMarkdownContainer - VBoxContainer that renders a markdown string
 // ---------------------------------------------------------------------------
 
 class ForgeMarkdownContainer : public VBoxContainer {
@@ -1638,7 +1638,7 @@ public:
 
     void set_base_font_size(double size) {
         base_font_size_ = (float)size;
-        // No lazy rebuild here — caller must call set_markdown again if needed.
+        // No lazy rebuild here - caller must call set_markdown again if needed.
     }
 
     void set_markdown(const String& text) {

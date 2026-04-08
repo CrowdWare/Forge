@@ -98,8 +98,8 @@ This page lists **only signals declared by `Object`**.
 
 | Godot Signal | SMS Event | Params |
 |-|-|-|
-| property_list_changed | `on <id>.propertyListChanged() { ... }` | — |
-| script_changed | `on <id>.scriptChanged() { ... }` | — |
+| property_list_changed | `on <id>.propertyListChanged() { ... }` | - |
+| script_changed | `on <id>.scriptChanged() { ... }` | - |
 
 ## Runtime Actions
 
@@ -107,23 +107,23 @@ This page lists **callable methods declared by `Object`**.
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| can_translate_messages | `<id>.canTranslateMessages()` | — | bool |
-| cancel_free | `<id>.cancelFree()` | — | void |
-| free | `<id>.free()` | — | void |
-| get_class | `<id>.getClass()` | — | string |
-| get_incoming_connections | `<id>.getIncomingConnections()` | — | Variant |
-| get_instance_id | `<id>.getInstanceId()` | — | int |
-| get_meta_list | `<id>.getMetaList()` | — | Variant |
-| get_method_list | `<id>.getMethodList()` | — | Variant |
-| get_property_list | `<id>.getPropertyList()` | — | Variant |
-| get_script | `<id>.getScript()` | — | void |
-| get_signal_list | `<id>.getSignalList()` | — | Variant |
-| get_translation_domain | `<id>.getTranslationDomain()` | — | Variant |
-| is_blocking_signals | `<id>.isBlockingSignals()` | — | bool |
+| can_translate_messages | `<id>.canTranslateMessages()` | - | bool |
+| cancel_free | `<id>.cancelFree()` | - | void |
+| free | `<id>.free()` | - | void |
+| get_class | `<id>.getClass()` | - | string |
+| get_incoming_connections | `<id>.getIncomingConnections()` | - | Variant |
+| get_instance_id | `<id>.getInstanceId()` | - | int |
+| get_meta_list | `<id>.getMetaList()` | - | Variant |
+| get_method_list | `<id>.getMethodList()` | - | Variant |
+| get_property_list | `<id>.getPropertyList()` | - | Variant |
+| get_script | `<id>.getScript()` | - | void |
+| get_signal_list | `<id>.getSignalList()` | - | Variant |
+| get_translation_domain | `<id>.getTranslationDomain()` | - | Variant |
+| is_blocking_signals | `<id>.isBlockingSignals()` | - | bool |
 | is_class | `<id>.isClass(class)` | string class | bool |
-| is_queued_for_deletion | `<id>.isQueuedForDeletion()` | — | bool |
+| is_queued_for_deletion | `<id>.isQueuedForDeletion()` | - | bool |
 | notification | `<id>.notification(what, reversed)` | int what, bool reversed | void |
-| notify_property_list_changed | `<id>.notifyPropertyListChanged()` | — | void |
+| notify_property_list_changed | `<id>.notifyPropertyListChanged()` | - | void |
 | set_block_signals | `<id>.setBlockSignals(enable)` | bool enable | void |
 | set_message_translation | `<id>.setMessageTranslation(enable)` | bool enable | void |
-| to_string | `<id>.toString()` | — | string |
+| to_string | `<id>.toString()` | - | string |

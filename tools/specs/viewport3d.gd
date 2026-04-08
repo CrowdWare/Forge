@@ -28,7 +28,7 @@ func get_spec() -> Dictionary:
         "name": "Viewport3D",
         "backing": "SubViewportContainer",
         "properties": [
-            {"sml":"id", "type":"identifier", "default":"—"},
+            {"sml":"id", "type":"identifier", "default":"-"},
             {"sml":"model", "type":"string(url)", "default":"\"\""},
             {"sml":"modelSource", "type":"string(url)", "default":"\"\""},
             {"sml":"animation", "type":"string(url)", "default":"\"\""},

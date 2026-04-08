@@ -3,7 +3,7 @@
 ## Goal
 Port `AssetCacheManager.cs` to C++ so that `ForgeRunner.Native` can fetch remote
 manifests + assets over HTTP/HTTPS, verify content hashes, store them in a local
-cache directory, and serve them to the UI builder — matching the C# behaviour.
+cache directory, and serve them to the UI builder - matching the C# behaviour.
 
 ## Context
 `ForgeRunner.Native/src/main.cpp` (1665 lines) already has download scaffolding
@@ -24,7 +24,7 @@ and cannot fetch `http://` / `https://` manifests at all.
 ### Cache Directory
 - Location: OS-appropriate cache dir (e.g. `~/.cache/forge-runner/assets/` on Linux/macOS,
   `%LOCALAPPDATA%\ForgeRunner\cache\` on Windows).
-- Index file: `cache/index.sml` — one entry per asset:
+- Index file: `cache/index.sml` - one entry per asset:
   `url`, `hash` (SHA-256 hex), `local_file`, `last_fetched`.
 - Atomic writes: write to `.tmp` → fsync → rename.
 
@@ -52,25 +52,25 @@ and cannot fetch `http://` / `https://` manifests at all.
 
 ## Implementation Status
 
-- [x] `forge_asset_cache.h` — API skeleton (AssetCache: resolve, store, sha256_of)
-- [x] `forge_asset_cache.cpp` — Full implementation:
+- [x] `forge_asset_cache.h` - API skeleton (AssetCache: resolve, store, sha256_of)
+- [x] `forge_asset_cache.cpp` - Full implementation:
   - `forge_cache_dir()` (OS-appropriate: XDG/HOME/.cache/forge-runner, LOCALAPPDATA)
   - `AssetCache::resolve()` with SHA-256 prefix normalization
-  - `AssetCache::store()` — atomic write + flat URL→hash-named index
-  - `AssetCache::sha256_of()` — via Godot `HashingContext`
-  - `load_index()` / `save_index()` — SML-format CacheIndex with atomic rename
-- [x] `forge_runner_main.cpp` — HTTP manifest support:
-  - `is_http_url()` — detect `http://` / `https://` URLs
-  - `show_loading_screen()` — built-in loading UI with ProgressBar
-  - `start_manifest_download()` — via Godot `HTTPRequest` node
-  - `on_manifest_downloaded()` — smlcore parse, manifest SHA check, delta list
-  - `start_next_asset_download()` — sequential asset download with hash-delta skip
-  - `on_asset_downloaded()` — atomic file save with 2 retry attempts on error
-  - `on_all_assets_ready()` — metadata save + `show_sml(entry_path)`
-  - `load_manifest_meta()` / `save_manifest_meta()` — per-app metadata.sml
-  - `normalize_asset_path()` — security: reject `..` traversal
-  - `save_file_atomic()` — write .tmp → rename
-- [x] `CMakeLists.txt` — forge_asset_cache.cpp added to GDExtension sources
+  - `AssetCache::store()` - atomic write + flat URL→hash-named index
+  - `AssetCache::sha256_of()` - via Godot `HashingContext`
+  - `load_index()` / `save_index()` - SML-format CacheIndex with atomic rename
+- [x] `forge_runner_main.cpp` - HTTP manifest support:
+  - `is_http_url()` - detect `http://` / `https://` URLs
+  - `show_loading_screen()` - built-in loading UI with ProgressBar
+  - `start_manifest_download()` - via Godot `HTTPRequest` node
+  - `on_manifest_downloaded()` - smlcore parse, manifest SHA check, delta list
+  - `start_next_asset_download()` - sequential asset download with hash-delta skip
+  - `on_asset_downloaded()` - atomic file save with 2 retry attempts on error
+  - `on_all_assets_ready()` - metadata save + `show_sml(entry_path)`
+  - `load_manifest_meta()` / `save_manifest_meta()` - per-app metadata.sml
+  - `normalize_asset_path()` - security: reject `..` traversal
+  - `save_file_atomic()` - write .tmp → rename
+- [x] `CMakeLists.txt` - forge_asset_cache.cpp added to GDExtension sources
 - [ ] Tests: mockup web server integration test
 
 ### Architecture Notes
@@ -80,7 +80,7 @@ and cannot fetch `http://` / `https://` manifests at all.
 - Delta download: second run skips unchanged files (manifest SHA + per-asset hash check)
 - `HTTPRequest` node used (Godot-native, no libcurl dependency)
 
-## Test Strategy — Mockup Web Server
+## Test Strategy - Mockup Web Server
 
 For unit / integration tests a lightweight mock HTTP server should be set up
 that serves static SML files and assets without requiring network access:
@@ -88,9 +88,9 @@ that serves static SML files and assets without requiring network access:
 - Use Python's built-in `http.server` (one-liner) or a tiny C++ or Go server.
 - Start it on a random port before each test run; shut it down after.
 - Serve a fixture directory (`tests/fixtures/remote_app/`) containing:
-  - `app.sml` — a minimal SML document
-  - `manifest.sml` — a manifest referencing a small image and a CSS-like layout
-  - `icon.png` — small test asset
+  - `app.sml` - a minimal SML document
+  - `manifest.sml` - a manifest referencing a small image and a CSS-like layout
+  - `icon.png` - small test asset
 - Test cases:
   1. First run: all files are downloaded and cached (index populated).
   2. Second run: no HTTP requests made (hashes match).

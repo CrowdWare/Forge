@@ -11,7 +11,7 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| use_top_left | useTopLeft | bool | — |
+| use_top_left | useTopLeft | bool | - |
 
 ## Events
 
@@ -28,7 +28,7 @@ Inherited actions are documented in: [Container](Container.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| is_using_top_left | `<id>.isUsingTopLeft()` | — | bool |
+| is_using_top_left | `<id>.isUsingTopLeft()` | - | bool |
 
 ## Attached Properties
 

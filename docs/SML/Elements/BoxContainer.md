@@ -18,8 +18,8 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| alignment | alignment | int | — |
-| vertical | vertical | bool | — |
+| alignment | alignment | int | - |
+| vertical | vertical | bool | - |
 
 ## Events
 

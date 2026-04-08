@@ -14,7 +14,7 @@ call stack via UI invoke callbacks. When this happens the engine recurses
 without limit on the C stack, causing an OS-level stack overflow before any
 SMS-level error is produced.
 
-### Crash scenario (ForgePoser — reproduced by the RED test)
+### Crash scenario (ForgePoser - reproduced by the RED test)
 
 ```
 sms_native_session_invoke("editor", "poseChanged", ...)
@@ -35,7 +35,7 @@ zsh: abort  ./run.sh poser
 Add a **per-session re-entrancy guard** to `sms_native_session_invoke` in
 `SMSCore.Native/src/sms_native.cpp`.
 
-### Option A — per-session flag (recommended)
+### Option A - per-session flag (recommended)
 
 Each `Session` object already exists at the call site. Add a `bool invoking`
 member, set it on entry, clear it on exit, and return an error if it is
@@ -58,7 +58,7 @@ int sms_native_session_invoke(int64_t session_id, ...) {
         // Return a classifiable error instead of recursing.
         snprintf(out_error, out_error_cap,
             "RuntimeError: re-entrant sms_native_session_invoke for session %" PRId64
-            " — UI callback triggered a new dispatch while a handler was executing "
+            " - UI callback triggered a new dispatch while a handler was executing "
             "(possible infinite loop in event handler).", session_id);
         return 1;
     }
@@ -84,7 +84,7 @@ InvokeGuard guard(s->invoking);
 // ... rest of invoke ...
 ```
 
-### Option B — thread_local depth counter (acceptable alternative)
+### Option B - thread_local depth counter (acceptable alternative)
 
 If per-session state is inconvenient, a `thread_local int` works as long as
 invocations are single-threaded (which they are):
@@ -115,7 +115,7 @@ that `forge::sms_error_requires_exit()` classifies it as a fatal error and
 ForgeRunner.Native terminates cleanly instead of entering an undefined state.
 
 ```cpp
-// forge_sms_error_policy.cpp — already handles this:
+// forge_sms_error_policy.cpp - already handles this:
 bool sms_error_requires_exit(const std::string& message) {
     if (message.find("RuntimeError:") != std::string::npos) return true;
     if (message.find("Stack overflow") != std::string::npos) return true;
@@ -163,7 +163,7 @@ ctest -R runner_integration_setKeyframe_cycle_unprotected --output-on-failure
 runaway cascades at the bridge level, but:
 
 1. The guard lives in **ForgeRunner.Native** (Godot extension), not in the
-   SMS engine itself — so any direct caller of `sms_native_session_invoke`
+   SMS engine itself - so any direct caller of `sms_native_session_invoke`
    (test harnesses, future hosts) bypasses it.
 2. 256 levels of `sms_native_session_invoke` frames on the C stack can
    overflow the OS stack before the counter reaches 256, because each

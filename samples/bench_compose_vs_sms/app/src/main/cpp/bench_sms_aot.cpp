@@ -2,7 +2,7 @@
 // SMS benchmark translated to native C++ (AOT path).
 // Matches kSmsBenchmarkSource in sms_bridge_jni.cpp exactly:
 //   fib(24), loopTest (10 000), nestedTest (25^3), mathCheck (2 000), stringBench (10 000).
-// No interpreter, no SMS runtime, no clang subprocess — compiled directly by the NDK.
+// No interpreter, no SMS runtime, no clang subprocess - compiled directly by the NDK.
 
 #include <cstdint>
 #include <string>

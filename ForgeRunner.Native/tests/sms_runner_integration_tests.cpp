@@ -30,7 +30,7 @@
 // guard, reproducing the exact scenarios that cause stack overflows at runtime
 // (e.g. the setKeyframe cycle in ForgePoser).
 //
-// No Godot dependency — links directly against sms_native + forge_sms_error_policy.
+// No Godot dependency - links directly against sms_native + forge_sms_error_policy.
 
 #include "../src/forge_sms_error_policy.h"
 #include "sml_document.h"
@@ -132,7 +132,7 @@ static MockUiState* g_mock = nullptr;
 static int mock_ui_get(const char* id, const char* prop,
                        char* out, int cap, char*, int) {
     const std::string prop_str = prop ? prop : "";
-    // ui.getObject() probes __exists — always return truthy so __ui_ref is created.
+    // ui.getObject() probes __exists - always return truthy so __ui_ref is created.
     if (prop_str == "__exists") {
         if (out && cap > 0) std::snprintf(out, static_cast<std::size_t>(cap), "1");
         return 0;
@@ -275,7 +275,7 @@ private:
 };
 
 // ==========================================================================
-// Dispatch Depth Guard — mirrors SmsBridge::dispatch_event without Godot
+// Dispatch Depth Guard - mirrors SmsBridge::dispatch_event without Godot
 // ==========================================================================
 
 static constexpr int kTestMaxDispatchDepth = 16;
@@ -315,7 +315,7 @@ static int          g_setKeyframe_calls = 0;
 static std::string  g_cycle_engine_error;
 
 // --------------------------------------------------------------------------
-// Unguarded re-entrancy state — used by test_setKeyframe_cycle_unprotected
+// Unguarded re-entrancy state - used by test_setKeyframe_cycle_unprotected
 //
 // Unlike mock_invoke_cycling this mock has NO depth guard of its own.
 // It only has a hard safety stopper (kUnguardedSafetyLimit) to prevent an
@@ -421,7 +421,7 @@ static int mock_invoke_cycling(const char* id, const char* method, const char* a
 // ==========================================================================
 
 // Baseline: SMS loads, event fires, property is set via mock callback.
-// SMS objects are string handles (e.g. var label = "label") — the engine
+// SMS objects are string handles (e.g. var label = "label") - the engine
 // routes method/property calls on strings through the UI callbacks.
 void test_basic_dispatch() {
     ScopedMockUi mock;
@@ -557,7 +557,7 @@ void test_setKeyframe_cycle_caught() {
 }
 
 // ---------------------------------------------------------------------------
-// RED TEST — turns GREEN after the engine fix described in:
+// RED TEST - turns GREEN after the engine fix described in:
 //   CWUP/tasks/sms_native_reentrant_invoke_guard.md
 //
 // What to implement (summary for Codex):
@@ -576,7 +576,7 @@ void test_setKeyframe_cycle_caught() {
 //         if (s->invoking) {
 //             snprintf(out_error, out_error_cap,
 //                 "RuntimeError: re-entrant sms_native_session_invoke for "
-//                 "session %" PRId64 " — a UI callback triggered a new "
+//                 "session %" PRId64 " - a UI callback triggered a new "
 //                 "dispatch while a handler was executing.", session_id);
 //             return 1;
 //         }
@@ -595,7 +595,7 @@ void test_setKeyframe_cycle_caught() {
 //
 // Why the existing kMaxSmsDispatchDepth guard is not enough:
 //   SmsBridge::dispatch_event in forge_runner_extension.cpp has a
-//   thread_local depth counter, but it lives in the Godot extension layer —
+//   thread_local depth counter, but it lives in the Godot extension layer -
 //   direct callers of sms_native_session_invoke (like this test harness)
 //   bypass it entirely. 256 nested C frames can also overflow the OS stack
 //   before the counter fires. The engine-level guard rejects on call #2.
@@ -623,7 +623,7 @@ void test_setKeyframe_cycle_unprotected() {
     g_cycle_session_id = session.id;
     struct Cleanup { ~Cleanup() { g_cycle_session_id = -1; } } cleanup;
 
-    // Fire the first dispatch — if the engine has no re-entrancy guard this
+    // Fire the first dispatch - if the engine has no re-entrancy guard this
     // recurses until the safety stopper fires; no error is ever returned.
     session.invoke("editor", "poseChanged", "[\"Spine\"]");
 

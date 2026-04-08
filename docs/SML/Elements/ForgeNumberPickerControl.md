@@ -27,7 +27,7 @@ Inherited actions are documented in: [LineEdit](LineEdit.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_numeric_value | `<id>.getNumericValue()` | — | float |
+| get_numeric_value | `<id>.getNumericValue()` | - | float |
 | set_numeric_config | `<id>.setNumericConfig(axis, unit, color, step, dragSensitivity, decimals)` | string axis, string unit, Color color, float step, float dragSensitivity, int decimals | void |
 | set_numeric_value | `<id>.setNumericValue(value)` | float value | void |
 

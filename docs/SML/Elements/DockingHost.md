@@ -11,14 +11,14 @@ Inherited properties are documented in: [Container](Container.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | gap | int | 0 |
-| — | endGap | int | 30 |
-| — | anchors | string | "" |
-| — | x | int | 0 |
-| — | y | int | 0 |
-| — | width | int | 0 |
-| — | height | int | 0 |
+| - | id | identifier | - |
+| - | gap | int | 0 |
+| - | endGap | int | 30 |
+| - | anchors | string | "" |
+| - | x | int | 0 |
+| - | y | int | 0 |
+| - | width | int | 0 |
+| - | height | int | 0 |
 
 > Layouts multiple DockingContainer children using dockSide/fixedWidth/flex semantics.
 > Supports side columns with optional bottom companions (farLeftBottom, leftBottom, rightBottom, farRightBottom).

@@ -61,7 +61,7 @@ public override void _Draw()
 
 ## Notes
 
-- Do **not** use `new Color(hexString)` in the SML parser — just store the raw hex string
+- Do **not** use `new Color(hexString)` in the SML parser - just store the raw hex string
   as meta and let `DockingContainerControl._Draw()` handle the conversion
 - The fallback (theme color) should remain functional for cases where `bgColor` is not set
 - Follow the existing patterns for property mapping and documentation in this codebase

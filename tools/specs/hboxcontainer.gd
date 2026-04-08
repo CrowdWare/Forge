@@ -28,10 +28,10 @@ func get_spec() -> Dictionary:
         "name": "HBoxContainer",
         "backing": "HBoxContainer",
         "properties": [
-            {"sml":"id",        "type":"identifier", "default":"—"},
+            {"sml":"id",        "type":"identifier", "default":"-"},
             {"sml":"alignment", "type":"enum: begin, center, end", "default":"begin",
              "notes":"Child alignment along the horizontal axis. Use unquoted values."},
-            {"sml":"spacing",   "type":"int",        "default":"—",
+            {"sml":"spacing",   "type":"int",        "default":"-",
              "notes":"Gap between child elements in pixels. Documented in runtime overrides."},
         ],
         "examples_sml": [

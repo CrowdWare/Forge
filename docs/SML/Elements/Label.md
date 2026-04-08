@@ -11,16 +11,16 @@ Inherited properties are documented in: [Control](Control.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| font_color (theme override) | color | color | — |
-| font_size (theme override) | fontSize | int | — |
-| font (theme override) | font | string(path) | — |
-| font (theme override, via Fonts resource block) | fontFace | string | — |
+| font_color (theme override) | color | color | - |
+| font_size (theme override) | fontSize | int | - |
+| font (theme override) | font | string(path) | - |
+| font (theme override, via Fonts resource block) | fontFace | string | - |
 | font (theme override, via Fonts resource block) | fontWeight | identifier or int | regular |
 | horizontal_alignment | horizontalAlignment | enum or int | 0 |
-| normal StyleBoxFlat (theme override) | bgColor | color | — |
-| normal StyleBoxFlat (theme override) | borderColor | color | — |
-| normal StyleBoxFlat (theme override) | borderWidth | int | — |
-| normal StyleBoxFlat (theme override) | borderRadius | int | — |
+| normal StyleBoxFlat (theme override) | bgColor | color | - |
+| normal StyleBoxFlat (theme override) | borderColor | color | - |
+| normal StyleBoxFlat (theme override) | borderWidth | int | - |
+| normal StyleBoxFlat (theme override) | borderRadius | int | - |
 
 ## Events
 
@@ -38,11 +38,11 @@ Inherited actions are documented in: [Control](Control.md)
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
 | get_character_bounds | `<id>.getCharacterBounds(pos)` | int pos | Variant |
-| get_line_count | `<id>.getLineCount()` | — | int |
+| get_line_count | `<id>.getLineCount()` | - | int |
 | get_line_height | `<id>.getLineHeight(line)` | int line | int |
-| get_total_character_count | `<id>.getTotalCharacterCount()` | — | int |
-| get_visible_line_count | `<id>.getVisibleLineCount()` | — | int |
-| is_clipping_text | `<id>.isClippingText()` | — | bool |
+| get_total_character_count | `<id>.getTotalCharacterCount()` | - | int |
+| get_visible_line_count | `<id>.getVisibleLineCount()` | - | int |
+| is_clipping_text | `<id>.isClippingText()` | - | bool |
 
 ## Attached Properties
 

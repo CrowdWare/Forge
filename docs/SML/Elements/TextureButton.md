@@ -17,14 +17,14 @@ Inherited properties are documented in: [BaseButton](BaseButton.md)
 
 | Godot Property | SML Property | Type | Default |
 |-|-|-|-|
-| — | id | identifier | — |
-| — | textureNormal | string(url) | "" |
-| — | textureHover | string(url) | "" |
-| — | texturePressed | string(url) | "" |
-| — | textureDisabled | string(url) | "" |
-| — | textureFocused | string(url) | "" |
-| — | disabled | bool | false |
-| — | ignoreTextureSize | bool | false |
+| - | id | identifier | - |
+| - | textureNormal | string(url) | "" |
+| - | textureHover | string(url) | "" |
+| - | texturePressed | string(url) | "" |
+| - | textureDisabled | string(url) | "" |
+| - | textureFocused | string(url) | "" |
+| - | disabled | bool | false |
+| - | ignoreTextureSize | bool | false |
 
 > A button that displays textures for each interaction state instead of a text label.
 > All texture properties accept the same path formats as TextureRect: res:/, user:/, appRes:/, file://, or absolute paths.
@@ -55,9 +55,9 @@ Inherited actions are documented in: [BaseButton](BaseButton.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
-| get_click_mask | `<id>.getClickMask()` | — | Object |
-| is_flipped_h | `<id>.isFlippedH()` | — | bool |
-| is_flipped_v | `<id>.isFlippedV()` | — | bool |
+| get_click_mask | `<id>.getClickMask()` | - | Object |
+| is_flipped_h | `<id>.isFlippedH()` | - | bool |
+| is_flipped_v | `<id>.isFlippedV()` | - | bool |
 
 ## Attached Properties
 
