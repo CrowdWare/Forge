@@ -1,4 +1,0 @@
-on treeview.itemSelected(path) {
-    var x = 1
-}
-1

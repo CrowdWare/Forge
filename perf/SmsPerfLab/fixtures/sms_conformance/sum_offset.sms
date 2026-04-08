@@ -1,7 +1,0 @@
-var n = 64
-var sum = 0
-var base = 7
-for (var i = 0; i < n; i = i + 1) {
-    sum = sum + i + base
-}
-sum

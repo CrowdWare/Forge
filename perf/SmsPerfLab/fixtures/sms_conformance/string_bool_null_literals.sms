@@ -1,8 +1,0 @@
-var a = "hello"
-var b = true
-var c = null
-if (b && a != "") {
-    1
-} else {
-    0
-}

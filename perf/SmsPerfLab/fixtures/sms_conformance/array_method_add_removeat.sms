@@ -1,4 +1,0 @@
-var list = [1, 2]
-list.add(3)
-var removed = list.removeAt(1)
-size(list) + removed + list[1]

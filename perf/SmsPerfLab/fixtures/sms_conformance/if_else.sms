@@ -1,9 +1,0 @@
-var x = 10
-var y = 20
-var result = 0
-if (x < y) {
-    result = 1
-} else {
-    result = 2
-}
-result

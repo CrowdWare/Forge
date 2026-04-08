@@ -1,9 +1,0 @@
-var rows = 12
-var cols = 5
-var sum = 0
-for (var r = 0; r < rows; r = r + 1) {
-    for (var c = 0; c < cols; c = c + 1) {
-        sum = sum + r + c
-    }
-}
-sum
