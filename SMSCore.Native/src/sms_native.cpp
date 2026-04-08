@@ -3269,6 +3269,10 @@ std::string capture_command_output(const std::string& command, int* out_exit_cod
     return output;
 }
 
+// Bump this when the LLVM IR codegen output changes (new instructions, fixed
+// bugs, new runtime functions) so that stale cached .so files are discarded.
+static constexpr const char* kCodegenVersion = "2026-04-08-3";
+
 std::string resolve_sms_aot_cache_dir() {
     const char* env_override = std::getenv("SMS_NATIVE_AOT_CACHE_DIR");
     if (env_override != nullptr && env_override[0] != '\0') {
@@ -4052,8 +4056,21 @@ static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
         const auto right_kind = llvm_expr_kind(c, b->right_.get());
         const bool string_op = (left_kind == LlvmValueKind::String || right_kind == LlvmValueKind::String);
         if (b->oper == TokenType::Plus && string_op) {
-            const auto left_ptr = llvm_expr_as_string_ptr(c, b->left_.get());
-            const auto right_ptr = llvm_expr_as_string_ptr(c, b->right_.get());
+            // Each operand must arrive as i8*. String operands use inttoptr (they
+            // already hold a char* cast to i64). Non-string operands (integers,
+            // Unknown) are converted to a decimal string via int_to_str first.
+            auto to_str_ptr = [&](const Expr* e, LlvmValueKind kind) -> std::string {
+                if (kind == LlvmValueKind::String) {
+                    return llvm_expr_as_string_ptr(c, e);
+                }
+                // Integer or Unknown: evaluate as i64, then convert to string.
+                const auto val = llvm_expr(c, e);
+                const auto ptr = llvm_t(c);
+                llvm_i(c, ptr + " = call i8* @sms_native_llvm_int_to_str(i64 " + val + ")");
+                return ptr;
+            };
+            const auto left_ptr  = to_str_ptr(b->left_.get(),  left_kind);
+            const auto right_ptr = to_str_ptr(b->right_.get(), right_kind);
             const auto concat_ptr = llvm_t(c);
             llvm_i(c, concat_ptr + " = call i8* @sms_native_llvm_string_concat(i8* " + left_ptr + ", i8* " + right_ptr + ")");
             const auto concat_i64 = llvm_t(c);
@@ -4061,8 +4078,15 @@ static std::string llvm_expr(LlvmCtx& c, const Expr* e) {
             return concat_i64;
         }
         if ((b->oper == TokenType::EqualEqual || b->oper == TokenType::BangEqual) && string_op) {
-            const auto left_ptr = llvm_expr_as_string_ptr(c, b->left_.get());
-            const auto right_ptr = llvm_expr_as_string_ptr(c, b->right_.get());
+            auto to_str_ptr2 = [&](const Expr* e, LlvmValueKind kind) -> std::string {
+                if (kind == LlvmValueKind::String) return llvm_expr_as_string_ptr(c, e);
+                const auto val = llvm_expr(c, e);
+                const auto ptr = llvm_t(c);
+                llvm_i(c, ptr + " = call i8* @sms_native_llvm_int_to_str(i64 " + val + ")");
+                return ptr;
+            };
+            const auto left_ptr  = to_str_ptr2(b->left_.get(),  left_kind);
+            const auto right_ptr = to_str_ptr2(b->right_.get(), right_kind);
             const auto eq_i64 = llvm_t(c);
             llvm_i(c, eq_i64 + " = call i64 @sms_native_llvm_string_eq(i8* " + left_ptr + ", i8* " + right_ptr + ")");
             if (b->oper == TokenType::EqualEqual) {
@@ -6031,7 +6055,7 @@ extern "C" int sms_native_aot_invoke(
             return 1;
         }
 
-        const std::string key = sha256_hex(std::string(source));
+        const std::string key = sha256_hex(std::string(source) + kCodegenVersion);
         const fs::path ir_path = cache_dir / (key + ".ll");
         const fs::path lib_path = cache_dir / (key + shared_lib_extension());
 
@@ -6128,7 +6152,7 @@ extern "C" SMS_EXPORT int sms_native_aot_lib_open(
             return 1;
         }
 
-        const std::string key = sha256_hex(std::string(source)) + "_lib";
+        const std::string key = sha256_hex(std::string(source) + kCodegenVersion) + "_lib";
         const fs::path ir_path  = cache_dir / (key + ".ll");
         const fs::path lib_path = cache_dir / (key + shared_lib_extension());
 

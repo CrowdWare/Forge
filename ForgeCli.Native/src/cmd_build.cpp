@@ -856,6 +856,10 @@ std::string android_export_preset(const fs::path& export_path,
         << "user_data_folder=\"" << package_name << "\"\n"
         << "permissions/internet=true\n"
         << "permissions/record_audio=true\n"
+        // Disable .NET/Mono embedding - C# plugins are desktop-only dev tools,
+        // Android needs none of them. Saves ~40-60 MB in the APK.
+        << "dotnet/embed_assemblies=false\n"
+        << "dotnet/enable_hotreload=false\n"
         << "plugins/ForgeSpeechBridge=true\n"
         << "plugins/ForgeSpeechBridge.gdap=true\n";
     for (const auto& plugin_name : plugin_names) {
