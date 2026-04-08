@@ -55,16 +55,31 @@ list(GET GODOT_CPP_LIB_CANDIDATES 0 GODOT_CPP_LIB)
 message(STATUS "Using godot-cpp library: ${GODOT_CPP_LIB}")
 
 # ---------------------------------------------------------------------------
-# SMLCore.Native (parser - compiled directly into the extension)
+# sml-cpp and sms-cpp (via FetchContent or local override)
+# Local development: cmake -DSML_CPP_DIR=/path/to/sml-cpp -DSMS_CPP_DIR=/path/to/sms-cpp ..
 # ---------------------------------------------------------------------------
-set(SMLCORE_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMLCore.Native")
-set(SMSCORE_NATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SMSCore.Native")
+include(FetchContent)
 
-if(NOT EXISTS "${SMLCORE_NATIVE_DIR}/include/sml_document.h")
-    message(FATAL_ERROR "SMLCore.Native not found at '${SMLCORE_NATIVE_DIR}'.")
+if(DEFINED SML_CPP_DIR AND EXISTS "${SML_CPP_DIR}")
+    message(STATUS "sml-cpp: using local override at ${SML_CPP_DIR}")
+    add_subdirectory("${SML_CPP_DIR}" "${CMAKE_BINARY_DIR}/sml-cpp-build")
+else()
+    FetchContent_Declare(sml-cpp
+        GIT_REPOSITORY https://github.com/Artanidos/sml-cpp.git
+        GIT_TAG main
+    )
+    FetchContent_MakeAvailable(sml-cpp)
 endif()
-if(NOT EXISTS "${SMSCORE_NATIVE_DIR}/include/sms_native.h")
-    message(FATAL_ERROR "SMSCore.Native not found at '${SMSCORE_NATIVE_DIR}'.")
+
+if(DEFINED SMS_CPP_DIR AND EXISTS "${SMS_CPP_DIR}")
+    message(STATUS "sms-cpp: using local override at ${SMS_CPP_DIR}")
+    add_subdirectory("${SMS_CPP_DIR}" "${CMAKE_BINARY_DIR}/sms-cpp-build")
+else()
+    FetchContent_Declare(sms-cpp
+        GIT_REPOSITORY https://github.com/Artanidos/sms-cpp.git
+        GIT_TAG main
+    )
+    FetchContent_MakeAvailable(sms-cpp)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -79,25 +94,23 @@ add_library(forge_runner_native SHARED
     src/forge_sms_error_policy.cpp
     src/forge_sms_bridge.cpp
     src/forge_ui_builder.cpp
-    "${SMLCORE_NATIVE_DIR}/src/smlcore_native.cpp"
+)
+
+target_link_libraries(forge_runner_native PRIVATE
+    smlcore_native_static
+    "${GODOT_CPP_LIB}"
 )
 
 if(ANDROID)
-    target_sources(forge_runner_native PRIVATE
-        "${SMSCORE_NATIVE_DIR}/src/sms_native.cpp"
-    )
+    target_link_libraries(forge_runner_native PRIVATE sms_native_static)
 endif()
 
 target_include_directories(forge_runner_native PRIVATE
     "${GODOT_CPP_INCLUDE_DIR}"
     "${GODOT_CPP_GEN_DIR}/include"
     "${GODOT_CPP_BINDING_DIR}"
-    "${SMLCORE_NATIVE_DIR}/include"
-    "${SMSCORE_NATIVE_DIR}/include"
     "src"
 )
-
-target_link_libraries(forge_runner_native PRIVATE "${GODOT_CPP_LIB}")
 
 if(APPLE)
     target_link_options(forge_runner_native PRIVATE "-Wl,-undefined,dynamic_lookup")
@@ -164,45 +177,37 @@ if(BUILD_TESTING)
     # Reproduces stack overflow scenarios (e.g. setKeyframe cycle in ForgePoser).
     # No Godot dependency - links sms_native sources directly.
     # ---------------------------------------------------------------------------
-    set(SMS_NATIVE_DIR "${SMSCORE_NATIVE_DIR}")
+    add_executable(forge_runner_native_sms_integration_tests
+        tests/sms_runner_integration_tests.cpp
+        src/forge_sms_error_policy.cpp
+    )
+    target_include_directories(forge_runner_native_sms_integration_tests PRIVATE
+        "src"
+    )
+    target_link_libraries(forge_runner_native_sms_integration_tests PRIVATE
+        sms_native_static
+    )
 
-    if(EXISTS "${SMS_NATIVE_DIR}/src/sms_native.cpp")
-        add_executable(forge_runner_native_sms_integration_tests
-            tests/sms_runner_integration_tests.cpp
-            src/forge_sms_error_policy.cpp
-            "${SMS_NATIVE_DIR}/src/sms_native.cpp"
-            "${SMLCORE_NATIVE_DIR}/src/smlcore_native.cpp"
-        )
+    add_test(NAME forge_runner_native_sms_integration_tests
+        COMMAND forge_runner_native_sms_integration_tests)
 
-        target_include_directories(forge_runner_native_sms_integration_tests PRIVATE
-            "${SMS_NATIVE_DIR}/include"
-            "${SMLCORE_NATIVE_DIR}/include"
-            "src"
-        )
-
-        add_test(NAME forge_runner_native_sms_integration_tests
-            COMMAND forge_runner_native_sms_integration_tests)
-
-        set(FRN_INTEGRATION_CASES
-            runner_integration_basic_dispatch
-            runner_integration_no_handler_is_silent
-            runner_integration_direct_script_recursion_caught
-            runner_integration_dispatch_depth_guard_fires
-            runner_integration_setKeyframe_cycle_caught
-            runner_integration_setKeyframe_cycle_unprotected
-            runner_integration_sequential_dispatches_ok
-            runner_integration_error_policy_on_overflow
-            runner_integration_property_get_set_round_trip
-            runner_sml_known_id_accessible
-            runner_sml_unknown_id_is_null
-            runner_sml_initial_attribute_readable
-            runner_sml_button_click_updates_label
-        )
-        foreach(CASE_NAME IN LISTS FRN_INTEGRATION_CASES)
-            add_test(NAME forge_runner_native_${CASE_NAME}
-                COMMAND forge_runner_native_sms_integration_tests ${CASE_NAME})
-        endforeach()
-    else()
-        message(WARNING "SMSCore.Native not found - skipping SMS integration tests.")
-    endif()
+    set(FRN_INTEGRATION_CASES
+        runner_integration_basic_dispatch
+        runner_integration_no_handler_is_silent
+        runner_integration_direct_script_recursion_caught
+        runner_integration_dispatch_depth_guard_fires
+        runner_integration_setKeyframe_cycle_caught
+        runner_integration_setKeyframe_cycle_unprotected
+        runner_integration_sequential_dispatches_ok
+        runner_integration_error_policy_on_overflow
+        runner_integration_property_get_set_round_trip
+        runner_sml_known_id_accessible
+        runner_sml_unknown_id_is_null
+        runner_sml_initial_attribute_readable
+        runner_sml_button_click_updates_label
+    )
+    foreach(CASE_NAME IN LISTS FRN_INTEGRATION_CASES)
+        add_test(NAME forge_runner_native_${CASE_NAME}
+            COMMAND forge_runner_native_sms_integration_tests ${CASE_NAME})
+    endforeach()
 endif()
