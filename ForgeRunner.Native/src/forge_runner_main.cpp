@@ -507,7 +507,7 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
     }
     {
         static constexpr std::string_view kAhimsaComments[] = {
-            "// Do not harm any living being.",
+            "// Do no harm to any living being.",
             "// Tu keinem Lebewesen Leid an.",
             "// Ne dama\xc4\x9du iun ajn vivantan esta\xc4\xb5on.",
         };
@@ -516,7 +516,7 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
             if (std::string_view(script_source).substr(0, c.size()) == c) { has_ahimsa = true; break; }
         }
         if (has_ahimsa) {
-            UtilityFunctions::print(String::utf8("[ForgeRunner.Native] \xf0\x9f\x8c\xb1 Ahimsa - Do not harm any living being."));
+            UtilityFunctions::print(String::utf8("[ForgeRunner.Native] \xf0\x9f\x8c\xb1 Ahimsa - Do no harm to any living being."));
         }
     }
     UtilityFunctions::print(String(("[ForgeRunner.Native] SMS session started: " + script_path).c_str()));
