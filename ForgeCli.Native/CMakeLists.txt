@@ -16,7 +16,7 @@ if(DEFINED SML_CPP_DIR AND EXISTS "${SML_CPP_DIR}")
     add_subdirectory("${SML_CPP_DIR}" "${CMAKE_BINARY_DIR}/sml-cpp-build")
 else()
     FetchContent_Declare(sml-cpp
-        GIT_REPOSITORY https://github.com/Artanidos/sml-cpp.git
+        GIT_REPOSITORY https://codeberg.org/CrowdWare/sml-cpp.git
         GIT_TAG main
     )
     FetchContent_MakeAvailable(sml-cpp)
@@ -27,7 +27,7 @@ if(DEFINED SMS_CPP_DIR AND EXISTS "${SMS_CPP_DIR}")
     add_subdirectory("${SMS_CPP_DIR}" "${CMAKE_BINARY_DIR}/sms-cpp-build")
 else()
     FetchContent_Declare(sms-cpp
-        GIT_REPOSITORY https://github.com/Artanidos/sms-cpp.git
+        GIT_REPOSITORY https://codeberg.org/CrowdWare/sms-cpp.git
         GIT_TAG main
     )
     FetchContent_MakeAvailable(sms-cpp)
