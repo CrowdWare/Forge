@@ -841,7 +841,7 @@ std::string android_export_preset(const fs::path& export_path,
         << "custom_template/release=\"\"\n"
         << "gradle_build/use_gradle_build=" << (use_gradle_build ? "true" : "false") << "\n"
         << "gradle_build/export_format=0\n"
-        << "architectures/armeabi-v7a=true\n"
+        << "architectures/armeabi-v7a=false\n"
         << "architectures/arm64-v8a=true\n"
         << "architectures/x86_64=false\n"
         << "package/unique_name=\"" << package_name << "\"\n"
