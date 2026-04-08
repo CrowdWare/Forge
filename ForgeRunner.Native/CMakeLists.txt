@@ -101,6 +101,11 @@ target_link_libraries(forge_runner_native PRIVATE
     "${GODOT_CPP_LIB}"
 )
 
+# sms_native.h is needed for type definitions (dynamic loading on non-Android)
+target_include_directories(forge_runner_native PRIVATE
+    $<TARGET_PROPERTY:sms_native_static,INTERFACE_INCLUDE_DIRECTORIES>
+)
+
 if(ANDROID)
     target_link_libraries(forge_runner_native PRIVATE sms_native_static)
 endif()
@@ -183,6 +188,8 @@ if(BUILD_TESTING)
     )
     target_include_directories(forge_runner_native_sms_integration_tests PRIVATE
         "src"
+        $<TARGET_PROPERTY:sms_native_static,INTERFACE_INCLUDE_DIRECTORIES>
+        $<TARGET_PROPERTY:smlcore_native_static,INTERFACE_INCLUDE_DIRECTORIES>
     )
     target_link_libraries(forge_runner_native_sms_integration_tests PRIVATE
         sms_native_static

@@ -5,6 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Collect all shared libraries (from FetchContent/add_subdirectory too) in
+# the build root so that SMS_NATIVE_LIB_DIR / SML_NATIVE_LIB_DIR can point
+# to a single, predictable directory.
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
 # ---------------------------------------------------------------------------
 # sml-cpp and sms-cpp (via FetchContent or local override)
 # Local development: cmake -DSML_CPP_DIR=/path/to/sml-cpp -DSMS_CPP_DIR=/path/to/sms-cpp ..

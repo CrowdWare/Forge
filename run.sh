@@ -143,7 +143,7 @@ Usage:
                              Build Android apk via ForgeCli.Native (wraps 'forgecli-native build android')
   ./run.sh build-android-autosign [forgecli-build-args]
                              Build Android apk and force local test signing config
-  ./run.sh test               Run native tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)
+  ./run.sh test               Run native tests (ForgeRunner.Native)
   ./run.sh clean              Remove native build/dist folders
   ./run.sh pin <file-or-dir> [--name <n>]
                              Pin a file or directory to IPFS via Pinata (requires PINATA_JWT env var)
@@ -243,8 +243,6 @@ run_forgecli_build_target() {
   local target="$1"
   shift || true
 
-  build_native_lib "SMLCore.Native" "$REPO_ROOT/SMLCore.Native" "$REPO_ROOT/SMLCore.Native/build" true
-  build_native_lib "SMSCore.Native" "$REPO_ROOT/SMSCore.Native" "$REPO_ROOT/SMSCore.Native/build" true
   build_native_lib "ForgeCli.Native" "$REPO_ROOT/ForgeCli.Native" "$REPO_ROOT/ForgeCli.Native/build" false
   build_forge_runner_native_host
 
@@ -276,8 +274,8 @@ run_forgecli_build_target() {
 
   local default_project="$REPO_ROOT/samples/${target}_demo"
   echo "Running forgecli build ${target}..."
-  SML_NATIVE_LIB_DIR="$REPO_ROOT/SMLCore.Native/build" \
-  SMS_NATIVE_LIB_DIR="$REPO_ROOT/SMSCore.Native/build" \
+  SML_NATIVE_LIB_DIR="$REPO_ROOT/ForgeCli.Native/build" \
+  SMS_NATIVE_LIB_DIR="$REPO_ROOT/ForgeCli.Native/build" \
   FORGE_HOST_PROJECT_DIR="$REPO_ROOT/ForgeRunner.Native/host" \
   FORGE_NATIVE_LIB_DIR="$native_lib_dir" \
     "$forgecli_bin" build "$target" --project "$default_project" "$@"
@@ -563,7 +561,6 @@ build_forge_runner_native_android() {
   fi
 
   local frn_dir="$REPO_ROOT/ForgeRunner.Native"
-  local sms_dir="$REPO_ROOT/SMSCore.Native"
   local toolchain_file="$ndk_root/build/cmake/android.toolchain.cmake"
   if [[ ! -f "$toolchain_file" ]]; then
     echo "ERROR: Android toolchain file not found: $toolchain_file" >&2
@@ -572,7 +569,7 @@ build_forge_runner_native_android() {
 
   local abi=""
   local build_dir=""
-  for abi in arm64-v8a armeabi-v7a; do
+  for abi in arm64-v8a; do
     build_dir="$frn_dir/build-android/$abi"
     mkdir -p "$build_dir"
     echo "Configuring ForgeRunner.Native Android ($abi)..."
@@ -585,25 +582,6 @@ build_forge_runner_native_android() {
       -DANDROID_PLATFORM=android-24
     echo "Building ForgeRunner.Native Android ($abi)..."
     cmake --build "$build_dir" --config Release --target forge_runner_native
-
-    local sms_build_dir="$sms_dir/build-android/$abi"
-    mkdir -p "$sms_build_dir"
-    echo "Configuring SMSCore.Native Android ($abi)..."
-    cmake -S "$sms_dir" -B "$sms_build_dir" \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_TESTING=OFF \
-      -DCMAKE_TOOLCHAIN_FILE="$toolchain_file" \
-      -DANDROID_ABI="$abi" \
-      -DANDROID_PLATFORM=android-24
-    echo "Building SMSCore.Native Android ($abi)..."
-    cmake --build "$sms_build_dir" --config Release --target sms_native
-
-    if [[ -f "$sms_build_dir/libsms_native.so" ]]; then
-      cp "$sms_build_dir/libsms_native.so" "$build_dir/libsms_native.so"
-    else
-      echo "ERROR: SMSCore.Native Android artifact not found: $sms_build_dir/libsms_native.so" >&2
-      return 1
-    fi
   done
 
   return 0
@@ -769,12 +747,12 @@ if [[ -z "$MODE" ]]; then
   echo "  5) remote-default  -> Hosted Default (AppServer)"
   echo "  6) remote-designer -> Hosted ForgeDesigner (AppServer)"
   echo "  7) docs            -> SML/SMS Docs generieren (headless Godot)"
-  echo "  8) build           -> Native Stack bauen (SMLCore.Native, SMSCore.Native, ForgeCli.Native, ForgeRunner.Native)"
+  echo "  8) build           -> Native Stack bauen (ForgeCli.Native, ForgeRunner.Native)"
   echo "  9) build-host      -> nur ForgeRunner.Native bauen"
   echo " 10) build-mac       -> forgecli build mac (inkl. prerequisites)"
   echo " 11) build-android   -> forgecli build android (inkl. prerequisites)"
   echo " 12) build-android-autosign -> forgecli build android mit lokalem Test-Signing"
-  echo " 13) test            -> Native Tests (SMLCore.Native + SMSCore.Native + ForgeRunner.Native)"
+  echo " 13) test            -> Native Tests (ForgeRunner.Native)"
   echo " 14) clean           -> Native Build-Artefakte entfernen"
   echo " 15) pub             -> Lokaler Publish-Override (run.local.sh)"
   echo " 16) help            -> Hilfe anzeigen"
@@ -886,8 +864,6 @@ case "$MODE" in
     echo "Documentation generation completed."
     ;;
   build|build-native)
-    build_native_lib "SMLCore.Native" "$REPO_ROOT/SMLCore.Native" "$REPO_ROOT/SMLCore.Native/build" true
-    build_native_lib "SMSCore.Native" "$REPO_ROOT/SMSCore.Native" "$REPO_ROOT/SMSCore.Native/build" true
     build_native_lib "ForgeCli.Native" "$REPO_ROOT/ForgeCli.Native" "$REPO_ROOT/ForgeCli.Native/build" false
     build_forge_runner_native_host
     ;;
@@ -912,33 +888,18 @@ case "$MODE" in
     run_forgecli_build_target "android" "$@"
     ;;
   test|test-native)
-    if [[ ! -f "$REPO_ROOT/SMLCore.Native/build/CTestTestfile.cmake" ]]; then
-      echo "ERROR: SMLCore.Native tests are not configured. Run './run.sh build' first." >&2
-      exit 1
-    fi
-    if [[ ! -f "$REPO_ROOT/SMSCore.Native/build/CTestTestfile.cmake" ]]; then
-      echo "ERROR: SMSCore.Native tests are not configured. Run './run.sh build' first." >&2
-      exit 1
-    fi
     if [[ ! -f "$REPO_ROOT/ForgeRunner.Native/build/CTestTestfile.cmake" ]]; then
       echo "ERROR: ForgeRunner.Native tests are not configured. Run './run.sh build' first." >&2
       exit 1
     fi
 
-    echo "Running SMLCore.Native spec tests..."
-    ctest --test-dir "$REPO_ROOT/SMLCore.Native/build" --output-on-failure
-
-    echo "Running SMSCore.Native spec tests..."
-    ctest --test-dir "$REPO_ROOT/SMSCore.Native/build" --output-on-failure
-
     echo "Running ForgeRunner.Native tests..."
     ctest --test-dir "$REPO_ROOT/ForgeRunner.Native/build" --output-on-failure
     ;;
   clean)
-    rm -rf "$REPO_ROOT/SMLCore.Native/build" \
-           "$REPO_ROOT/SMSCore.Native/build" \
-           "$REPO_ROOT/ForgeCli.Native/build" \
+    rm -rf "$REPO_ROOT/ForgeCli.Native/build" \
            "$REPO_ROOT/ForgeRunner.Native/build" \
+           "$REPO_ROOT/ForgeRunner.Native/build-android" \
            "$REPO_ROOT/ForgeRunner.Native/dist"
     echo "Native build artifacts cleaned."
     ;;
