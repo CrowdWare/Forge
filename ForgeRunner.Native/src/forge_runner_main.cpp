@@ -40,6 +40,9 @@
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/file_dialog.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/canvas_layer.hpp>
+#include <godot_cpp/classes/color_rect.hpp>
+#include <godot_cpp/classes/input_event_mouse_button.hpp>
 #include <godot_cpp/classes/h_box_container.hpp>
 #include <godot_cpp/classes/http_request.hpp>
 #include <godot_cpp/classes/item_list.hpp>
@@ -114,18 +117,49 @@ void ForgeRunnerNativeMain::_ready() {
     g_sms_main_instance = this;
     forge::set_ui_open_dialog_hook(&sms_open_dialog_hook);
 
+    // Ensure the cache dir is writable: use Godot's user data dir as XDG_CACHE_HOME
+    // when XDG_CACHE_HOME is not already set. Critical on Android where $HOME is not
+    // the app-writable path and /tmp is not accessible.
+    if (!std::getenv("XDG_CACHE_HOME") || std::getenv("XDG_CACHE_HOME")[0] == '\0') {
+        const String godot_user_path = ProjectSettings::get_singleton()->globalize_path("user://");
+        if (!godot_user_path.is_empty()) {
+            const std::string cache_base = godot_user_path.utf8().get_data();
+#if defined(_WIN32)
+            _putenv_s("XDG_CACHE_HOME", cache_base.c_str());
+#else
+            setenv("XDG_CACHE_HOME", cache_base.c_str(), 0);
+#endif
+            UtilityFunctions::print(String(
+                ("[ForgeRunner.Native] Cache dir: " + cache_base + "/forge-runner").c_str()));
+        }
+    }
+
     if (Viewport* vp = get_viewport()) {
         vp->connect("size_changed", callable_mp(this, &ForgeRunnerNativeMain::on_viewport_size_changed));
     }
 
     const char* env_url = std::getenv("FORGE_RUNNER_URL");
-    if (!env_url || env_url[0] == '\0') {
+    std::string url;
+    if (env_url && env_url[0] != '\0') {
+        url = env_url;
+    } else {
+        // Check for a dev-build config file bundled as res://forge_dev_url.txt.
+        // Written by forgecli when FORGE_DEV_URL is set at build time.
+        const std::string dev_url_file = load_file("res://forge_dev_url.txt");
+        if (!dev_url_file.empty()) {
+            // Trim whitespace / newlines
+            url = dev_url_file;
+            while (!url.empty() && (url.back() == '\n' || url.back() == '\r' || url.back() == ' '))
+                url.pop_back();
+            UtilityFunctions::print(String(
+                ("[ForgeRunner.Native] Dev URL from forge_dev_url.txt: " + url).c_str()));
+        }
+    }
+    if (url.empty()) {
         UtilityFunctions::push_warning("[ForgeRunner.Native] FORGE_RUNNER_URL is not set. Falling back to res:/app.sml.");
         show_sml("res:/app.sml");
         return;
     }
-
-    const std::string url(env_url);
 
     if (is_http_url(url)) {
         show_loading_screen();
@@ -348,8 +382,125 @@ void ForgeRunnerNativeMain::show_error(const std::string& msg) {
     lbl->set_anchor_and_offset(SIDE_RIGHT,  1.0f, -16.0f);
     lbl->set_anchor_and_offset(SIDE_BOTTOM, 1.0f, -16.0f);
     lbl->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+    lbl->add_theme_font_size_override("font_size", 36);
     add_child(lbl);
     content_root_ = lbl;
+}
+
+// Show a Guru Meditation overlay for SMS errors (inspired by ForgeCMS 404 style).
+// Uses explicit pixel positions from the viewport rect so the panel is properly
+// centered even when hosted inside a CanvasLayer (anchors don't resolve there).
+// The UI stays visible underneath. Tap anywhere to dismiss.
+void ForgeRunnerNativeMain::show_sms_guru(const std::string& msg) {
+    if (sms_toast_layer_) {
+        sms_toast_layer_->queue_free();
+        sms_toast_layer_ = nullptr;
+    }
+
+    auto* layer = memnew(CanvasLayer);
+    layer->set_layer(128);
+    add_child(layer);
+    sms_toast_layer_ = layer;
+
+    const Vector2 vp = get_viewport()->get_visible_rect().size;
+
+    // Full-screen clickable overlay - intercepts all taps
+    auto* overlay = memnew(Control);
+    overlay->set_position(Vector2(0.0f, 0.0f));
+    overlay->set_size(vp);
+    overlay->set_mouse_filter(Control::MOUSE_FILTER_STOP);
+    overlay->connect("gui_input", callable_mp(this, &ForgeRunnerNativeMain::on_sms_guru_input));
+    layer->add_child(overlay);
+
+    // Dark vignette (#1a0a00 style)
+    auto* dim = memnew(ColorRect);
+    dim->set_position(Vector2(0.0f, 0.0f));
+    dim->set_size(vp);
+    dim->set_color(Color(0.102f, 0.039f, 0.0f, 0.94f));
+    dim->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    overlay->add_child(dim);
+
+    // Panel: 2/3 of screen, centered
+    const float pw  = vp.x * 0.667f;
+    const float ph  = vp.y * 0.667f;
+    const float px  = (vp.x - pw) * 0.5f;
+    const float py  = (vp.y - ph) * 0.5f;
+    const float pad = 28.0f;
+    const float lw  = pw - 2.0f * pad;   // label width
+
+    // Panel background: rgba(160,40,10) matching ForgeCMS 404
+    auto* panel = memnew(ColorRect);
+    panel->set_position(Vector2(px, py));
+    panel->set_size(Vector2(pw, ph));
+    panel->set_color(Color(160.0f / 255.0f, 40.0f / 255.0f, 10.0f / 255.0f, 0.92f));
+    panel->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    overlay->add_child(panel);
+
+    float y = py + pad;
+
+    // "Software Failure. Press left mouse button to continue."
+    auto* header = memnew(Label);
+    header->set_text("Software Failure.");
+    header->set_position(Vector2(px + pad, y));
+    header->set_size(Vector2(lw, 96.0f));
+    header->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+    header->add_theme_color_override("font_color", Color(1.0f, 1.0f, 1.0f, 0.85f));
+    header->add_theme_font_size_override("font_size", 36);
+    header->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+    header->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    overlay->add_child(header);
+    y += 108.0f;
+
+    // "Guru Meditation" - bold title
+    auto* title = memnew(Label);
+    title->set_text("Guru Meditation");
+    title->set_position(Vector2(px + pad, y));
+    title->set_size(Vector2(lw, 80.0f));
+    title->add_theme_color_override("font_color", Color(1.0f, 1.0f, 1.0f, 1.0f));
+    title->add_theme_font_size_override("font_size", 68);
+    title->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+    title->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    overlay->add_child(title);
+    y += 92.0f;
+
+    // Error message (rest of panel height minus hint row)
+    const float hint_h = 56.0f;
+    const float err_h  = (py + ph - pad - hint_h) - y;
+    auto* err_lbl = memnew(Label);
+    err_lbl->set_text(String(msg.c_str()));
+    err_lbl->set_position(Vector2(px + pad, y));
+    err_lbl->set_size(Vector2(lw, err_h));
+    err_lbl->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+    err_lbl->add_theme_color_override("font_color", Color(1.0f, 0.95f, 0.80f, 0.9f));
+    err_lbl->add_theme_font_size_override("font_size", 44);
+    err_lbl->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+    err_lbl->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    overlay->add_child(err_lbl);
+
+    // "Tap screen to dismiss" - amber, bottom of panel
+    auto* hint = memnew(Label);
+    hint->set_text("Tap screen to dismiss");
+    hint->set_position(Vector2(px + pad, py + ph - pad - hint_h));
+    hint->set_size(Vector2(lw, hint_h));
+    hint->add_theme_color_override("font_color", Color(1.0f, 150.0f / 255.0f, 50.0f / 255.0f, 0.9f));
+    hint->add_theme_font_size_override("font_size", 36);
+    hint->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+    hint->set_mouse_filter(Control::MOUSE_FILTER_IGNORE);
+    overlay->add_child(hint);
+}
+
+void ForgeRunnerNativeMain::on_sms_guru_input(Ref<InputEvent> event) {
+    Ref<InputEventMouseButton> mb = event;
+    if (mb.is_valid() && mb->is_pressed()) {
+        on_sms_guru_dismissed();
+    }
+}
+
+void ForgeRunnerNativeMain::on_sms_guru_dismissed() {
+    if (sms_toast_layer_) {
+        sms_toast_layer_->queue_free();
+        sms_toast_layer_ = nullptr;
+    }
 }
 
 void ForgeRunnerNativeMain::on_splash_timeout() {
@@ -392,7 +543,22 @@ void ForgeRunnerNativeMain::start_sms(const std::string& sml_path, const std::st
     if (!sms_bridge_.load(repo_root)) return;
 
     sms_session_ = sms_bridge_.start_session_from_source(script_source, script_path);
-    if (sms_session_ < 0) return;
+    if (sms_session_ < 0) {
+        // Session failed - show Guru Meditation so the user sees the error,
+        // but the UI layout remains visible for visual testing.
+        const std::string label = script_path.empty() ? "unknown" : script_path.substr(
+            script_path.find_last_of("/\\") != std::string::npos
+                ? script_path.find_last_of("/\\") + 1 : 0);
+        const std::string err = sms_bridge_.last_error();
+        const std::string guru_msg = label + "\n\n" + (err.empty() ? "Session start failed." : err);
+        show_sms_guru(guru_msg);
+        return;
+    }
+    // Clear any previous Guru Meditation - scripts are running fine
+    if (sms_toast_layer_) {
+        sms_toast_layer_->queue_free();
+        sms_toast_layer_ = nullptr;
+    }
 
     popup_item_id_map_.clear();
     popup_item_index_to_id_map_.clear();
@@ -995,6 +1161,7 @@ void ForgeRunnerNativeMain::show_loading_screen() {
     auto* lbl = memnew(Label);
     lbl->set_text("Loading application...");
     lbl->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+    lbl->add_theme_font_size_override("font_size", 36);
     vbox->add_child(lbl);
 
     auto* progress = memnew(ProgressBar);
@@ -1055,6 +1222,11 @@ void ForgeRunnerNativeMain::on_manifest_downloaded(int result, int code,
             const std::string cached_entry_path =
                 per_manifest_dir_ + "/files/" + cached_entry;
             if (fs::exists(cached_entry_path)) {
+                if (is_polling_) {
+                    // Server temporarily unreachable during poll - silently retry
+                    if (dev_poll_timer_) dev_poll_timer_->start();
+                    return;
+                }
                 UtilityFunctions::push_warning(String(
                     ("[ForgeRunner.Native] Manifest download failed (HTTP " +
                      std::to_string(code) + "), using cached version.").c_str()));
@@ -1083,8 +1255,14 @@ void ForgeRunnerNativeMain::on_manifest_downloaded(int result, int code,
         if (cached_sha256 == manifest_sha256) {
             const std::string entry_path = per_manifest_dir_ + "/files/" + cached_entry;
             if (fs::exists(entry_path)) {
+                if (is_polling_) {
+                    // Poll cycle: nothing changed, just restart the timer
+                    if (dev_poll_timer_) dev_poll_timer_->start();
+                    return;
+                }
                 UtilityFunctions::print("[ForgeRunner.Native] Manifest unchanged, using cache.");
                 show_sml(entry_path);
+                start_dev_poll_timer();
                 return;
             }
         }
@@ -1165,6 +1343,7 @@ void ForgeRunnerNativeMain::on_manifest_downloaded(int result, int code,
         const std::string entry_path = per_manifest_dir_ + "/files/" + manifest_entry_relative_;
         if (fs::exists(entry_path)) {
             show_sml(entry_path);
+            start_dev_poll_timer();
         } else {
             show_error("Manifest has no downloadable assets and entry point is not cached.");
         }
@@ -1325,4 +1504,38 @@ void ForgeRunnerNativeMain::on_all_assets_ready() {
     UtilityFunctions::print(String(
         ("[ForgeRunner.Native] All assets ready, showing: " + entry_path).c_str()));
     show_sml(entry_path);
+    start_dev_poll_timer();
+}
+
+// ---------------------------------------------------------------------------
+// Dev hot-reload: poll HTTP server every second for manifest changes
+// ---------------------------------------------------------------------------
+
+void ForgeRunnerNativeMain::start_dev_poll_timer() {
+    if (manifest_url_.empty() || !is_http_url(manifest_url_)) return;
+
+    is_polling_ = true;
+
+    if (dev_poll_timer_) {
+        dev_poll_timer_->stop();
+        dev_poll_timer_->queue_free();
+        dev_poll_timer_ = nullptr;
+    }
+
+    dev_poll_timer_ = memnew(Timer);
+    dev_poll_timer_->set_one_shot(true);
+    dev_poll_timer_->set_wait_time(1.0);
+    dev_poll_timer_->connect("timeout",
+        callable_mp(this, &ForgeRunnerNativeMain::on_dev_poll_timeout));
+    add_child(dev_poll_timer_);
+    dev_poll_timer_->start();
+
+    UtilityFunctions::print("[ForgeRunner.Native] Dev hot-reload: polling every 1s.");
+}
+
+void ForgeRunnerNativeMain::on_dev_poll_timeout() {
+    if (manifest_url_.empty()) return;
+    // Re-use the existing manifest download + SHA check.
+    // on_manifest_downloaded will skip show_sml if nothing changed (is_polling_ == true).
+    start_manifest_download(manifest_url_);
 }

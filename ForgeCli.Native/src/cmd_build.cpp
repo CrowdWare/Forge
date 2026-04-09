@@ -759,6 +759,7 @@ bool patch_project_name(const fs::path& project_godot_path,
     return true;
 }
 
+
 std::string mac_export_preset(const fs::path& export_path) {
     std::ostringstream os;
     os
@@ -1398,6 +1399,21 @@ int cmd_build(const std::vector<std::string>& args) {
         return 1;
     }
 
+    if (opts.target == BuildTarget::Android) {
+        const std::string dev_url = env_or_empty("FORGE_DEV_URL");
+        if (!dev_url.empty()) {
+            // Write forge_dev_url.txt into the staging root so it is bundled
+            // as res://forge_dev_url.txt in the APK. ForgeRunner.Native reads
+            // this file on _ready() when FORGE_RUNNER_URL env var is not set.
+            const fs::path dev_url_file = staging / "forge_dev_url.txt";
+            if (!write_text_file(dev_url_file, dev_url, err)) {
+                std::cerr << err << "\n";
+                return 1;
+            }
+            std::cout << "[forgecli] Dev hot-reload URL baked in: " << dev_url << "\n";
+        }
+    }
+
     fs::create_directories(opts.output.parent_path(), ec);
 
     const std::string preset_name = opts.target == BuildTarget::Mac ? "macOS" : "Android";
@@ -1419,9 +1435,21 @@ int cmd_build(const std::vector<std::string>& args) {
         }
     }
 
-    const std::string preset_text = opts.target == BuildTarget::Mac
+    std::string preset_text = opts.target == BuildTarget::Mac
         ? mac_export_preset(export_path)
         : android_export_preset(export_path, project_name, opts.android_package_id, use_gradle_build, android_plugins);
+
+    // When building a dev APK, forge_dev_url.txt must be included in the export.
+    // Append it to the include_filter so Godot packs it as res://forge_dev_url.txt.
+    if (opts.target == BuildTarget::Android && !env_or_empty("FORGE_DEV_URL").empty()) {
+        const std::string old_filter = "include_filter=\"*.sml,*.sms,*.ll\"";
+        const std::string new_filter = "include_filter=\"*.sml,*.sms,*.ll,forge_dev_url.txt\"";
+        auto pos = preset_text.find(old_filter);
+        if (pos != std::string::npos) {
+            preset_text.replace(pos, old_filter.size(), new_filter);
+        }
+    }
+
     if (!write_text_file(staging / "export_presets.cfg", preset_text, err)) {
         std::cerr << err << "\n";
         return 1;

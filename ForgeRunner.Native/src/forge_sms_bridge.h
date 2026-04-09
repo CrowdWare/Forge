@@ -78,11 +78,15 @@ public:
 
     bool loaded() const { return loaded_; }
 
+    /// Last error message from a failed start_session_from_source() call.
+    const std::string& last_error() const { return last_error_; }
+
     /// Global id → Control* map.  Populated by UiBuilder::apply_props(),
     /// cleared at the start of each UiBuilder::build() call.
     static IdMap& id_map();
 
 private:
+    std::string last_error_;
     struct SessionMeta {
         bool is_local_source = true;
         bool aot_lib_ready   = false;   // lib compiled and loaded

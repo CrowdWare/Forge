@@ -33,6 +33,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <godot_cpp/classes/canvas_layer.hpp>
+#include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/packed_string_array.hpp>
@@ -82,6 +84,18 @@ private:
     godot::Control* content_root_    = nullptr;
     godot::Timer*   splash_timer_    = nullptr;
     std::string     splash_next_path_;
+
+    // ----- Dev hot-reload (HTTP only) -----
+    godot::Timer*      dev_poll_timer_   = nullptr;
+    bool               is_polling_       = false;
+    void               start_dev_poll_timer();
+    void               on_dev_poll_timeout();
+
+    // ----- SMS Guru Meditation (error overlay) -----
+    godot::CanvasLayer* sms_toast_layer_ = nullptr;
+    void                show_sms_guru(const std::string& msg);
+    void                on_sms_guru_input(godot::Ref<godot::InputEvent> event);
+    void                on_sms_guru_dismissed();
 
     // ----- SMS state -----
     forge::SmsBridge sms_bridge_;

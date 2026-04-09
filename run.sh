@@ -581,7 +581,7 @@ build_forge_runner_native_android() {
       -DANDROID_ABI="$abi" \
       -DANDROID_PLATFORM=android-24
     echo "Building ForgeRunner.Native Android ($abi)..."
-    cmake --build "$build_dir" --config Release --target forge_runner_native
+    cmake --build "$build_dir" --config Release --target forge_runner_native sms_native
   done
 
   return 0

@@ -1477,6 +1477,7 @@ std::int64_t SmsBridge::start_session_from_source(const std::string& source, con
         return -1;
     }
     if (load_fn_(session, source.c_str(), err, static_cast<int>(sizeof(err))) != 0) {
+        last_error_ = err;
         std::string prefix = "[ForgeRunner.Native] SMS session load failed";
         if (!source_label.empty()) {
             prefix += " for '" + source_label + "'";
@@ -1485,6 +1486,7 @@ std::int64_t SmsBridge::start_session_from_source(const std::string& source, con
         dispose_fn_(session, nullptr, 0);
         return -1;
     }
+    last_error_.clear();
     SessionMeta meta;
     meta.is_local_source = is_local_source_label(source_label);
     meta.source = source;
