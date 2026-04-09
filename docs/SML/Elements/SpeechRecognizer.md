@@ -18,7 +18,9 @@ Inherited properties are documented in: [Control](Control.md)
 | - | suffix | string | "" |
 
 > Current vertical-slice behavior focuses on processing pipeline and emits result/rawResult signals.
-> On Android, listen() currently emits an error hint until native capture wiring is added.
+> Android host integration uses a fixed singleton name: ForgeSpeechBridge.
+> Bridge contract: startListening(objectId:int, language:string) -> bool, stopListening(objectId:int).
+> Bridge callbacks into this control: _bridgeRawResult(text), _bridgeResult(text), _bridgeError(message).
 > Use keyboard dictation as input source, then pass text through submitText() for Raw/Clean/Markdown processing.
 
 ### Examples

@@ -873,6 +873,16 @@ case "$MODE" in
   build-mac)
     run_forgecli_build_target "mac" "$@"
     ;;
+  build-android-native-only)
+    # Rebuild only the Android .so files (CMake incremental - fast).
+    # Skips ForgeCli.Native and ForgeRunner.Native macOS builds.
+    # Use this after editing ForgeRunner.Native C++ when the dev APK is already installed.
+    if ! build_forge_runner_native_android; then
+      echo "ERROR: Android native build failed." >&2
+      exit 1
+    fi
+    echo "Android native libs rebuilt (incremental)."
+    ;;
   build-android)
     export FORGE_ANDROID_BUILD_CHANNEL="release"
     run_forgecli_build_target "android" "$@"

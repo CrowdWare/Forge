@@ -24,6 +24,7 @@ Inherited signals are documented in: [Control](Control.md)
 | Godot Signal | SMS Event | Params |
 |-|-|-|
 | error | `on <id>.error(message) { ... }` | string message |
+| partialResult | `on <id>.partialResult(text) { ... }` | string text |
 | rawResult | `on <id>.rawResult(text) { ... }` | string text |
 | result | `on <id>.result(text) { ... }` | string text |
 | started | `on <id>.started() { ... }` | - |
@@ -36,7 +37,15 @@ Inherited actions are documented in: [Control](Control.md)
 
 | Godot Method | SMS Call | Params | Returns |
 |-|-|-|-|
+| getFilters | `<id>.getFilters()` | - | string |
+| getLanguage | `<id>.getLanguage()` | - | string |
+| getMode | `<id>.getMode()` | - | string |
+| getSuffix | `<id>.getSuffix()` | - | string |
 | listen | `<id>.listen()` | - | void |
+| setFilters | `<id>.setFilters(value)` | string value | void |
+| setLanguage | `<id>.setLanguage(value)` | string value | void |
+| setMode | `<id>.setMode(value)` | string value | void |
+| setSuffix | `<id>.setSuffix(value)` | string value | void |
 | stop | `<id>.stop()` | - | void |
 | submitText | `<id>.submitText(text)` | string text | void |
 
