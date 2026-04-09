@@ -112,7 +112,7 @@ void ForgeRunnerNativeMain::_bind_methods() {
 // ---------------------------------------------------------------------------
 
 void ForgeRunnerNativeMain::_ready() {
-    UtilityFunctions::print("[ForgeRunner.Native] _ready");
+    UtilityFunctions::print("[ForgeRunner.Native] _ready v2026.04.09-7");
     set_process(true);
     g_sms_main_instance = this;
     forge::set_ui_open_dialog_hook(&sms_open_dialog_hook);
@@ -265,13 +265,16 @@ void ForgeRunnerNativeMain::show_sml(const std::string& path) {
     std::string appres_root;
     if (env_appres && env_appres[0] != '\0') {
         appres_root = env_appres;
+    } else if (path.rfind("res://", 0) == 0 || path.rfind("res:/", 0) == 0) {
+        // APK mode: keep as Godot virtual path so appRes:/foo resolves to
+        // res://foo, which ResourceLoader and FileAccess can open from the APK.
+        appres_root = "res:/";
     } else {
-        // Default: Godot project root (ForgeRunner.Native/) so that appRes:/
-        // paths resolve relative to the native app, not the SML file location.
-        String proj_root = ProjectSettings::get_singleton()->globalize_path("res://");
-        appres_root = std::string(proj_root.utf8().get_data());
-        if (!appres_root.empty() && appres_root.back() == '/')
-            appres_root.pop_back();
+        // HotReload / filesystem mode: appRes:/ resolves relative to the
+        // directory of the loaded SML file (= <cache>/files/).
+        // This allows fonts and other assets to be served via HotReload
+        // and referenced with appRes:/assets/fonts/... etc.
+        appres_root = base_dir;
     }
 
     // Build UI

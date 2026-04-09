@@ -96,6 +96,7 @@ add_library(forge_runner_native SHARED
     src/forge_json_string.cpp
     src/forge_markdown.cpp
     src/forge_runner_extension.cpp
+    src/forge_logger.cpp
     src/forge_runner_main.cpp
     src/forge_sms_error_policy.cpp
     src/forge_sms_bridge.cpp

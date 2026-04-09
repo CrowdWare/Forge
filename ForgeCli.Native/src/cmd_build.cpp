@@ -771,7 +771,7 @@ std::string mac_export_preset(const fs::path& export_path) {
         << "dedicated_server=false\n"
         << "custom_features=\"\"\n"
         << "export_filter=\"all_resources\"\n"
-        << "include_filter=\"*.sml,*.sms,*.ll\"\n"
+        << "include_filter=\"*.sml,*.sms,*.ll,*.ttf,*.otf\"\n"
         << "exclude_filter=\"\"\n"
         << "export_path=\"" << export_path.string() << "\"\n"
         << "encryption_include_filters=\"\"\n"
@@ -830,7 +830,7 @@ std::string android_export_preset(const fs::path& export_path,
         << "dedicated_server=false\n"
         << "custom_features=\"\"\n"
         << "export_filter=\"all_resources\"\n"
-        << "include_filter=\"*.sml,*.sms,*.ll\"\n"
+        << "include_filter=\"*.sml,*.sms,*.ll,*.ttf,*.otf\"\n"
         << "exclude_filter=\"\"\n"
         << "export_path=\"" << export_path.string() << "\"\n"
         << "encryption_include_filters=\"\"\n"
@@ -1442,8 +1442,8 @@ int cmd_build(const std::vector<std::string>& args) {
     // When building a dev APK, forge_dev_url.txt must be included in the export.
     // Append it to the include_filter so Godot packs it as res://forge_dev_url.txt.
     if (opts.target == BuildTarget::Android && !env_or_empty("FORGE_DEV_URL").empty()) {
-        const std::string old_filter = "include_filter=\"*.sml,*.sms,*.ll\"";
-        const std::string new_filter = "include_filter=\"*.sml,*.sms,*.ll,forge_dev_url.txt\"";
+        const std::string old_filter = "include_filter=\"*.sml,*.sms,*.ll,*.ttf,*.otf\"";
+        const std::string new_filter = "include_filter=\"*.sml,*.sms,*.ll,*.ttf,*.otf,forge_dev_url.txt\"";
         auto pos = preset_text.find(old_filter);
         if (pos != std::string::npos) {
             preset_text.replace(pos, old_filter.size(), new_filter);

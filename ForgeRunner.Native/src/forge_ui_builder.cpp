@@ -36,6 +36,7 @@
 #include <sstream>
 
 // Godot-cpp headers
+#include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/aspect_ratio_container.hpp>
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/center_container.hpp>
@@ -219,7 +220,8 @@ UiBuilder::UiBuilder(const std::string& base_dir, const std::string& appres_root
 Control* UiBuilder::build(const smlcore::Document& doc, WindowConfig& out_window) {
     forge::SmsBridge::id_map().clear();
     font_deferred_.clear();
-    fonts_.clear();
+    // fonts_ is populated by load_theme() in the constructor - do NOT clear here.
+    // Document-level Fonts blocks (below) can add/override individual entries.
 
     if (doc.roots.empty()) return memnew(Control);
 
@@ -316,11 +318,24 @@ void UiBuilder::load_strings() {
 void UiBuilder::load_theme() {
     auto load_one = [&](const std::string& dir) {
         const auto path = dir + "/theme.sml";
+        std::string content;
         std::ifstream f(path);
-        if (!f.is_open()) return;
-        std::ostringstream ss; ss << f.rdbuf();
+        if (f.is_open()) {
+            std::ostringstream ss; ss << f.rdbuf();
+            content = ss.str();
+        } else {
+            // Fallback: Godot FileAccess for res:// paths packed in APK
+            Ref<FileAccess> gf = FileAccess::open(String(path.c_str()), FileAccess::READ);
+            if (gf.is_null()) {
+                // Also try res://theme.sml directly
+                gf = FileAccess::open("res://theme.sml", FileAccess::READ);
+            }
+            if (gf.is_null()) return;
+            content = std::string(gf->get_as_text().utf8().get_data());
+        }
+        UtilityFunctions::print(String(("[ForgeRunner.Native] theme.sml loaded: " + path).c_str()));
         try {
-            auto doc = smlcore::parse_document(ss.str());
+            auto doc = smlcore::parse_document(content);
             for (const auto& root : doc.roots) {
                 std::string rl = root.name;
                 std::transform(rl.begin(), rl.end(), rl.begin(),
@@ -329,6 +344,11 @@ void UiBuilder::load_theme() {
                 if (rl == "colors") {
                     for (const auto& prop : root.properties)
                         colors_[prop.name] = prop.value;
+                } else if (rl == "fonts") {
+                    for (const auto& prop : root.properties) {
+                        fonts_[prop.name] = prop.value;
+                        UtilityFunctions::print(String(("[ForgeRunner.Native] theme font: '" + prop.name + "' = '" + prop.value + "'").c_str()));
+                    }
                 } else if (rl == "layouts") {
                     for (const auto& prop : root.properties)
                         layouts_[prop.name] = prop.value;
@@ -1332,20 +1352,30 @@ void UiBuilder::post_build_pass() {
         if (!d.face.empty()) {
             // Try "FaceName-Weight", then "FaceName" in the Fonts block
             Ref<Font> font;
+            UtilityFunctions::print(String(
+                ("[ForgeRunner.Native] font lookup: face='" + d.face + "' weight='" + weight +
+                 "' fonts_size=" + std::to_string(fonts_.size())).c_str()));
             for (const auto& key : {d.face + "-" + weight, d.face}) {
                 auto it = fonts_.find(key);
-                if (it == fonts_.end()) continue;
+                if (it == fonts_.end()) {
+                    UtilityFunctions::print(String(("[ForgeRunner.Native] font key not found: '" + key + "'").c_str()));
+                    continue;
+                }
                 const auto path = resolve_asset_path(it->second);
+                UtilityFunctions::print(String(("[ForgeRunner.Native] font path resolved: '" + path + "'").c_str()));
                 font = try_load_font_file(path);
-                if (font.is_valid()) break;
+                if (font.is_valid()) {
+                    UtilityFunctions::print(String(("[ForgeRunner.Native] font loaded OK: '" + path + "'").c_str()));
+                    break;
+                }
                 UtilityFunctions::push_warning(String(
-                    ("[ForgeRunner] Cannot load font file: " + path).c_str()));
+                    ("[ForgeRunner.Native] Cannot load font file: " + path).c_str()));
             }
             if (font.is_valid()) {
                 d.ctrl->add_theme_font_override("font", font);
             } else {
                 UtilityFunctions::push_warning(String(
-                    ("[ForgeRunner] Font '" + d.face + "-" + weight +
+                    ("[ForgeRunner.Native] Font '" + d.face + "-" + weight +
                      "' not found in Fonts block - using system font fallback").c_str()));
                 Ref<SystemFont> sf; sf.instantiate();
                 sf->set_font_weight(weight_name_to_int(weight));
