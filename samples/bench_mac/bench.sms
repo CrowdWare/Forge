@@ -1,0 +1,45 @@
+// SMS AOT Benchmark — CrowdWare Forge 2026
+// Compiled via sms_compile → LLVM IR → clang (no -O)
+//
+// Workload designed to resist compiler optimization:
+//   1. fib(36)          — exponential recursion, no loop-conversion possible
+//   2. lcgChain         — serial LCG dependency, no vectorization possible
+//   3. nestedMod        — modulo in inner loop blocks SIMD
+
+fun fib(n) {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+fun lcgChain(seed, count) {
+    var acc = seed
+    var i = 0
+    while (i < count) {
+        acc = (acc * 1664525 + 1013904223) % 1000000007
+        i = i + 1
+    }
+    return acc
+}
+
+fun nestedMod(n) {
+    var sum = 0
+    var i = 0
+    while (i < n) {
+        var j = 1
+        while (j <= n) {
+            sum = (sum + i * j) % 999983
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return sum
+}
+
+fun main() {
+    var r1 = fib(36)
+    var r2 = lcgChain(42, 2000000)
+    var r3 = nestedMod(800)
+    return r1 + r2 + r3
+}
