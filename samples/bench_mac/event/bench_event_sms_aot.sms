@@ -1,0 +1,9 @@
+// SMS AOT Event Handler — compiled to native object via sms_compile --emit-obj
+// on bench.tick() → emits symbol: sms_on_bench_tick()
+
+var counter = 0
+
+on bench.tick() {
+    counter = counter + 1
+    return counter
+}
