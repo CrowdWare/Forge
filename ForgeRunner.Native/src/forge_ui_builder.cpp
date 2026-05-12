@@ -469,7 +469,7 @@ Control* UiBuilder::build_node(const smlcore::Node& node) {
     // If a non-MarginContainer has padding, wrap it so margins work correctly.
     // The wrapper takes layout properties; the inner control handles content.
     const bool is_box = (nl == "vboxcontainer" || nl == "hboxcontainer" ||
-                         nl == "panel" || nl == "panelcontainer");
+                         nl == "box" || nl == "panel" || nl == "panelcontainer");
     const bool has_padding = node.has_property("padding") || node.has_property("paddingLeft") ||
                              node.has_property("paddingTop") || node.has_property("paddingRight") ||
                              node.has_property("paddingBottom");
