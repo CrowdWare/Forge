@@ -9,23 +9,20 @@ LINK="$INSTALL_DIR/forgecli"
 echo "Forge setup"
 echo "==========="
 
-# ── 1. Build ForgeCli.Native if binary is missing ───────────────────────────
+# ── 1. Build ForgeCli.Native (cmake handles incremental rebuilds) ────────────
 CLI_BIN="$REPO_ROOT/ForgeCli.Native/build/forgecli-native"
 
-if [[ -x "$CLI_BIN" ]]; then
-  echo "[1/3] forgecli-native already built — skipping."
-else
-  echo "[1/3] Building ForgeCli.Native..."
-  if ! command -v cmake >/dev/null 2>&1; then
-    echo "ERROR: cmake not found. Install cmake and re-run setup.sh." >&2
-    exit 1
-  fi
-  cmake -S "$REPO_ROOT/ForgeCli.Native" \
-        -B "$REPO_ROOT/ForgeCli.Native/build" \
-        -DCMAKE_BUILD_TYPE=Release
-  cmake --build "$REPO_ROOT/ForgeCli.Native/build" --config Release
-  echo "  Built: $CLI_BIN"
+echo "[1/3] Building ForgeCli.Native..."
+if ! command -v cmake >/dev/null 2>&1; then
+  echo "ERROR: cmake not found. Install cmake and re-run setup.sh." >&2
+  exit 1
 fi
+cmake -S "$REPO_ROOT/ForgeCli.Native" \
+      -B "$REPO_ROOT/ForgeCli.Native/build" \
+      -DCMAKE_BUILD_TYPE=Release \
+      --log-level=ERROR
+cmake --build "$REPO_ROOT/ForgeCli.Native/build" --config Release
+echo "  Ready: $CLI_BIN"
 
 # ── 2. Install forgecli wrapper to ~/.local/bin ──────────────────────────────
 echo "[2/3] Installing forgecli to $INSTALL_DIR ..."
