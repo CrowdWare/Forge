@@ -33,9 +33,6 @@ exports/
 /export/frames*/
 /exports/frames*/
 
-ForgeRunner.Native/host/*.dylib
-ForgeRunner.Native/host/*.so
-ForgeRunner.Native/host/*.dll
 
 # temporary images only
 /ScreenShots/

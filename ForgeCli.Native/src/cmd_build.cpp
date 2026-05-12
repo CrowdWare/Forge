@@ -957,7 +957,9 @@ bool find_native_library(const fs::path& native_lib_dir, fs::path& out_path) {
         if (ec) break;
         if (!entry.is_regular_file()) continue;
         const std::string filename = entry.path().filename().string();
-        if (filename.find("forge_runner_native") != std::string::npos) {
+        const std::string ext = to_lower_ascii(entry.path().extension().string());
+        const bool is_shared_lib = ext == ".dylib" || ext == ".so" || ext == ".dll";
+        if (is_shared_lib && filename.find("forge_runner_native") != std::string::npos) {
             out_path = entry.path();
             return true;
         }
