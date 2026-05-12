@@ -219,6 +219,10 @@ UiBuilder::UiBuilder(const std::string& base_dir, const std::string& appres_root
 
 Control* UiBuilder::build(const smlcore::Document& doc, WindowConfig& out_window) {
     forge::SmsBridge::id_map().clear();
+    forge::SmsBridge::color_bindings().clear();
+    forge::SmsBridge::color_tokens() = colors_;
+    forge::SmsBridge::theme_base_dir() = base_dir_;
+    forge::SmsBridge::theme_appres_dir() = appres_root_;
     font_deferred_.clear();
     // fonts_ is populated by load_theme() in the constructor - do NOT clear here.
     // Document-level Fonts blocks (below) can add/override individual entries.
@@ -1092,6 +1096,17 @@ void UiBuilder::apply_props(Control* ctrl, const smlcore::Node& node) {
             ctrl->add_theme_color_override("font_color", c);
             ctrl->add_theme_color_override("font_uneditable_color", c);
         }
+        const auto& ctrl_id = node.get_value("id", "");
+        if (!ctrl_id.empty() && !p->value.empty() && p->value[0] == '@') {
+            const auto dot = p->value.find('.', 1);
+            if (dot != std::string::npos) {
+                std::string ns = p->value.substr(1, dot - 1);
+                std::transform(ns.begin(), ns.end(), ns.begin(),
+                               [](unsigned char c){ return std::tolower(c); });
+                if (ns == "colors")
+                    forge::SmsBridge::color_bindings()[ctrl_id].push_back({"color", p->value.substr(dot + 1)});
+            }
+        }
     }
 
     // --- Styling: fontSize ---
@@ -1250,6 +1265,26 @@ void UiBuilder::apply_props(Control* ctrl, const smlcore::Node& node) {
         } else {
             ctrl->add_theme_stylebox_override("panel", style);
             ctrl->add_theme_stylebox_override("normal", style);
+        }
+
+        // Store StyleBoxFlat ref and color token bindings for runtime theme switching.
+        const auto& ctrl_id = node.get_value("id", "");
+        if (!ctrl_id.empty()) {
+            style_refs[ctrl_id] = style;
+            for (const char* key : {"bgColor", "borderColor"}) {
+                if (const auto* p = node.find_property(key)) {
+                    if (!p->value.empty() && p->value[0] == '@') {
+                        const auto dot = p->value.find('.', 1);
+                        if (dot != std::string::npos) {
+                            std::string ns = p->value.substr(1, dot - 1);
+                            std::transform(ns.begin(), ns.end(), ns.begin(),
+                                           [](unsigned char c){ return std::tolower(c); });
+                            if (ns == "colors")
+                                forge::SmsBridge::color_bindings()[ctrl_id].push_back({key, p->value.substr(dot + 1)});
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1515,6 +1550,80 @@ int UiBuilder::parse_size_flags(const std::string& v, int fallback) {
     if (vl == "shrinkbegin")  return Control::SIZE_FILL;
     if (vl == "shrinkend")    return Control::SIZE_SHRINK_END;
     return fallback;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime theme switching
+// ---------------------------------------------------------------------------
+
+void UiBuilder::load_theme_named(const std::string& mode) {
+    const std::string filename = "theme." + mode + ".sml";
+    auto& tokens = forge::SmsBridge::color_tokens();
+
+    auto load_one = [&](const std::string& dir) {
+        const auto path = dir + "/" + filename;
+        std::string content;
+        std::ifstream f(path);
+        if (f.is_open()) {
+            std::ostringstream ss; ss << f.rdbuf();
+            content = ss.str();
+        } else {
+            Ref<FileAccess> gf = FileAccess::open(String(path.c_str()), FileAccess::READ);
+            if (gf.is_null()) return;
+            content = std::string(gf->get_as_text().utf8().get_data());
+        }
+        try {
+            auto doc = smlcore::parse_document(content);
+            for (const auto& root : doc.roots) {
+                std::string rl = root.name;
+                std::transform(rl.begin(), rl.end(), rl.begin(),
+                               [](unsigned char c){ return std::tolower(c); });
+                if (rl == "colors") {
+                    for (const auto& prop : root.properties)
+                        tokens[prop.name] = prop.value;
+                }
+            }
+            UtilityFunctions::print(String(("[ForgeRunner] theme switched: " + path).c_str()));
+        } catch (...) {
+            UtilityFunctions::push_warning(String(("[ForgeRunner] Failed to parse " + path).c_str()));
+        }
+    };
+
+    if (!appres_root_.empty()) load_one(appres_root_);
+    load_one(base_dir_);
+}
+
+void UiBuilder::apply_color_bindings(const std::string& id, Control* ctrl) {
+    auto& bindings = forge::SmsBridge::color_bindings();
+    auto bindings_it = bindings.find(id);
+    if (bindings_it == bindings.end()) return;
+
+    const auto& tokens = forge::SmsBridge::color_tokens();
+    for (const auto& binding : bindings_it->second) {
+        auto color_it = tokens.find(binding.token);
+        if (color_it == tokens.end()) continue;
+
+        float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;
+        if (!parse_color(color_it->second, r, g, b, a)) continue;
+        const Color new_color(r, g, b, a);
+
+        if (binding.property == "color") {
+            ctrl->add_theme_color_override("font_color", new_color);
+            ctrl->add_theme_color_override("font_uneditable_color", new_color);
+        } else if (binding.property == "bgColor") {
+            auto style_it = style_refs.find(id);
+            if (style_it != style_refs.end() && style_it->second.is_valid()) {
+                style_it->second->set_bg_color(new_color);
+                ctrl->queue_redraw();
+            }
+        } else if (binding.property == "borderColor") {
+            auto style_it = style_refs.find(id);
+            if (style_it != style_refs.end() && style_it->second.is_valid()) {
+                style_it->second->set_border_color(new_color);
+                ctrl->queue_redraw();
+            }
+        }
+    }
 }
 
 } // namespace forge

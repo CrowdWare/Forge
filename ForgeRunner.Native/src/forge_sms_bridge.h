@@ -85,6 +85,20 @@ public:
     /// cleared at the start of each UiBuilder::build() call.
     static IdMap& id_map();
 
+    // --- Runtime theme state (populated by UiBuilder, consumed by sms_ui_invoke) ---
+
+    struct ColorBinding { std::string property; std::string token; };
+
+    /// color token name → hex value (e.g. "headerBg" → "#F5F5F5")
+    static std::unordered_map<std::string, std::string>& color_tokens();
+
+    /// ctrl id → list of {property, token} bindings
+    static std::unordered_map<std::string, std::vector<ColorBinding>>& color_bindings();
+
+    /// ctrl id → base_dir of the loaded app (for theme file lookup)
+    static std::string& theme_base_dir();
+    static std::string& theme_appres_dir();
+
 private:
     std::string last_error_;
     struct SessionMeta {

@@ -32,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include <godot_cpp/classes/style_box_flat.hpp>
+
 namespace godot {
 class Control;
 class Texture2D;
@@ -65,6 +67,18 @@ public:
     /// Fills @p out_window with window / splash settings from the root node.
     godot::Control* build(const smlcore::Document& doc, WindowConfig& out_window);
 
+    /// Load theme.{mode}.sml (e.g. "dark", "light") and update the color tokens.
+    void load_theme_named(const std::string& mode);
+
+    /// Re-apply stored color bindings for one control after a theme switch.
+    void apply_color_bindings(const std::string& id, godot::Control* ctrl);
+
+    // Read-only access to current color tokens (for bridge-side re-application).
+    const std::unordered_map<std::string, std::string>& colors() const { return colors_; }
+
+    // Stored StyleBoxFlat refs keyed by control id (for in-place bg color updates).
+    std::unordered_map<std::string, godot::Ref<godot::StyleBoxFlat>> style_refs;
+
 private:
     std::string base_dir_;
     std::string appres_root_;
@@ -77,6 +91,7 @@ private:
     std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> elevations_;
     // "FaceName-Weight" or "FaceName" → asset path (from Fonts {} block in SML)
     std::unordered_map<std::string, std::string> fonts_;
+
 
     // Deferred font resolution (fontFace / fontWeight collected during apply_props)
     struct FontDeferred {

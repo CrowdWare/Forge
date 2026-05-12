@@ -27,7 +27,10 @@
 #include "forge_sms_error_policy.h"
 #include "forge_json_string.h"
 #include "forge_path_resolver.h"
+#include "forge_ui_builder.h"
 #include "sms_native.h"
+
+#include <godot_cpp/classes/tween.hpp>
 
 #include <algorithm>
 #include <atomic>
@@ -242,6 +245,26 @@ bool try_quit_on_fatal_sms_error(const std::string& message) {
 IdMap& SmsBridge::id_map() {
     static IdMap s_map;
     return s_map;
+}
+
+std::unordered_map<std::string, std::string>& SmsBridge::color_tokens() {
+    static std::unordered_map<std::string, std::string> s_tokens;
+    return s_tokens;
+}
+
+std::unordered_map<std::string, std::vector<SmsBridge::ColorBinding>>& SmsBridge::color_bindings() {
+    static std::unordered_map<std::string, std::vector<SmsBridge::ColorBinding>> s_bindings;
+    return s_bindings;
+}
+
+std::string& SmsBridge::theme_base_dir() {
+    static std::string s_dir;
+    return s_dir;
+}
+
+std::string& SmsBridge::theme_appres_dir() {
+    static std::string s_dir;
+    return s_dir;
 }
 
 static UiOpenDialogHook& ui_open_dialog_hook() {
@@ -1178,6 +1201,60 @@ static int sms_ui_invoke(
                 }
             }
             write_out(out_json, out_cap, std::to_string(value));
+            return 0;
+        }
+        if (mname == "setTheme") {
+            const std::string mode = arg_string(0);
+            if (!mode.empty()) {
+                forge::UiBuilder loader(
+                    SmsBridge::theme_base_dir(),
+                    SmsBridge::theme_appres_dir());
+                loader.load_theme_named(mode);
+                for (auto& [ctrl_id, ctrl_ptr] : SmsBridge::id_map()) {
+                    if (ctrl_ptr) loader.apply_color_bindings(ctrl_id, ctrl_ptr);
+                }
+            }
+            write_out(out_json, out_cap, "true");
+            return 0;
+        }
+        if (mname == "animate") {
+            const std::string target_id = arg_string(0);
+            const std::string property  = arg_string(1);
+            double duration_sec = 0.2;
+            if (arr.size() > 3) {
+                const Variant dur = arr[3];
+                if (dur.get_type() == Variant::INT || dur.get_type() == Variant::FLOAT)
+                    duration_sec = static_cast<double>(dur) / 1000.0;
+            }
+            auto ctrl_it = SmsBridge::id_map().find(target_id);
+            if (ctrl_it != SmsBridge::id_map().end() && ctrl_it->second) {
+                Control* tgt = ctrl_it->second;
+                if (property == "scale") {
+                    double to_val = 1.4;
+                    if (arr.size() > 2) {
+                        const Variant v = arr[2];
+                        if (v.get_type() == Variant::FLOAT || v.get_type() == Variant::INT)
+                            to_val = static_cast<double>(v);
+                    }
+                    Ref<Tween> tween = tgt->create_tween();
+                    tween->set_parallel(false);
+                    tween->tween_property(tgt, "scale",
+                        Vector2(static_cast<float>(to_val), static_cast<float>(to_val)),
+                        duration_sec);
+                    tween->tween_property(tgt, "scale",
+                        Vector2(1.0f, 1.0f),
+                        duration_sec);
+                } else if (property == "modulate") {
+                    const std::string color_str = arg_string(2);
+                    if (!color_str.empty()) {
+                        Ref<Tween> tween = tgt->create_tween();
+                        tween->tween_property(tgt, "modulate",
+                            Color(String(color_str.c_str())),
+                            duration_sec);
+                    }
+                }
+            }
+            write_out(out_json, out_cap, "null");
             return 0;
         }
         write_out(out_json, out_cap, "null");

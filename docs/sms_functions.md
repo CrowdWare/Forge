@@ -128,6 +128,12 @@ Returns the current numeric value of a configured numeric LineEdit as a float.
 ### ui.setNumericLineEditValue(id: String, value: float)
 Sets the numeric value of a configured numeric LineEdit and refreshes its displayed preview/raw text.
 
+### ui.setTheme(mode: String)
+Switches the active color theme at runtime by loading `theme.{mode}.sml` (e.g. `theme.dark.sml` or `theme.light.sml`) from the app directory and re-applying all `@Colors.*` token bindings to the live control tree. Controls whose color properties were declared with `@Colors.*` references are updated automatically; controls with hard-coded color values are unaffected.
+
+### ui.animate(id: String, property: String, toValue, durationMs: Int)
+Animates a UI element property using Godot's Tween. Supported properties: `"scale"` (pulse: scales up to `toValue`, then back to 1.0), `"modulate"` (color tween to the hex string `toValue`). `durationMs` is the duration of each tween step in milliseconds.
+
 ### Window Flag Constants
 Enum-like global constants for Window flags in SMS. Use with setFlag/getFlag without magic numbers, e.g. mainWindow.setFlag(extendToTitle, true). Available constants: borderless=0, alwaysOnTop=1, transparent=2, noFocus=3, popup=5, extendToTitle=6, mousePassthrough=7, sharpCorners=8, excludeFromCapture=9, popupWmHint=10, minSize=11, maxSize=12, resizeDisabled=13, transient=14, modal=15, popupExclusive=16.
 
