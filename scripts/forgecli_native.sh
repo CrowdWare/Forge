@@ -29,7 +29,14 @@ set_env_defaults() {
   export SML_NATIVE_LIB_DIR="${SML_NATIVE_LIB_DIR:-$CLI_NATIVE_BUILD_DIR}"
   export SMS_NATIVE_LIB_DIR="${SMS_NATIVE_LIB_DIR:-$CLI_NATIVE_BUILD_DIR}"
   export FORGE_HOST_PROJECT_DIR="${FORGE_HOST_PROJECT_DIR:-$REPO_ROOT/ForgeRunner.Native/host}"
-  export FORGE_NATIVE_LIB_DIR="${FORGE_NATIVE_LIB_DIR:-$REPO_ROOT/ForgeRunner.Native/build}"
+  # Prefer built output; fall back to the committed dylib in host/ (available after git clone).
+  if [[ -z "${FORGE_NATIVE_LIB_DIR:-}" ]]; then
+    if [[ -d "$REPO_ROOT/ForgeRunner.Native/build" ]]; then
+      export FORGE_NATIVE_LIB_DIR="$REPO_ROOT/ForgeRunner.Native/build"
+    else
+      export FORGE_NATIVE_LIB_DIR="$REPO_ROOT/ForgeRunner.Native/host"
+    fi
+  fi
 }
 
 ensure_cli_native_built
