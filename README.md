@@ -42,6 +42,40 @@ The Forge-Runner interprets this description and executes it on the target platf
 
 ---
 
+## 🚀 Getting Started
+
+```bash
+git clone https://github.com/CrowdWare/Forge.git
+cd Forge
+./setup.sh
+```
+
+`setup.sh` builds the CLI, installs `forgecli` to `~/.local/bin`, and adds it to your PATH — no sudo required.
+
+Open a new terminal, then:
+
+```bash
+forgecli --help
+```
+
+### Build a tutorial app
+
+```bash
+# Mac desktop app
+forgecli build mac --project tutorials/theme-demo-mac --output ./theme-demo-mac.zip
+
+# Android APK
+forgecli build android --project tutorials/theme-demo-android --output ./theme-demo.apk
+```
+
+### Prerequisites
+
+- `cmake` (for building the CLI)
+- `clang` (for SMS → native compilation)
+- Godot 4 headless binary in PATH (for `build mac` / `build android`)
+
+---
+
 ## 📌 Project Status
 
 - Current Process: [CWUP/README.md](CWUP/README.md)

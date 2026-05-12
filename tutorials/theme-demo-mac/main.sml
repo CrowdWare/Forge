@@ -1,0 +1,98 @@
+Window {
+    id: mainWindow
+    title: "Forge Theme Demo"
+    minSize: 640, 400
+    size: 800, 520
+
+    VBoxContainer {
+        anchors: left | top | right | bottom
+
+        Box {
+            id: headerBar
+            height: 60
+            anchors: left | right
+            bgColor: @Colors.headerBg
+            padding: 0, 24, 0, 24
+
+            Row {
+                anchors: left | top | right | bottom
+                spacing: 12
+
+                Label {
+                    id: appTitle
+                    text: "Forge Theme Demo"
+                    fontSize: 20
+                    color: @Colors.titleText
+                    sizeFlagsVertical: shrinkCenter
+                    sizeFlagsHorizontal: expandFill
+                }
+
+                Button {
+                    id: btnTheme
+                    text: "🌙 Dark"
+                    width: 110
+                    sizeFlagsVertical: shrinkCenter
+                }
+            }
+        }
+
+        Box {
+            id: contentArea
+            sizeFlagsVertical: expandFill
+            anchors: left | right
+            bgColor: @Colors.contentBg
+            padding: 48, 0, 48, 0
+
+            VBoxContainer {
+                anchors: left | top | right | bottom
+                spacing: 0
+
+                Control { sizeFlagsVertical: expandFill }
+
+                Box {
+                    id: card
+                    sizeFlagsHorizontal: shrinkCenter
+                    width: 420
+                    bgColor: @Colors.cardBg
+                    borderRadius: 12
+                    padding: 32, 32, 32, 32
+
+                    VBoxContainer {
+                        spacing: 20
+
+                        Label {
+                            id: cardTitle
+                            text: "Hello from Forge"
+                            fontSize: 22
+                            color: @Colors.titleText
+                        }
+
+                        Label {
+                            id: cardBody
+                            text: "SML + SMS. One codebase. Mac and Android."
+                            fontSize: 14
+                            color: @Colors.bodyText
+                        }
+
+                        Box {
+                            id: animBox
+                            width: 72
+                            height: 72
+                            borderRadius: 36
+                            bgColor: @Colors.animBoxColor
+                            sizeFlagsHorizontal: shrinkCenter
+                        }
+
+                        Button {
+                            id: btnAnimate
+                            text: "Animate"
+                            sizeFlagsHorizontal: shrinkCenter
+                        }
+                    }
+                }
+
+                Control { sizeFlagsVertical: expandFill }
+            }
+        }
+    }
+}

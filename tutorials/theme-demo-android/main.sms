@@ -1,0 +1,25 @@
+// Sat Nam
+
+var isDark = 0
+
+on mainWindow.ready() {
+    ui.setTheme("light")
+}
+
+on btnTheme.clicked() {
+    if (isDark == 0) {
+        isDark = 1
+        var btn = ui.getObject("btnTheme")
+        btn.text = "☀️"
+        ui.setTheme("dark")
+    } else {
+        isDark = 0
+        var btn = ui.getObject("btnTheme")
+        btn.text = "🌙"
+        ui.setTheme("light")
+    }
+}
+
+on btnAnimate.clicked() {
+    ui.animate("animBox", "scale", 1.4, 200)
+}
