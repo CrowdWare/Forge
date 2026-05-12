@@ -499,7 +499,7 @@ bool parse_build_options(const std::vector<std::string>& args, BuildOptions& out
         : out.project.filename().string();
     if (out.output.empty()) {
         out.output = fs::current_path() /
-            (project_name + (out.target == BuildTarget::Mac ? ".zip" : ".apk"));
+            (project_name + (out.target == BuildTarget::Mac ? ".dmg" : ".apk"));
     } else if (out.output.is_relative()) {
         out.output = fs::absolute(out.output);
     }
