@@ -574,6 +574,7 @@ Control* UiBuilder::build_node(const smlcore::Node& node) {
 
 Control* UiBuilder::create_control(const std::string& nl) {
     if (nl == "window" || nl == "splashscreen") return memnew(Panel);
+    if (nl == "box")               return memnew(Panel);
     if (nl == "panel")             return memnew(Panel);
     if (nl == "panelcontainer")    return memnew(PanelContainer);
     if (nl == "vboxcontainer") {

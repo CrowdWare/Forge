@@ -29,7 +29,7 @@ Window {
 
                 Button {
                     id: btnTheme
-                    text: "🌙 Dark"
+                    text: "Dark Mode"
                     width: 110
                     sizeFlagsVertical: shrinkCenter
                 }
@@ -41,58 +41,64 @@ Window {
             sizeFlagsVertical: expandFill
             anchors: left | right
             bgColor: @Colors.contentBg
-            padding: 48, 0, 48, 0
 
-            VBoxContainer {
+            ScrollContainer {
                 anchors: left | top | right | bottom
-                spacing: 0
 
-                Control { sizeFlagsVertical: expandFill }
+                VBoxContainer {
+                    sizeFlagsHorizontal: expandFill
+                    spacing: 0
 
-                Box {
-                    id: card
-                    sizeFlagsHorizontal: shrinkCenter
-                    width: 420
-                    bgColor: @Colors.cardBg
-                    borderRadius: 12
-                    padding: 32, 32, 32, 32
+                    Control {
+                        sizeFlagsVertical: shrinkCenter
+                        height: 48
+                    }
 
-                    VBoxContainer {
-                        spacing: 20
+                    Box {
+                        id: card
+                        sizeFlagsHorizontal: shrinkCenter
+                        width: 420
+                        bgColor: @Colors.cardBg
+                        borderRadius: 12
+                        padding: 32, 32, 32, 32
 
-                        Label {
-                            id: cardTitle
-                            text: "Hello from Forge"
-                            fontSize: 22
-                            color: @Colors.titleText
-                        }
+                        VBoxContainer {
+                            spacing: 20
 
-                        Label {
-                            id: cardBody
-                            text: "SML + SMS. One codebase. Mac and Android."
-                            fontSize: 14
-                            color: @Colors.bodyText
-                        }
+                            Label {
+                                id: cardTitle
+                                text: "Hello from Forge"
+                                fontSize: 22
+                                color: @Colors.titleText
+                            }
 
-                        Box {
-                            id: animBox
-                            width: 72
-                            height: 72
-                            borderRadius: 36
-                            bgColor: @Colors.animBoxColor
-                            sizeFlagsHorizontal: shrinkCenter
-                        }
+                            Label {
+                                id: cardBody
+                                text: "SML + SMS. One codebase. Mac and Android."
+                                fontSize: 14
+                                color: @Colors.bodyText
+                            }
 
-                        Button {
-                            id: btnAnimate
-                            text: "Animate"
-                            sizeFlagsHorizontal: shrinkCenter
+                            Box {
+                                id: animBox
+                                width: 72
+                                height: 72
+                                borderRadius: 36
+                                bgColor: @Colors.animBoxColor
+                                sizeFlagsHorizontal: shrinkCenter
+                            }
+
+                            Button {
+                                id: btnAnimate
+                                text: "Animate"
+                                sizeFlagsHorizontal: shrinkCenter
+                            }
                         }
                     }
-                }
 
-                Control { sizeFlagsVertical: expandFill }
+                }
             }
         }
     }
 }
+
