@@ -77,7 +77,8 @@ public:
     const std::unordered_map<std::string, std::string>& colors() const { return colors_; }
 
     // Stored StyleBoxFlat refs keyed by control id (for in-place bg color updates).
-    std::unordered_map<std::string, godot::Ref<godot::StyleBoxFlat>> style_refs;
+    // Static so any UiBuilder instance (including the one created in setTheme) shares the same map.
+    static std::unordered_map<std::string, godot::Ref<godot::StyleBoxFlat>>& style_refs();
 
 private:
     std::string base_dir_;

@@ -217,9 +217,15 @@ UiBuilder::UiBuilder(const std::string& base_dir, const std::string& appres_root
 // Public API
 // ---------------------------------------------------------------------------
 
+std::unordered_map<std::string, Ref<StyleBoxFlat>>& UiBuilder::style_refs() {
+    static std::unordered_map<std::string, Ref<StyleBoxFlat>> s_style_refs;
+    return s_style_refs;
+}
+
 Control* UiBuilder::build(const smlcore::Document& doc, WindowConfig& out_window) {
     forge::SmsBridge::id_map().clear();
     forge::SmsBridge::color_bindings().clear();
+    UiBuilder::style_refs().clear();
     forge::SmsBridge::color_tokens() = colors_;
     forge::SmsBridge::theme_base_dir() = base_dir_;
     forge::SmsBridge::theme_appres_dir() = appres_root_;
@@ -502,6 +508,21 @@ Control* UiBuilder::build_node(const smlcore::Node& node) {
         if (node.has_property("spacing")) {
             if (auto* box = Object::cast_to<BoxContainer>(inner))
                 box->add_theme_constant_override("separation", std::stoi(node.get_value("spacing")));
+        }
+
+        // Also apply bgColor StyleBoxFlat to inner (wrapper=MarginContainer doesn't draw "panel")
+        {
+            const auto& id_val = node.get_value("id", "");
+            if (!id_val.empty()) {
+                auto sref_it = UiBuilder::style_refs().find(id_val);
+                if (sref_it != UiBuilder::style_refs().end() && sref_it->second.is_valid()) {
+                    if (inner->has_method("set_bg_style")) {
+                        inner->call("set_bg_style", sref_it->second);
+                    } else {
+                        inner->add_theme_stylebox_override("panel", sref_it->second);
+                    }
+                }
+            }
         }
 
         // Inner fills the wrapper
@@ -1271,7 +1292,7 @@ void UiBuilder::apply_props(Control* ctrl, const smlcore::Node& node) {
         // Store StyleBoxFlat ref and color token bindings for runtime theme switching.
         const auto& ctrl_id = node.get_value("id", "");
         if (!ctrl_id.empty()) {
-            style_refs[ctrl_id] = style;
+            UiBuilder::style_refs()[ctrl_id] = style;
             for (const char* key : {"bgColor", "borderColor"}) {
                 if (const auto* p = node.find_property(key)) {
                     if (!p->value.empty() && p->value[0] == '@') {
@@ -1561,8 +1582,9 @@ void UiBuilder::load_theme_named(const std::string& mode) {
     const std::string filename = "theme." + mode + ".sml";
     auto& tokens = forge::SmsBridge::color_tokens();
 
-    auto load_one = [&](const std::string& dir) {
-        const auto path = dir + "/" + filename;
+    // Returns true if the file was found and parsed.
+    auto load_one = [&](const std::string& dir, const std::string& fname) -> bool {
+        const auto path = dir + "/" + fname;
         std::string content;
         std::ifstream f(path);
         if (f.is_open()) {
@@ -1570,7 +1592,7 @@ void UiBuilder::load_theme_named(const std::string& mode) {
             content = ss.str();
         } else {
             Ref<FileAccess> gf = FileAccess::open(String(path.c_str()), FileAccess::READ);
-            if (gf.is_null()) return;
+            if (gf.is_null()) return false;
             content = std::string(gf->get_as_text().utf8().get_data());
         }
         try {
@@ -1585,13 +1607,20 @@ void UiBuilder::load_theme_named(const std::string& mode) {
                 }
             }
             UtilityFunctions::print(String(("[ForgeRunner] theme switched: " + path).c_str()));
+            return true;
         } catch (...) {
             UtilityFunctions::push_warning(String(("[ForgeRunner] Failed to parse " + path).c_str()));
+            return false;
         }
     };
 
-    if (!appres_root_.empty()) load_one(appres_root_);
-    load_one(base_dir_);
+    auto load_dir = [&](const std::string& dir) {
+        if (!load_one(dir, filename))
+            load_one(dir, "theme.sml");  // fall back to base theme
+    };
+
+    if (!appres_root_.empty()) load_dir(appres_root_);
+    load_dir(base_dir_);
 }
 
 void UiBuilder::apply_color_bindings(const std::string& id, Control* ctrl) {
@@ -1612,14 +1641,14 @@ void UiBuilder::apply_color_bindings(const std::string& id, Control* ctrl) {
             ctrl->add_theme_color_override("font_color", new_color);
             ctrl->add_theme_color_override("font_uneditable_color", new_color);
         } else if (binding.property == "bgColor") {
-            auto style_it = style_refs.find(id);
-            if (style_it != style_refs.end() && style_it->second.is_valid()) {
+            auto style_it = UiBuilder::style_refs().find(id);
+            if (style_it != UiBuilder::style_refs().end() && style_it->second.is_valid()) {
                 style_it->second->set_bg_color(new_color);
                 ctrl->queue_redraw();
             }
         } else if (binding.property == "borderColor") {
-            auto style_it = style_refs.find(id);
-            if (style_it != style_refs.end() && style_it->second.is_valid()) {
+            auto style_it = UiBuilder::style_refs().find(id);
+            if (style_it != UiBuilder::style_refs().end() && style_it->second.is_valid()) {
                 style_it->second->set_border_color(new_color);
                 ctrl->queue_redraw();
             }

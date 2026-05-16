@@ -1394,6 +1394,16 @@ int cmd_build(const std::vector<std::string>& args) {
             std::cerr << "Failed to copy native library: " << native_lib_file.string() << "\n";
             return 1;
         }
+        const fs::path sms_lib = opts.native_lib_dir / ("libsms_native" + lib_ext());
+        if (fs::exists(sms_lib)) {
+            fs::copy_file(sms_lib, staging / sms_lib.filename(), fs::copy_options::overwrite_existing, ec);
+            if (ec) {
+                std::cerr << "[WARN] Failed to copy SMS native library: " << sms_lib.string() << "\n";
+                ec.clear();
+            } else {
+                std::cout << "[INFO] SMS native library bundled.\n";
+            }
+        }
     }
 
     if (!patch_project_name(staging / "project.godot", project_name, opts.target, err)) {

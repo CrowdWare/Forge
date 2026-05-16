@@ -3,10 +3,12 @@
 var isDark = 0
 
 on mainWindow.ready() {
+    log.success("Ready")
     ui.setTheme("light")
 }
 
 on btnTheme.clicked() {
+    log.success("Theme")
     if (isDark == 0) {
         isDark = 1
         var btn = ui.getObject("btnTheme")
@@ -21,5 +23,6 @@ on btnTheme.clicked() {
 }
 
 on btnAnimate.clicked() {
+    log.success("Animate")
     ui.animate("animBox", "scale", 1.4, 200)
 }

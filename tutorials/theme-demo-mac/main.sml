@@ -7,31 +7,34 @@ Window {
     VBoxContainer {
         anchors: left | top | right | bottom
 
-        Box {
+        Panel {
             id: headerBar
             height: 60
-            anchors: left | right
             bgColor: @Colors.headerBg
-            padding: 0, 24, 0, 24
 
-            Row {
+            MarginContainer {
                 anchors: left | top | right | bottom
-                spacing: 12
+                paddingLeft: 24
+                paddingRight: 24
 
-                Label {
-                    id: appTitle
-                    text: "Forge Theme Demo"
-                    fontSize: 20
-                    color: @Colors.titleText
-                    sizeFlagsVertical: shrinkCenter
-                    sizeFlagsHorizontal: expandFill
-                }
+                HBoxContainer {
+                    spacing: 12
 
-                Button {
-                    id: btnTheme
-                    text: "Dark Mode"
-                    width: 110
-                    sizeFlagsVertical: shrinkCenter
+                    Label {
+                        id: appTitle
+                        text: "Forge Theme Demo"
+                        fontSize: 20
+                        color: @Colors.titleText
+                        sizeFlagsVertical: shrinkCenter
+                        sizeFlagsHorizontal: expandFill
+                    }
+
+                    Button {
+                        id: btnTheme
+                        text: "Dark Mode"
+                        width: 110
+                        sizeFlagsVertical: shrinkCenter
+                    }
                 }
             }
         }

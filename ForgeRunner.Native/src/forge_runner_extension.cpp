@@ -25,6 +25,7 @@
 
 #include "forge_runner_main.h"
 #include "forge_sms_bridge.h"
+#include "forge_ui_builder.h"
 #include "forge_markdown.h"
 #include "forge_path_resolver.h"
 #include <sml_document.h>
@@ -5966,6 +5967,7 @@ void initialize_forge_runner_native(ModuleInitializationLevel p_level) {
 
 void uninitialize_forge_runner_native(ModuleInitializationLevel p_level) {
     (void)p_level;
+    forge::UiBuilder::style_refs().clear();
 }
 
 extern "C" {

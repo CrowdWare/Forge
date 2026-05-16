@@ -1425,6 +1425,19 @@ bool SmsBridge::load(const std::string& repo_root) {
     const fs::path lib_path = lib_dir / ("libsms_native" + lib_extension());
 
     lib_handle_ = platform_load_lib(lib_path);
+#if !defined(_WIN32) && !defined(__ANDROID__)
+    if (!lib_handle_) {
+        // In packaged Mac/Linux builds, libsms_native sits next to libforge_runner_native
+        // in Contents/Frameworks/. Use dladdr on a local symbol to find that directory.
+        static const int s_anchor = 0;
+        Dl_info self_info{};
+        if (dladdr(&s_anchor, &self_info) && self_info.dli_fname) {
+            const fs::path frameworks_dir = fs::path(self_info.dli_fname).parent_path();
+            const fs::path candidate = frameworks_dir / ("libsms_native" + lib_extension());
+            lib_handle_ = platform_load_lib(candidate);
+        }
+    }
+#endif
 #if defined(__ANDROID__)
     if (!lib_handle_) {
         // In packaged Android builds, try direct soname first.

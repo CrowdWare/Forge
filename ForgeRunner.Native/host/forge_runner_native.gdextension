@@ -10,3 +10,7 @@ linux.release = "res://libforge_runner_native.so"
 windows.debug.x86_64 = "res://forge_runner_native.dll"
 windows.release.x86_64 = "res://forge_runner_native.dll"
 
+[dependencies]
+macos.debug = {"res://libsms_native.dylib": ""}
+macos.release = {"res://libsms_native.dylib": ""}
+
