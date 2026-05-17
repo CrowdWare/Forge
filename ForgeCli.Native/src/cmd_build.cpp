@@ -4,6 +4,7 @@
 #include "sandbox_policy.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <cctype>
 #include <cstdint>
@@ -1500,4 +1501,97 @@ int cmd_build(const std::vector<std::string>& args) {
 
     std::cout << "[OK] " << opts.output.string() << "\n";
     return 0;
+}
+
+// ---------------------------------------------------------------------------
+// cmd_run  –  interpreter-mode launch via Godot + host project (no AOT)
+// Usage: forgecli run mac --project <dir> [--godot-version <ver>]
+// ---------------------------------------------------------------------------
+int cmd_run(const std::vector<std::string>& args) {
+#if !defined(__APPLE__)
+    std::cerr << "forgecli run mac is only supported on macOS.\n";
+    return 1;
+#else
+    if (args.empty() || args[0] != "mac") {
+        std::cerr << "Usage: forgecli run mac --project <dir> [--godot-version <ver>]\n";
+        return 1;
+    }
+
+    fs::path project_dir;
+    std::string godot_version = "4.6-stable";
+
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        if (args[i] == "--project" && i + 1 < args.size()) {
+            project_dir = fs::absolute(args[++i]);
+        } else if (args[i] == "--godot-version" && i + 1 < args.size()) {
+            godot_version = args[++i];
+        }
+    }
+
+    if (project_dir.empty()) {
+        std::cerr << "Error: --project <dir> is required.\n";
+        return 1;
+    }
+    if (!fs::is_directory(project_dir)) {
+        std::cerr << "Error: project directory not found: " << project_dir << "\n";
+        return 1;
+    }
+
+    // Determine entry point: app.sml inside project dir
+    const fs::path entry = project_dir / "app.sml";
+    if (!fs::exists(entry)) {
+        std::cerr << "Error: no app.sml found in " << project_dir << "\n";
+        return 1;
+    }
+
+    // Locate the host Godot project (has project.godot + GDExtension config).
+    // forgecli_native.sh already exports FORGE_HOST_PROJECT_DIR.
+    const char* host_env = std::getenv("FORGE_HOST_PROJECT_DIR");
+    if (!host_env || host_env[0] == '\0') {
+        std::cerr << "Error: FORGE_HOST_PROJECT_DIR is not set. Run forgecli via scripts/forgecli_native.sh.\n";
+        return 1;
+    }
+    const fs::path host_project_dir = fs::path(host_env);
+    if (!fs::is_directory(host_project_dir)) {
+        std::cerr << "Error: host project directory not found: " << host_project_dir << "\n";
+        return 1;
+    }
+
+    // Ensure Godot binary is available (downloads if missing — same as forgecli build).
+    const char* home = std::getenv("HOME");
+    if (!home || home[0] == '\0') {
+        std::cerr << "Error: HOME not set.\n";
+        return 1;
+    }
+    godot_sdk::Config sdk_cfg{
+        godot_version,
+        fs::path(home) / ".cache" / "forge-runner" / "godot" / godot_version
+    };
+    std::string sdk_err;
+    const std::string godot_path = godot_sdk::ensure_binary(sdk_cfg, sdk_err);
+    if (godot_path.empty()) {
+        std::cerr << "Error: Could not locate Godot binary: " << sdk_err << "\n";
+        return 1;
+    }
+
+    // Set FORGE_RUNNER_URL so the GDExtension loads the user's project on startup.
+    const std::string url = "file://" + entry.string();
+    setenv("FORGE_RUNNER_URL", url.c_str(), 1);
+
+    std::cout << "Starting ForgeRunner in interpreter mode...\n";
+    std::cout << "  Godot:   " << godot_path << "\n";
+    std::cout << "  Host:    " << host_project_dir.string() << "\n";
+    std::cout << "  Project: " << project_dir.string() << "\n";
+
+    // exec Godot with --path pointing at the host project; inherits our environment.
+    const std::string host_str = host_project_dir.string();
+    execv(godot_path.c_str(), (char* const[]){
+        const_cast<char*>(godot_path.c_str()),
+        const_cast<char*>("--path"),
+        const_cast<char*>(host_str.c_str()),
+        nullptr
+    });
+    std::cerr << "Error: execv failed: " << strerror(errno) << "\n";
+    return 1;
+#endif
 }

@@ -1425,16 +1425,22 @@ bool SmsBridge::load(const std::string& repo_root) {
     const fs::path lib_path = lib_dir / ("libsms_native" + lib_extension());
 
     lib_handle_ = platform_load_lib(lib_path);
-#if !defined(_WIN32) && !defined(__ANDROID__)
+#if defined(__APPLE__)
     if (!lib_handle_) {
-        // In packaged Mac/Linux builds, libsms_native sits next to libforge_runner_native
-        // in Contents/Frameworks/. Use dladdr on a local symbol to find that directory.
-        static const int s_anchor = 0;
+        // @loader_path is resolved by dyld relative to libforge_runner_native.dylib,
+        // i.e. Contents/Frameworks/ in a packaged app — more reliable than dladdr.
+        lib_handle_ = dlopen(("@loader_path/libsms_native" + lib_extension()).c_str(),
+                             RTLD_NOW | RTLD_GLOBAL);
+    }
+#endif
+#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(__APPLE__)
+    if (!lib_handle_) {
+        // Linux: use dladdr to locate the directory of libforge_runner_native.so.
+        static volatile char s_anchor = '\x01';
         Dl_info self_info{};
-        if (dladdr(&s_anchor, &self_info) && self_info.dli_fname) {
-            const fs::path frameworks_dir = fs::path(self_info.dli_fname).parent_path();
-            const fs::path candidate = frameworks_dir / ("libsms_native" + lib_extension());
-            lib_handle_ = platform_load_lib(candidate);
+        if (dladdr(const_cast<char*>(&s_anchor), &self_info) && self_info.dli_fname) {
+            const fs::path lib_dir2 = fs::path(self_info.dli_fname).parent_path();
+            lib_handle_ = platform_load_lib(lib_dir2 / ("libsms_native" + lib_extension()));
         }
     }
 #endif
@@ -1475,9 +1481,11 @@ bool SmsBridge::load(const std::string& repo_root) {
     }
 #endif
     if (!lib_handle_) {
+        const char* dl_err = dlerror();
         UtilityFunctions::push_warning(String((
             "[ForgeRunner.Native] SMS library not found at " + lib_path.string() +
-            " - SMS execution disabled.").c_str()));
+            (dl_err ? std::string(" — ") + dl_err : "") +
+            " — SMS execution disabled.").c_str()));
         return false;
     }
 

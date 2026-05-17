@@ -766,6 +766,7 @@ static void help() {
     std::cout << "  forgecli-native validate [--project <dir>]\n";
     std::cout << "  forgecli-native build mac     --project <dir> [--output <path>] [--godot-version <ver>]\n";
     std::cout << "  forgecli-native build android --project <dir> [--output <path>] [--godot-version <ver>] [--android-package-id <id>]\n";
+    std::cout << "  forgecli-native run mac       --project <dir> [--godot-version <ver>]\n";
     std::cout << "  forgecli-native toolchain doctor\n";
     std::cout << "  forgecli-native sms run <file.sms> [--invoke <target.event>] [--args <json-array>]\n";
     std::cout << "  forgecli-native sms llvm-ir <file.sms> [--out <file.ll>] [--mode <exe|lib>]\n";
@@ -785,6 +786,7 @@ int main(int argc, char** argv) {
     if (cmd == "new") return cmd_new(args);
     if (cmd == "validate") return cmd_validate(args);
     if (cmd == "build") return cmd_build(args);
+    if (cmd == "run") return cmd_run(args);
     if (cmd == "toolchain") return cmd_toolchain(args);
     if (cmd == "sms") return cmd_sms(args);
     if (cmd == "help" || cmd == "--help" || cmd == "-h") {
