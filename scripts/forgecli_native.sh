@@ -32,9 +32,16 @@ ensure_cli_native_built() {
 }
 
 ensure_android_native_built() {
-  local so="$REPO_ROOT/ForgeRunner.Native/build-android/arm64-v8a/libforge_runner_native.so"
-  if [[ -f "$so" ]]; then return 0; fi
-  echo "Android native libraries missing — building now..." >&2
+  # Use pre-built .so from host-android/ if available (committed, no NDK needed).
+  local prebuilt="$REPO_ROOT/ForgeRunner.Native/host-android/arm64-v8a/libforge_runner_native.so"
+  local built="$REPO_ROOT/ForgeRunner.Native/build-android/arm64-v8a/libforge_runner_native.so"
+  if [[ -f "$built" ]]; then return 0; fi
+  if [[ -f "$prebuilt" ]]; then
+    mkdir -p "$(dirname "$built")"
+    cp "$prebuilt" "$built"
+    return 0
+  fi
+  echo "Android native libraries missing — building now (requires NDK)..." >&2
   local build_script="$REPO_ROOT/scripts/build_android_native.sh"
   if [[ ! -f "$build_script" ]]; then
     echo "ERROR: $build_script not found." >&2
