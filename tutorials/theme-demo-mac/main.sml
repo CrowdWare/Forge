@@ -18,6 +18,7 @@ Window {
                 paddingRight: 24
 
                 HBoxContainer {
+                    sizeFlagsHorizontal: expandFill
                     spacing: 12
 
                     Label {
