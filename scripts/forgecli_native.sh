@@ -22,14 +22,13 @@ is_android_build() {
 }
 
 ensure_cli_native_built() {
-  if [[ -x "$CLI_NATIVE_BIN" ]]; then return 0; fi
   if ! command -v cmake >/dev/null 2>&1; then
     echo "ERROR: cmake not found. Install cmake to build ForgeCli.Native." >&2
     exit 1
   fi
-  echo "ForgeCli.Native binary missing — building now..." >&2
-  cmake -S "$CLI_NATIVE_DIR" -B "$CLI_NATIVE_BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
-  cmake --build "$CLI_NATIVE_BUILD_DIR" --config Release
+  # Always run cmake --build (incremental: only recompiles changed sources).
+  cmake -S "$CLI_NATIVE_DIR" -B "$CLI_NATIVE_BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -Wno-dev 2>/dev/null
+  cmake --build "$CLI_NATIVE_BUILD_DIR" --config Release --target forgecli-native -j"$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)"
 }
 
 ensure_android_native_built() {
