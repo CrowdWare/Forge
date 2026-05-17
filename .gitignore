@@ -4,6 +4,8 @@
 
 # Godot editor cache & metadata
 .godot/
+# Exception: extension_list.cfg must be committed so Godot loads GDExtensions without the editor
+!ForgeRunner.Native/host/.godot/extension_list.cfg
 .import/
 
 # Godot 3.x legacy
