@@ -1395,7 +1395,13 @@ int cmd_build(const std::vector<std::string>& args) {
             std::cerr << "Failed to copy native library: " << native_lib_file.string() << "\n";
             return 1;
         }
-        const fs::path sms_lib = opts.native_lib_dir / ("libsms_native" + lib_ext());
+        // Look for libsms_native in FORGE_NATIVE_LIB_DIR first, then SMS_NATIVE_LIB_DIR.
+        const std::string sms_filename = "libsms_native" + lib_ext();
+        fs::path sms_lib = opts.native_lib_dir / sms_filename;
+        if (!fs::exists(sms_lib)) {
+            const char* sms_env = std::getenv("SMS_NATIVE_LIB_DIR");
+            if (sms_env && sms_env[0]) sms_lib = fs::path(sms_env) / sms_filename;
+        }
         if (fs::exists(sms_lib)) {
             fs::copy_file(sms_lib, staging / sms_lib.filename(), fs::copy_options::overwrite_existing, ec);
             if (ec) {
