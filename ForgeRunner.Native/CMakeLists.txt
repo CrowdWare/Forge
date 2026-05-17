@@ -128,11 +128,13 @@ target_include_directories(forge_runner_native PRIVATE
 
 if(APPLE)
     target_link_options(forge_runner_native PRIVATE "-Wl,-undefined,dynamic_lookup")
-    # Use absolute install name so macOS dyld doesn't confuse this with other
-    # libraries sharing the same @rpath-relative install name.
+    # @loader_path install name: dyld resolves relative to wherever the dylib
+    # is loaded from (host/, build/, or Contents/Frameworks/) — works in any clone.
     set_target_properties(forge_runner_native PROPERTIES
         MACOSX_RPATH OFF
         BUILD_WITH_INSTALL_RPATH OFF
+        BUILD_RPATH "@loader_path"
+        INSTALL_NAME_DIR "@loader_path"
     )
 endif()
 
